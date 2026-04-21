@@ -1,0 +1,5 @@
+name: Get Profile
+method: GET
+url: "{{base_url}}/auth/profile"
+headers:
+  Authorization: "Bearer {{token}}"

@@ -1,0 +1,5 @@
+name: Refresh Token
+method: POST
+url: "{{base_url}}/auth/refresh"
+headers:
+  Authorization: "Bearer {{token}}"

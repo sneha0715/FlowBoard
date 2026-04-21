@@ -20,14 +20,16 @@ public interface AuthService {
 
     User getUserByEmail(String email);
 
-    User getUserByUserId(int userId);
+    User getUserByUserId(Integer userId);
 
-    User updateProfile(int id , User user);
+    User getProfile(String token);
 
-    void changePassword(int id, String newPassword);
+    User updateProfile(Integer id , User user);
+
+    void changePassword(Integer id, String newPassword);
     
-    void deactivateAccount(int id);
+    void deactivateAccount(Integer id);
     
-    List<User> getAllUsers();
+    List<User> searchUsers(String query);
 
 }

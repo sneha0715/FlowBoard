@@ -4,6 +4,8 @@ import java.time.LocalDate;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -26,7 +28,7 @@ import lombok.ToString;
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private int userId;
+    private Integer userId;
 
     @Column(nullable = false)
     private String fullName;
@@ -41,9 +43,9 @@ public class User {
     private String userName;
 
     @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     @Builder.Default
-    private String role = "MEMBER";
-
+    private Role role = Role.MEMBER;
     private String avatarUrl;
     private String provider;
 

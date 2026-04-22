@@ -1,0 +1,8 @@
+name: List All Users (Admin)
+method: GET
+url: "{{base_url}}/auth/users/search"
+params:
+  - key: query
+    value: ""
+headers:
+  Authorization: "Bearer {{token}}"

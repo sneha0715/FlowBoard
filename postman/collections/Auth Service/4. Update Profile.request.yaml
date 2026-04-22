@@ -1,0 +1,13 @@
+name: Update Profile
+method: PUT
+url: "{{base_url}}/auth/profile/1"
+headers:
+  Authorization: "Bearer {{token}}"
+  Content-Type: application/json
+body:
+  mode: raw
+  raw: |
+    {
+      "fullName": "John Updated Doe",
+      "avatarUrl": "https://example.com/avatar.png"
+    }

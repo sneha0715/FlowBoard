@@ -1,0 +1,5 @@
+name: Logout
+method: POST
+url: "{{base_url}}/auth/logout"
+headers:
+  Authorization: "Bearer {{token}}"

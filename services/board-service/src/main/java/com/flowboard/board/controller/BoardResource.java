@@ -20,14 +20,13 @@ import java.util.List;
 public class BoardResource {
 
     private final BoardService boardService;
-    private final JwtUtil jwtUtil;
 
     @PostMapping
     public ResponseEntity<ApiResponse<BoardResponse>> createBoard(
             @Valid @RequestBody BoardRequest request,
-            @RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.extractUserId(token.substring(7));
-        BoardResponse response = boardService.createBoard(request, userId);
+            @RequestAttribute(value = "userId", required = false) Long requesterId) {
+        if (requesterId == null) return unauthorized();
+        BoardResponse response = boardService.createBoard(request, requesterId);
         return ResponseEntity.ok(ApiResponse.success(response, "Board created successfully"));
     }
 
@@ -44,45 +43,58 @@ public class BoardResource {
     }
 
     @GetMapping("/member")
-    public ResponseEntity<ApiResponse<List<BoardResponse>>> getByMember(@RequestHeader("Authorization") String token) {
-        Long userId = jwtUtil.extractUserId(token.substring(7));
-        List<BoardResponse> response = boardService.getBoardsByMember(userId);
+    public ResponseEntity<ApiResponse<List<BoardResponse>>> getByMember(
+            @RequestAttribute(value = "userId", required = false) Long requesterId) {
+        if (requesterId == null) return unauthorized();
+        List<BoardResponse> response = boardService.getBoardsByMember(requesterId);
         return ResponseEntity.ok(ApiResponse.success(response, "Boards retrieved successfully"));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<BoardResponse>> update(@PathVariable Long id, @Valid @RequestBody BoardRequest request) {
+    public ResponseEntity<ApiResponse<BoardResponse>> update(@PathVariable Long id, @Valid @RequestBody BoardRequest request,
+            @RequestAttribute(value = "userId", required = false) Long requesterId) {
+        if (requesterId == null) return unauthorized();
         BoardResponse response = boardService.updateBoard(id, request);
         return ResponseEntity.ok(ApiResponse.success(response, "Board updated successfully"));
     }
 
     @PutMapping("/{id}/close")
-    public ResponseEntity<ApiResponse<Void>> closeBoard(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> closeBoard(@PathVariable Long id,
+            @RequestAttribute(value = "userId", required = false) Long requesterId) {
+        if (requesterId == null) return unauthorized();
         boardService.closeBoard(id);
         return ResponseEntity.ok(ApiResponse.success(null, "Board closed successfully"));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id,
+            @RequestAttribute(value = "userId", required = false) Long requesterId) {
+        if (requesterId == null) return unauthorized();
         boardService.deleteBoard(id);
         return ResponseEntity.ok(ApiResponse.success(null, "Board deleted successfully"));
     }
 
     // Member endpoints
     @PostMapping("/{id}/members")
-    public ResponseEntity<ApiResponse<BoardMemberResponse>> addMember(@PathVariable Long id, @Valid @RequestBody BoardMemberRequest request) {
+    public ResponseEntity<ApiResponse<BoardMemberResponse>> addMember(@PathVariable Long id, @Valid @RequestBody BoardMemberRequest request,
+            @RequestAttribute(value = "userId", required = false) Long requesterId) {
+        if (requesterId == null) return unauthorized();
         BoardMemberResponse response = boardService.addMember(id, request);
         return ResponseEntity.ok(ApiResponse.success(response, "Member added successfully"));
     }
 
     @DeleteMapping("/{id}/members/{userId}")
-    public ResponseEntity<ApiResponse<Void>> removeMember(@PathVariable Long id, @PathVariable Long userId) {
+    public ResponseEntity<ApiResponse<Void>> removeMember(@PathVariable Long id, @PathVariable Long userId,
+            @RequestAttribute(value = "userId", required = false) Long requesterId) {
+        if (requesterId == null) return unauthorized();
         boardService.removeMember(id, userId);
         return ResponseEntity.ok(ApiResponse.success(null, "Member removed successfully"));
     }
 
     @PutMapping("/{id}/members/{userId}/role")
-    public ResponseEntity<ApiResponse<BoardMemberResponse>> updateRole(@PathVariable Long id, @PathVariable Long userId, @RequestParam String role) {
+    public ResponseEntity<ApiResponse<BoardMemberResponse>> updateRole(@PathVariable Long id, @PathVariable Long userId, @RequestParam String role,
+            @RequestAttribute(value = "userId", required = false) Long requesterId) {
+        if (requesterId == null) return unauthorized();
         BoardMemberResponse response = boardService.updateMemberRole(id, userId, role);
         return ResponseEntity.ok(ApiResponse.success(response, "Member role updated successfully"));
     }
@@ -91,5 +103,9 @@ public class BoardResource {
     public ResponseEntity<ApiResponse<List<BoardMemberResponse>>> getMembers(@PathVariable Long id) {
         List<BoardMemberResponse> response = boardService.getMembers(id);
         return ResponseEntity.ok(ApiResponse.success(response, "Members retrieved successfully"));
+    }
+
+    private <T> ResponseEntity<ApiResponse<T>> unauthorized() {
+        return ResponseEntity.status(401).body(ApiResponse.error("Unauthorized: Invalid or missing token"));
     }
 }

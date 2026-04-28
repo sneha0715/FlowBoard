@@ -1,0 +1,1128 @@
+{
+	"info": {
+		"_postman_id": "flowboard-api-collection-complete",
+		"name": "FlowBoard API Complete",
+		"description": "Comprehensive collection for all FlowBoard microservices with pre-configured ports.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Auth Service",
+			"item": [
+				{
+					"name": "User Registration",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fullName\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"userName\": \"johndoe\",\n  \"password\": \"password123\",\n  \"role\": \"MEMBER\",\n  \"provider\": \"LOCAL\",\n  \"isActive\": true\n}"
+						},
+						"url": {
+							"raw": "{{auth_url}}/auth/register",
+							"host": ["{{auth_url}}"],
+							"path": ["auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "User Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_url}}/auth/login",
+							"host": ["{{auth_url}}"],
+							"path": ["auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{auth_url}}/auth/logout",
+							"host": ["{{auth_url}}"],
+							"path": ["auth", "logout"]
+						}
+					}
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{auth_url}}/auth/refresh",
+							"host": ["{{auth_url}}"],
+							"path": ["auth", "refresh"]
+						}
+					}
+				},
+				{
+					"name": "Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{auth_url}}/auth/profile",
+							"host": ["{{auth_url}}"],
+							"path": ["auth", "profile"]
+						}
+					}
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fullName\": \"John Updated\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_url}}/auth/profile/{{user_id}}",
+							"host": ["{{auth_url}}"],
+							"path": ["auth", "profile", "{{user_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Change Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"newPassword\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{auth_url}}/auth/change-password/{{user_id}}",
+							"host": ["{{auth_url}}"],
+							"path": ["auth", "change-password", "{{user_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Search Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{auth_url}}/auth/users/search?query=john",
+							"host": ["{{auth_url}}"],
+							"path": ["auth", "users", "search"],
+							"query": [
+								{ "key": "query", "value": "john" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Deactivate Account",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{auth_url}}/auth/deactivate/{{user_id}}",
+							"host": ["{{auth_url}}"],
+							"path": ["auth", "deactivate", "{{user_id}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Workspace Service",
+			"item": [
+				{
+					"name": "Create Workspace",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"My New Workspace\",\n  \"description\": \"This is a test workspace\",\n  \"ownerId\": 1,\n  \"visibility\": \"PUBLIC\",\n  \"logoUrl\": \"https://example.com/logo.png\"\n}"
+						},
+						"url": {
+							"raw": "{{workspace_url}}/workspaces/create",
+							"host": ["{{workspace_url}}"],
+							"path": ["workspaces", "create"]
+						}
+					}
+				},
+				{
+					"name": "Get Workspace by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{workspace_url}}/workspaces/{{workspace_id}}",
+							"host": ["{{workspace_url}}"],
+							"path": ["workspaces", "{{workspace_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Workspaces by Owner",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{workspace_url}}/workspaces/owner/{{owner_id}}",
+							"host": ["{{workspace_url}}"],
+							"path": ["workspaces", "owner", "{{owner_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Workspaces by Member",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{workspace_url}}/workspaces/member/{{user_id}}",
+							"host": ["{{workspace_url}}"],
+							"path": ["workspaces", "member", "{{user_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Workspace",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Workspace Name\",\n  \"description\": \"Updated description\",\n  \"visibility\": \"PRIVATE\"\n}"
+						},
+						"url": {
+							"raw": "{{workspace_url}}/workspaces/{{workspace_id}}",
+							"host": ["{{workspace_url}}"],
+							"path": ["workspaces", "{{workspace_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete Workspace",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{workspace_url}}/workspaces/{{workspace_id}}",
+							"host": ["{{workspace_url}}"],
+							"path": ["workspaces", "{{workspace_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Add Member",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 2,\n  \"role\": \"MEMBER\"\n}"
+						},
+						"url": {
+							"raw": "{{workspace_url}}/workspaces/{{workspace_id}}/members/add",
+							"host": ["{{workspace_url}}"],
+							"path": ["workspaces", "{{workspace_id}}", "members", "add"]
+						}
+					}
+				},
+				{
+					"name": "Remove Member",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{workspace_url}}/workspaces/{{workspace_id}}/members/remove/{{user_id}}",
+							"host": ["{{workspace_url}}"],
+							"path": ["workspaces", "{{workspace_id}}", "members", "remove", "{{user_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Member Role",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{workspace_url}}/workspaces/{{workspace_id}}/members/role?userId={{user_id}}&role=ADMIN",
+							"host": ["{{workspace_url}}"],
+							"path": ["workspaces", "{{workspace_id}}", "members", "role"],
+							"query": [
+								{ "key": "userId", "value": "{{user_id}}" },
+								{ "key": "role", "value": "ADMIN" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Workspace Members",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{workspace_url}}/workspaces/{{workspace_id}}/members",
+							"host": ["{{workspace_url}}"],
+							"path": ["workspaces", "{{workspace_id}}", "members"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Board Service",
+			"item": [
+				{
+					"name": "Create Board",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"workspaceId\": 1,\n  \"name\": \"Project Roadmap\",\n  \"description\": \"Planning for Q3\",\n  \"background\": \"#3498db\",\n  \"visibility\": \"PUBLIC\"\n}"
+						},
+						"url": {
+							"raw": "{{board_url}}/boards",
+							"host": ["{{board_url}}"],
+							"path": ["boards"]
+						}
+					}
+				},
+				{
+					"name": "Get Board by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{board_url}}/boards/{{board_id}}",
+							"host": ["{{board_url}}"],
+							"path": ["boards", "{{board_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Boards by Workspace",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{board_url}}/boards/workspace/{{workspace_id}}",
+							"host": ["{{board_url}}"],
+							"path": ["boards", "workspace", "{{workspace_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get My Boards",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{board_url}}/boards/member",
+							"host": ["{{board_url}}"],
+							"path": ["boards", "member"]
+						}
+					}
+				},
+				{
+					"name": "Update Board",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"workspaceId\": 1,\n  \"name\": \"Updated Board Name\",\n  \"description\": \"Updated description\",\n  \"background\": \"#2ecc71\",\n  \"visibility\": \"PRIVATE\"\n}"
+						},
+						"url": {
+							"raw": "{{board_url}}/boards/{{board_id}}",
+							"host": ["{{board_url}}"],
+							"path": ["boards", "{{board_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Close Board",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{board_url}}/boards/{{board_id}}/close",
+							"host": ["{{board_url}}"],
+							"path": ["boards", "{{board_id}}", "close"]
+						}
+					}
+				},
+				{
+					"name": "Delete Board",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{board_url}}/boards/{{board_id}}",
+							"host": ["{{board_url}}"],
+							"path": ["boards", "{{board_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Add Member",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 2,\n  \"role\": \"MEMBER\"\n}"
+						},
+						"url": {
+							"raw": "{{board_url}}/boards/{{board_id}}/members",
+							"host": ["{{board_url}}"],
+							"path": ["boards", "{{board_id}}", "members"]
+						}
+					}
+				},
+				{
+					"name": "Remove Member",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{board_url}}/boards/{{board_id}}/members/{{user_id}}",
+							"host": ["{{board_url}}"],
+							"path": ["boards", "{{board_id}}", "members", "{{user_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Member Role",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{board_url}}/boards/{{board_id}}/members/{{user_id}}/role?role=ADMIN",
+							"host": ["{{board_url}}"],
+							"path": ["boards", "{{board_id}}", "members", "{{user_id}}", "role"],
+							"query": [
+								{ "key": "role", "value": "ADMIN" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Board Members",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{board_url}}/boards/{{board_id}}/members",
+							"host": ["{{board_url}}"],
+							"path": ["boards", "{{board_id}}", "members"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Column Service",
+			"item": [
+				{
+					"name": "Create List",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"boardId\": 1,\n  \"name\": \"To Do\",\n  \"position\": 1,\n  \"color\": \"#f1c40f\"\n}"
+						},
+						"url": {
+							"raw": "{{column_url}}/api/lists",
+							"host": ["{{column_url}}"],
+							"path": ["api", "lists"]
+						}
+					}
+				},
+				{
+					"name": "Get List by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{column_url}}/api/lists/{{list_id}}",
+							"host": ["{{column_url}}"],
+							"path": ["api", "lists", "{{list_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Lists by Board",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{column_url}}/api/lists/board/{{board_id}}",
+							"host": ["{{column_url}}"],
+							"path": ["api", "lists", "board", "{{board_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Update List",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"boardId\": 1,\n  \"name\": \"Doing\",\n  \"position\": 2,\n  \"color\": \"#e67e22\"\n}"
+						},
+						"url": {
+							"raw": "{{column_url}}/api/lists/{{list_id}}",
+							"host": ["{{column_url}}"],
+							"path": ["api", "lists", "{{list_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Reorder Lists",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "[1, 3, 2]"
+						},
+						"url": {
+							"raw": "{{column_url}}/api/lists/reorder/{{board_id}}",
+							"host": ["{{column_url}}"],
+							"path": ["api", "lists", "reorder", "{{board_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Archive List",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{column_url}}/api/lists/{{list_id}}/archive",
+							"host": ["{{column_url}}"],
+							"path": ["api", "lists", "{{list_id}}", "archive"]
+						}
+					}
+				},
+				{
+					"name": "Unarchive List",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{column_url}}/api/lists/{{list_id}}/unarchive",
+							"host": ["{{column_url}}"],
+							"path": ["api", "lists", "{{list_id}}", "unarchive"]
+						}
+					}
+				},
+				{
+					"name": "Delete List",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{column_url}}/api/lists/{{list_id}}",
+							"host": ["{{column_url}}"],
+							"path": ["api", "lists", "{{list_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Move List",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{column_url}}/api/lists/{{list_id}}/move/{{new_board_id}}",
+							"host": ["{{column_url}}"],
+							"path": ["api", "lists", "{{list_id}}", "move", "{{new_board_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Archived Lists",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{column_url}}/api/lists/board/{{board_id}}/archived",
+							"host": ["{{column_url}}"],
+							"path": ["api", "lists", "board", "{{board_id}}", "archived"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Card Service",
+			"item": [
+				{
+					"name": "Create Card",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"listId\": 1,\n  \"boardId\": 1,\n  \"title\": \"Fix bug in login flow\",\n  \"description\": \"User cannot login with Google\",\n  \"priority\": \"HIGH\",\n  \"status\": \"OPEN\",\n  \"dueDate\": \"2026-05-01\"\n}"
+						},
+						"url": {
+							"raw": "{{card_url}}/api/cards",
+							"host": ["{{card_url}}"],
+							"path": ["api", "cards"]
+						}
+					}
+				},
+				{
+					"name": "Get Card by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{card_url}}/api/cards/{{card_id}}",
+							"host": ["{{card_url}}"],
+							"path": ["api", "cards", "{{card_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Cards by List",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{card_url}}/api/cards/list/{{list_id}}",
+							"host": ["{{card_url}}"],
+							"path": ["api", "cards", "list", "{{list_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Cards by Board",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{card_url}}/api/cards/board/{{board_id}}",
+							"host": ["{{card_url}}"],
+							"path": ["api", "cards", "board", "{{board_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Cards by Assignee",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{card_url}}/api/cards/assignee/{{user_id}}",
+							"host": ["{{card_url}}"],
+							"path": ["api", "cards", "assignee", "{{user_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Card",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"listId\": 1,\n  \"boardId\": 1,\n  \"title\": \"Updated Card Title\",\n  \"description\": \"Updated description\",\n  \"priority\": \"MEDIUM\",\n  \"status\": \"IN_PROGRESS\"\n}"
+						},
+						"url": {
+							"raw": "{{card_url}}/api/cards/{{card_id}}",
+							"host": ["{{card_url}}"],
+							"path": ["api", "cards", "{{card_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Move Card",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{card_url}}/api/cards/{{card_id}}/move?newListId={{list_id}}&newPosition=2",
+							"host": ["{{card_url}}"],
+							"path": ["api", "cards", "{{card_id}}", "move"],
+							"query": [
+								{ "key": "newListId", "value": "{{list_id}}" },
+								{ "key": "newPosition", "value": "2" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Reorder Cards",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "[1, 3, 2]"
+						},
+						"url": {
+							"raw": "{{card_url}}/api/cards/reorder/{{list_id}}",
+							"host": ["{{card_url}}"],
+							"path": ["api", "cards", "reorder", "{{list_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Archive Card",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{card_url}}/api/cards/{{card_id}}/archive",
+							"host": ["{{card_url}}"],
+							"path": ["api", "cards", "{{card_id}}", "archive"]
+						}
+					}
+				},
+				{
+					"name": "Unarchive Card",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{card_url}}/api/cards/{{card_id}}/unarchive",
+							"host": ["{{card_url}}"],
+							"path": ["api", "cards", "{{card_id}}", "unarchive"]
+						}
+					}
+				},
+				{
+					"name": "Delete Card",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{card_url}}/api/cards/{{card_id}}",
+							"host": ["{{card_url}}"],
+							"path": ["api", "cards", "{{card_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Set Assignee",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{card_url}}/api/cards/{{card_id}}/assignee?assigneeId={{user_id}}",
+							"host": ["{{card_url}}"],
+							"path": ["api", "cards", "{{card_id}}", "assignee"],
+							"query": [
+								{ "key": "assigneeId", "value": "{{user_id}}" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Set Priority",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{card_url}}/api/cards/{{card_id}}/priority?priority=URGENT",
+							"host": ["{{card_url}}"],
+							"path": ["api", "cards", "{{card_id}}", "priority"],
+							"query": [
+								{ "key": "priority", "value": "URGENT" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Set Status",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{card_url}}/api/cards/{{card_id}}/status?status=COMPLETED",
+							"host": ["{{card_url}}"],
+							"path": ["api", "cards", "{{card_id}}", "status"],
+							"query": [
+								{ "key": "status", "value": "COMPLETED" }
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Overdue Cards",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{card_url}}/api/cards/overdue",
+							"host": ["{{card_url}}"],
+							"path": ["api", "cards", "overdue"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Comment Service",
+			"item": [
+				{
+					"name": "Add Comment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cardId\": 1,\n  \"content\": \"This is a great idea!\",\n  \"parentCommentId\": null\n}"
+						},
+						"url": {
+							"raw": "{{comment_url}}/api/comments",
+							"host": ["{{comment_url}}"],
+							"path": ["api", "comments"]
+						}
+					}
+				},
+				{
+					"name": "Get Comments by Card",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{comment_url}}/api/comments/card/{{card_id}}",
+							"host": ["{{comment_url}}"],
+							"path": ["api", "comments", "card", "{{card_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Comment by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{comment_url}}/api/comments/{{comment_id}}",
+							"host": ["{{comment_url}}"],
+							"path": ["api", "comments", "{{comment_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Replies",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{comment_url}}/api/comments/{{comment_id}}/replies",
+							"host": ["{{comment_url}}"],
+							"path": ["api", "comments", "{{comment_id}}", "replies"]
+						}
+					}
+				},
+				{
+					"name": "Update Comment",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content\": \"Updated comment content\"\n}"
+						},
+						"url": {
+							"raw": "{{comment_url}}/api/comments/{{comment_id}}",
+							"host": ["{{comment_url}}"],
+							"path": ["api", "comments", "{{comment_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete Comment",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{comment_url}}/api/comments/{{comment_id}}",
+							"host": ["{{comment_url}}"],
+							"path": ["api", "comments", "{{comment_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Comment Count",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{comment_url}}/api/comments/card/{{card_id}}/count",
+							"host": ["{{comment_url}}"],
+							"path": ["api", "comments", "card", "{{card_id}}", "count"]
+						}
+					}
+				},
+				{
+					"name": "Add Attachment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cardId\": 1,\n  \"fileName\": \"screenshot.png\",\n  \"fileUrl\": \"https://example.com/screenshot.png\",\n  \"fileType\": \"image/png\",\n  \"sizeKb\": 1024.0\n}"
+						},
+						"url": {
+							"raw": "{{comment_url}}/api/attachments",
+							"host": ["{{comment_url}}"],
+							"path": ["api", "attachments"]
+						}
+					}
+				},
+				{
+					"name": "Get Attachments by Card",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{comment_url}}/api/attachments/card/{{card_id}}",
+							"host": ["{{comment_url}}"],
+							"path": ["api", "attachments", "card", "{{card_id}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete Attachment",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{comment_url}}/api/attachments/{{attachment_id}}",
+							"host": ["{{comment_url}}"],
+							"path": ["api", "attachments", "{{attachment_id}}"]
+						}
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "auth_url",
+			"value": "http://localhost:8081"
+		},
+		{
+			"key": "workspace_url",
+			"value": "http://localhost:8082"
+		},
+		{
+			"key": "board_url",
+			"value": "http://localhost:8083"
+		},
+		{
+			"key": "column_url",
+			"value": "http://localhost:8084"
+		},
+		{
+			"key": "card_url",
+			"value": "http://localhost:8085"
+		},
+		{
+			"key": "comment_url",
+			"value": "http://localhost:8086"
+		},
+		{
+			"key": "token",
+			"value": "PASTE_TOKEN_HERE"
+		},
+		{
+			"key": "user_id",
+			"value": "1"
+		},
+		{
+			"key": "workspace_id",
+			"value": "1"
+		},
+		{
+			"key": "board_id",
+			"value": "1"
+		},
+		{
+			"key": "list_id",
+			"value": "1"
+		},
+		{
+			"key": "card_id",
+			"value": "1"
+		},
+		{
+			"key": "comment_id",
+			"value": "1"
+		},
+		{
+			"key": "attachment_id",
+			"value": "1"
+		},
+		{
+			"key": "new_board_id",
+			"value": "2"
+		}
+	]
+}

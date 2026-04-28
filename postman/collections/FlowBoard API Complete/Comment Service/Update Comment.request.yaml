@@ -1,0 +1,13 @@
+$kind: http-request
+url: "{{comment_url}}/api/comments/{{comment_id}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+body:
+  type: text
+  content: |-
+    {
+      "content": "Updated comment content"
+    }
+order: 5000

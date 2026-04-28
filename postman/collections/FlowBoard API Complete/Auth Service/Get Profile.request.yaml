@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{auth_url}}/auth/profile"
+method: GET
+headers:
+  Authorization: Bearer {{token}}
+order: 5000

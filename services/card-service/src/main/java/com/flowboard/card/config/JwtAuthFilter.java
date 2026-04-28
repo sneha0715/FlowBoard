@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,6 +18,7 @@ import java.util.ArrayList;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
@@ -33,6 +35,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         final Long userId;
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            log.debug("No Bearer token found in request headers");
             filterChain.doFilter(request, response);
             return;
         }
@@ -41,9 +44,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         try {
             userEmail = jwtUtil.extractUsername(jwt);
             userId = jwtUtil.extractUserId(jwt);
+            log.debug("Extracted userEmail: {}, userId: {}", userEmail, userId);
 
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 if (jwtUtil.isTokenValid(jwt)) {
+                    log.debug("Token is valid.");
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             userEmail,
                             null,
@@ -52,10 +57,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     request.setAttribute("userId", userId);
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                } else {
+                    log.warn("Invalid JWT token received");
                 }
             }
         } catch (Exception e) {
-            // Token validation failed
+            log.error("Error processing JWT token: {}", e.getMessage());
         }
         filterChain.doFilter(request, response);
     }

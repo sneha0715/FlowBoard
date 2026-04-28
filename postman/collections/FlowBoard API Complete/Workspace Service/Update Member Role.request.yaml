@@ -1,0 +1,9 @@
+$kind: http-request
+url: "{{workspace_url}}/workspaces/{{workspace_id}}/members/role?userId={{user_id}}&role=ADMIN"
+method: PUT
+headers:
+  Authorization: Bearer {{token}}
+queryParams:
+  userId: "{{user_id}}"
+  role: ADMIN
+order: 9000

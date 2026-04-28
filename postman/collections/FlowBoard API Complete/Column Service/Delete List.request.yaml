@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{column_url}}/api/lists/{{list_id}}"
+method: DELETE
+headers:
+  Authorization: Bearer {{token}}
+order: 8000

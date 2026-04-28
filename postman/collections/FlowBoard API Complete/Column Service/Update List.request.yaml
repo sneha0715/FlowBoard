@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{column_url}}/api/lists/{{list_id}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+body:
+  type: text
+  content: |-
+    {
+      "boardId": 1,
+      "name": "Doing",
+      "position": 2,
+      "color": "#e67e22"
+    }
+order: 4000

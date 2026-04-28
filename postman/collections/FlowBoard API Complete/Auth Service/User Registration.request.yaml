@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{auth_url}}/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "fullName": "John Doe",
+      "email": "john.doe@example.com",
+      "userName": "johndoe",
+      "password": "password123",
+      "role": "MEMBER",
+      "provider": "LOCAL",
+      "isActive": true
+    }
+order: 1000

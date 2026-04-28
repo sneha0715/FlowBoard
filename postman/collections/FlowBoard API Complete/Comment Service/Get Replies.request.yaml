@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{comment_url}}/api/comments/{{comment_id}}/replies"
+method: GET
+headers:
+  Authorization: Bearer {{token}}
+order: 4000

@@ -1,0 +1,8 @@
+$kind: http-request
+url: "{{card_url}}/api/cards/{{card_id}}/assignee?assigneeId={{user_id}}"
+method: PUT
+headers:
+  Authorization: Bearer {{token}}
+queryParams:
+  assigneeId: "{{user_id}}"
+order: 12000

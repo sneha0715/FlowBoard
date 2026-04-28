@@ -1,5 +1,0 @@
-name: Deactivate User (Admin)
-method: POST
-url: "{{base_url}}/auth/deactivate/1"
-headers:
-  Authorization: "Bearer {{token}}"

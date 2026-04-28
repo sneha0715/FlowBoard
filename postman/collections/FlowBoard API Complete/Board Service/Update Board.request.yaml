@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{board_url}}/boards/{{board_id}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+body:
+  type: text
+  content: |-
+    {
+      "workspaceId": 1,
+      "name": "Updated Board Name",
+      "description": "Updated description",
+      "background": "#2ecc71",
+      "visibility": "PRIVATE"
+    }
+order: 5000

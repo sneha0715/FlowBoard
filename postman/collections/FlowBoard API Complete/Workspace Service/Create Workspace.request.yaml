@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{workspace_url}}/workspaces/create"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+body:
+  type: text
+  content: |-
+    {
+      "name": "My New Workspace",
+      "description": "This is a test workspace",
+      "ownerId": 1,
+      "visibility": "PUBLIC",
+      "logoUrl": "https://example.com/logo.png"
+    }
+order: 1000

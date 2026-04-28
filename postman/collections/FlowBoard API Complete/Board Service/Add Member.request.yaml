@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{board_url}}/boards/{{board_id}}/members"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+body:
+  type: text
+  content: |-
+    {
+      "userId": 2,
+      "role": "MEMBER"
+    }
+order: 8000

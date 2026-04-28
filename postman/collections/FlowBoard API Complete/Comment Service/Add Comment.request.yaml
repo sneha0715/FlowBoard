@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{comment_url}}/api/comments"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+body:
+  type: text
+  content: |-
+    {
+      "cardId": 1,
+      "content": "This is a great idea!",
+      "parentCommentId": null
+    }
+order: 1000

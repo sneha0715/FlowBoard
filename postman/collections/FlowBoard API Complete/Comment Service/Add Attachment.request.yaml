@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{comment_url}}/api/attachments"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{token}}
+body:
+  type: text
+  content: |-
+    {
+      "cardId": 1,
+      "fileName": "screenshot.png",
+      "fileUrl": "https://example.com/screenshot.png",
+      "fileType": "image/png",
+      "sizeKb": 1024.0
+    }
+order: 8000

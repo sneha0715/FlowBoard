@@ -1,0 +1,8 @@
+$kind: http-request
+url: "{{card_url}}/api/cards/{{card_id}}/priority?priority=URGENT"
+method: PUT
+headers:
+  Authorization: Bearer {{token}}
+queryParams:
+  priority: URGENT
+order: 13000

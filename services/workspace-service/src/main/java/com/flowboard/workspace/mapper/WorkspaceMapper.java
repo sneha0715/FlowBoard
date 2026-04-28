@@ -17,7 +17,5 @@ public interface WorkspaceMapper {
     @Mapping(target = "members", ignore = true)
     Workspace toEntity(WorkspaceRequest request);
 
-    @Mapping(target = "createAt", dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-    @Mapping(target = "updateAt", dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     WorkspaceResponse toResponse(Workspace entity);
 }

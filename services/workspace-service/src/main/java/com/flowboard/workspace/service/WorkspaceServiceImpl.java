@@ -22,7 +22,9 @@ import com.flowboard.workspace.repository.WorkspaceMemberRepository;
 import com.flowboard.workspace.repository.WorkspaceRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class WorkspaceServiceImpl implements WorkspaceService {
@@ -36,17 +38,18 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     @Transactional
     public WorkspaceResponse createWorkspace(WorkspaceRequest request) {
         if (request.getOwnerId() == null) {
+            log.warn("Workspace creation failed — ownerId is null");
             throw new CustomException("Owner ID is required for workspace creation", org.springframework.http.HttpStatus.BAD_REQUEST);
         }
 
         if (workspaceRepository.existsByNameAndOwnerId(request.getName(), request.getOwnerId())) {
+            log.warn("Workspace already exists: name={}, ownerId={}", request.getName(), request.getOwnerId());
             throw new WorkspaceAlreadyExistsException("Workspace with this name already exists for this owner");
         }
 
         Workspace workspace = workspaceMapper.toEntity(request);
         Workspace savedWorkspace = workspaceRepository.save(workspace);
 
-        // Add owner as the first member
         WorkspaceMember ownerMember = WorkspaceMember.builder()
                 .workspace(savedWorkspace)
                 .userId(request.getOwnerId())
@@ -54,6 +57,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 .build();
         workspaceMemberRepository.save(ownerMember);
 
+        log.info("Workspace created: id={}, name={}, owner={}", savedWorkspace.getWorkspaceId(), savedWorkspace.getName(), request.getOwnerId());
         return workspaceMapper.toResponse(savedWorkspace);
     }
 
@@ -96,7 +100,9 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         workspace.setVisibility(request.getVisibility());
         workspace.setLogoUrl(request.getLogoUrl());
 
-        return workspaceMapper.toResponse(workspaceRepository.save(workspace));
+        WorkspaceResponse response = workspaceMapper.toResponse(workspaceRepository.save(workspace));
+        log.info("Workspace updated: id={}", workspaceId);
+        return response;
     }
 
     @Override
@@ -106,6 +112,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             throw new ResourceNotFoundException("Workspace not found");
         }
         workspaceRepository.deleteById(workspaceId);
+        log.info("Workspace deleted: id={}", workspaceId);
     }
 
     @Override
@@ -115,6 +122,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
 
         if (workspaceMemberRepository.findByWorkspaceWorkspaceIdAndUserId(workspaceId, userId).isPresent()) {
+            log.warn("Add member failed — userId={} already in workspace={}", userId, workspaceId);
             throw new MemberAlreadyExistsException("User is already a member of this workspace");
         }
 
@@ -124,7 +132,9 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 .role(role)
                 .build();
 
-        return workspaceMemberMapper.toResponse(workspaceMemberRepository.save(member));
+        WorkspaceMemberResponse response = workspaceMemberMapper.toResponse(workspaceMemberRepository.save(member));
+        log.info("Member added: userId={}, workspaceId={}, role={}", userId, workspaceId, role);
+        return response;
     }
 
     @Override
@@ -134,6 +144,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
             throw new ResourceNotFoundException("Member not found in this workspace");
         }
         workspaceMemberRepository.deleteByWorkspaceWorkspaceIdAndUserId(workspaceId, userId);
+        log.info("Member removed: userId={}, workspaceId={}", userId, workspaceId);
     }
 
     @Override
@@ -143,6 +154,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 .orElseThrow(() -> new ResourceNotFoundException("Member not found"));
         member.setRole(role);
         workspaceMemberRepository.save(member);
+        log.info("Member role updated: userId={}, workspaceId={}, role={}", userId, workspaceId, role);
     }
 
     @Override

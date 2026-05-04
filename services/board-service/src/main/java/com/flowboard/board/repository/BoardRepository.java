@@ -25,5 +25,5 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
 
     long countByWorkspaceId(Long workspaceId);
 
-    List<Board> findByIsClosed(boolean isClosed);
+    List<Board> findByClosed(boolean isClosed);
 }

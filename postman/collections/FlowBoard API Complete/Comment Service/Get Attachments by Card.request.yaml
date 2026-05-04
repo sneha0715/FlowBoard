@@ -1,6 +1,0 @@
-$kind: http-request
-url: "{{comment_url}}/api/attachments/card/{{card_id}}"
-method: GET
-headers:
-  Authorization: Bearer {{token}}
-order: 9000

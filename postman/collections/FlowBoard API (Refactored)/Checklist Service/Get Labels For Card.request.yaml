@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{base_url}}/labels/card/{{cardId}}"
+method: GET
+headers:
+  Authorization: Bearer {{token}}
+order: 16000

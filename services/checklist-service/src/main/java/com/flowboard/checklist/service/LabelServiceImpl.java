@@ -7,12 +7,14 @@ import com.flowboard.checklist.exception.ResourceNotFoundException;
 import com.flowboard.checklist.mapper.LabelMapper;
 import com.flowboard.checklist.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -25,7 +27,9 @@ public class LabelServiceImpl implements LabelService {
     @Override
     public LabelResponse createLabel(LabelRequest request) {
         Label label = labelMapper.toEntity(request);
-        return labelMapper.toResponse(labelRepository.save(label));
+        LabelResponse response = labelMapper.toResponse(labelRepository.save(label));
+        log.info("Label created: id={}, boardId={}", response.getLabelId(), request.getBoardId());
+        return response;
     }
 
     @Override
@@ -40,13 +44,16 @@ public class LabelServiceImpl implements LabelService {
         Label label = labelRepository.findById(labelId)
                 .orElseThrow(() -> new ResourceNotFoundException("Label not found"));
         labelMapper.updateEntity(request, label);
-        return labelMapper.toResponse(labelRepository.save(label));
+        LabelResponse response = labelMapper.toResponse(labelRepository.save(label));
+        log.info("Label updated: id={}", labelId);
+        return response;
     }
 
     @Override
     public void deleteLabel(Long labelId) {
         cardLabelRepository.deleteByLabelId(labelId);
         labelRepository.deleteById(labelId);
+        log.info("Label deleted: id={}", labelId);
     }
 
     @Override
@@ -57,12 +64,14 @@ public class LabelServiceImpl implements LabelService {
                     .labelId(labelId)
                     .build();
             cardLabelRepository.save(cardLabel);
+            log.info("Label attached: labelId={}, cardId={}", labelId, cardId);
         }
     }
 
     @Override
     public void removeLabelFromCard(Long cardId, Long labelId) {
         cardLabelRepository.deleteByCardIdAndLabelId(cardId, labelId);
+        log.info("Label detached: labelId={}, cardId={}", labelId, cardId);
     }
 
     @Override

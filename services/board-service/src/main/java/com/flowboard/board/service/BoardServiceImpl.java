@@ -12,12 +12,14 @@ import com.flowboard.board.model.BoardMember;
 import com.flowboard.board.repository.BoardMemberRepository;
 import com.flowboard.board.repository.BoardRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BoardServiceImpl implements BoardService {
@@ -34,7 +36,6 @@ public class BoardServiceImpl implements BoardService {
         board.setCreatedById(userId);
         Board savedBoard = boardRepository.save(board);
 
-        // Add creator as ADMIN member
         BoardMember member = BoardMember.builder()
                 .boardId(savedBoard.getBoardId())
                 .userId(userId)
@@ -42,6 +43,7 @@ public class BoardServiceImpl implements BoardService {
                 .build();
         boardMemberRepository.save(member);
 
+        log.info("Board created: id={}, name={}, userId={}", savedBoard.getBoardId(), savedBoard.getName(), userId);
         return boardMapper.toResponse(savedBoard);
     }
 
@@ -72,7 +74,9 @@ public class BoardServiceImpl implements BoardService {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new ResourceNotFoundException("Board not found with id: " + boardId));
         boardMapper.updateEntityFromRequest(request, board);
-        return boardMapper.toResponse(boardRepository.save(board));
+        BoardResponse response = boardMapper.toResponse(boardRepository.save(board));
+        log.info("Board updated: id={}", boardId);
+        return response;
     }
 
     @Override
@@ -82,6 +86,7 @@ public class BoardServiceImpl implements BoardService {
                 .orElseThrow(() -> new ResourceNotFoundException("Board not found with id: " + boardId));
         board.setClosed(true);
         boardRepository.save(board);
+        log.info("Board closed: id={}", boardId);
     }
 
     @Override
@@ -91,8 +96,7 @@ public class BoardServiceImpl implements BoardService {
             throw new ResourceNotFoundException("Board not found with id: " + boardId);
         }
         boardRepository.deleteById(boardId);
-        // Members will be deleted if we have cascading, otherwise manually:
-        // boardMemberRepository.deleteByBoardId(boardId);
+        log.info("Board deleted: id={}", boardId);
     }
 
     @Override
@@ -112,6 +116,7 @@ public class BoardServiceImpl implements BoardService {
     @Transactional
     public void removeMember(Long boardId, Long userId) {
         boardMemberRepository.deleteByBoardIdAndUserId(boardId, userId);
+        log.info("Board member removed: boardId={}, userId={}", boardId, userId);
     }
 
     @Override

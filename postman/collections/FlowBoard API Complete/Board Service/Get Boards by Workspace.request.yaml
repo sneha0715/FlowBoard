@@ -1,6 +1,0 @@
-$kind: http-request
-url: "{{board_url}}/boards/workspace/{{workspace_id}}"
-method: GET
-headers:
-  Authorization: Bearer {{token}}
-order: 3000

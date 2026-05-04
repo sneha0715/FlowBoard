@@ -7,6 +7,7 @@ import com.flowboard.column.mapper.ListMapper;
 import com.flowboard.column.model.TaskList;
 import com.flowboard.column.repository.ListRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +18,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ListServiceImpl implements ListService {
@@ -28,13 +30,13 @@ public class ListServiceImpl implements ListService {
     @Transactional
     public ListResponse createList(ListRequest request) {
         TaskList taskList = listMapper.toEntity(request);
-        
         if (taskList.getPosition() == null) {
             Integer maxPos = listRepository.findMaxPositionByBoardId(request.getBoardId());
             taskList.setPosition(maxPos == null ? 0 : maxPos + 1);
         }
-        
-        return listMapper.toResponse(listRepository.save(taskList));
+        ListResponse response = listMapper.toResponse(listRepository.save(taskList));
+        log.info("List created: id={}, boardId={}", response.getListId(), request.getBoardId());
+        return response;
     }
 
     @Override
@@ -57,9 +59,10 @@ public class ListServiceImpl implements ListService {
     public ListResponse updateList(Long listId, ListRequest request) {
         TaskList taskList = listRepository.findById(listId)
                 .orElseThrow(() -> new ResourceNotFoundException("List not found with id: " + listId));
-        
         listMapper.updateEntityFromRequest(request, taskList);
-        return listMapper.toResponse(listRepository.save(taskList));
+        ListResponse response = listMapper.toResponse(listRepository.save(taskList));
+        log.info("List updated: id={}", listId);
+        return response;
     }
 
     @Override
@@ -86,6 +89,7 @@ public class ListServiceImpl implements ListService {
                 .orElseThrow(() -> new ResourceNotFoundException("List not found with id: " + listId));
         taskList.setArchived(true);
         listRepository.save(taskList);
+        log.info("List archived: id={}", listId);
     }
 
     @Override
@@ -95,6 +99,7 @@ public class ListServiceImpl implements ListService {
                 .orElseThrow(() -> new ResourceNotFoundException("List not found with id: " + listId));
         taskList.setArchived(false);
         listRepository.save(taskList);
+        log.info("List unarchived: id={}", listId);
     }
 
     @Override
@@ -104,6 +109,7 @@ public class ListServiceImpl implements ListService {
             throw new ResourceNotFoundException("List not found with id: " + listId);
         }
         listRepository.deleteById(listId);
+        log.info("List deleted: id={}", listId);
     }
 
     @Override

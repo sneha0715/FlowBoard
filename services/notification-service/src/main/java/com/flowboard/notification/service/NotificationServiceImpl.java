@@ -59,6 +59,7 @@ public class NotificationServiceImpl implements NotificationService {
         notificationRepository.findById(notificationId).ifPresent(n -> {
             n.setRead(true);
             notificationRepository.save(n);
+            log.info("Notification marked read: id={}", notificationId);
         });
     }
 
@@ -67,11 +68,13 @@ public class NotificationServiceImpl implements NotificationService {
         List<Notification> unread = notificationRepository.findByRecipientIdAndIsRead(recipientId, false);
         unread.forEach(n -> n.setRead(true));
         notificationRepository.saveAll(unread);
+        log.info("All notifications marked read: recipientId={}, count={}", recipientId, unread.size());
     }
 
     @Override
     public void deleteRead(Long recipientId) {
         notificationRepository.deleteByRecipientIdAndIsRead(recipientId, true);
+        log.info("Read notifications deleted: recipientId={}", recipientId);
     }
 
     @Override
@@ -89,6 +92,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public void deleteNotification(Long notificationId) {
         notificationRepository.deleteById(notificationId);
+        log.info("Notification deleted: id={}", notificationId);
     }
 
     @Override

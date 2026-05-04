@@ -11,12 +11,14 @@ import com.flowboard.checklist.mapper.ChecklistMapper;
 import com.flowboard.checklist.repository.ChecklistItemRepository;
 import com.flowboard.checklist.repository.ChecklistRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -29,7 +31,9 @@ public class ChecklistServiceImpl implements ChecklistService {
     @Override
     public ChecklistResponse createChecklist(ChecklistRequest request) {
         Checklist checklist = checklistMapper.toEntity(request);
-        return checklistMapper.toResponse(checklistRepository.save(checklist));
+        ChecklistResponse response = checklistMapper.toResponse(checklistRepository.save(checklist));
+        log.info("Checklist created: id={}, cardId={}", response.getChecklistId(), request.getCardId());
+        return response;
     }
 
     @Override
@@ -37,12 +41,15 @@ public class ChecklistServiceImpl implements ChecklistService {
         Checklist checklist = checklistRepository.findById(checklistId)
                 .orElseThrow(() -> new ResourceNotFoundException("Checklist not found"));
         checklistMapper.updateEntity(request, checklist);
-        return checklistMapper.toResponse(checklistRepository.save(checklist));
+        ChecklistResponse response = checklistMapper.toResponse(checklistRepository.save(checklist));
+        log.info("Checklist updated: id={}", checklistId);
+        return response;
     }
 
     @Override
     public void deleteChecklist(Long checklistId) {
         checklistRepository.deleteById(checklistId);
+        log.info("Checklist deleted: id={}", checklistId);
     }
 
     @Override
@@ -59,6 +66,7 @@ public class ChecklistServiceImpl implements ChecklistService {
         ChecklistItem item = checklistMapper.toItemEntity(request);
         item.setChecklist(checklist);
         checklistItemRepository.save(item);
+        log.info("Checklist item added: checklistId={}", checklistId);
     }
 
     @Override
@@ -67,11 +75,13 @@ public class ChecklistServiceImpl implements ChecklistService {
                 .orElseThrow(() -> new ResourceNotFoundException("Checklist item not found"));
         checklistMapper.updateItemEntity(request, item);
         checklistItemRepository.save(item);
+        log.info("Checklist item updated: id={}", itemId);
     }
 
     @Override
     public void deleteItem(Long itemId) {
         checklistItemRepository.deleteById(itemId);
+        log.info("Checklist item deleted: id={}", itemId);
     }
 
     @Override
@@ -80,6 +90,7 @@ public class ChecklistServiceImpl implements ChecklistService {
                 .orElseThrow(() -> new ResourceNotFoundException("Checklist item not found"));
         item.setCompleted(!item.isCompleted());
         checklistItemRepository.save(item);
+        log.info("Checklist item toggled: id={}, completed={}", itemId, item.isCompleted());
     }
 
     @Override

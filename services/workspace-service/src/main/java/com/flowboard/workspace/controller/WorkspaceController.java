@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -39,6 +38,10 @@ public class WorkspaceController {
     @PostMapping("/create")
     public ResponseEntity<ApiResponse<WorkspaceResponse>> createWorkspace(@Valid @RequestBody WorkspaceRequest request,
             HttpServletRequest httpRequest) {
+        Long userId = (Long) httpRequest.getAttribute("userId");
+        if (userId != null) {
+            request.setOwnerId(userId.intValue());
+        }
         WorkspaceResponse response = workspaceService.createWorkspace(request);
         return ResponseEntity
                 .ok(ApiResponse.success(response, "Workspace created successfully", httpRequest.getRequestURI()));
@@ -93,7 +96,7 @@ public class WorkspaceController {
 
 
     @DeleteMapping("/{workspaceId}/members/remove/{userId}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    
     public ResponseEntity<ApiResponse<Void>> removeMember(@PathVariable int workspaceId, @PathVariable int userId,
             HttpServletRequest httpRequest) {
         workspaceService.removeMember(userId, workspaceId);

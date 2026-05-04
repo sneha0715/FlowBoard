@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{base_url}}/workspaces/{{workspaceId}}/members/add"
+method: POST
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "memberId": 2,
+        "role": "MEMBER"
+    }
+order: 7000

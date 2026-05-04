@@ -36,7 +36,7 @@ public class Board {
     private Long createdById;
 
     @Column(nullable = false)
-    private boolean isClosed = false;
+    private boolean closed = false;
 
     @CreationTimestamp
     @Column(updatable = false)

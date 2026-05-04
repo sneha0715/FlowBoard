@@ -8,12 +8,15 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import com.flowboard.workspace.dto.response.ApiResponse;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<ApiResponse<Void>> handleCustomException(CustomException ex, HttpServletRequest request) {
+        log.warn("[{}] {} — {}", ex.getStatus().value(), request.getRequestURI(), ex.getMessage());
         return ResponseEntity.status(ex.getStatus())
                 .body(ApiResponse.error(ex.getMessage(), request.getRequestURI()));
     }
@@ -30,6 +33,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneralException(Exception ex, HttpServletRequest request) {
+        log.error("Unhandled error at {}: {}", request.getRequestURI(), ex.getMessage());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error("An unexpected error occurred: " + ex.getMessage(), request.getRequestURI()));
     }

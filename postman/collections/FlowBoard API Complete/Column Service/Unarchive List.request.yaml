@@ -1,6 +1,0 @@
-$kind: http-request
-url: "{{column_url}}/api/lists/{{list_id}}/unarchive"
-method: POST
-headers:
-  Authorization: Bearer {{token}}
-order: 7000

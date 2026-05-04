@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{base_url}}/checklists"
+method: POST
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "cardId": 1,
+        "title": "Tasks"
+    }
+order: 1000

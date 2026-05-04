@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{base_url}}/checklists/{{checklistId}}/items"
+method: POST
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "content": "New item",
+        "isCompleted": false
+    }
+order: 5000

@@ -1,8 +1,0 @@
-$kind: http-request
-url: "{{card_url}}/api/cards/{{card_id}}/status?status=COMPLETED"
-method: PUT
-headers:
-  Authorization: Bearer {{token}}
-queryParams:
-  status: COMPLETED
-order: 14000

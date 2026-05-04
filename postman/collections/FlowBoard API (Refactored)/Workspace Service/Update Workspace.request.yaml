@@ -1,0 +1,14 @@
+$kind: http-request
+url: "{{base_url}}/workspaces/{{id}}"
+method: PUT
+headers:
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+        "name": "Updated Workspace",
+        "description": "Updated description"
+    }
+order: 5000

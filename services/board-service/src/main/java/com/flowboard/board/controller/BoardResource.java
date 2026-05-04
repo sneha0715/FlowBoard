@@ -1,6 +1,5 @@
 package com.flowboard.board.controller;
 
-import com.flowboard.board.config.JwtUtil;
 import com.flowboard.board.dto.request.BoardMemberRequest;
 import com.flowboard.board.dto.request.BoardRequest;
 import com.flowboard.board.dto.response.ApiResponse;

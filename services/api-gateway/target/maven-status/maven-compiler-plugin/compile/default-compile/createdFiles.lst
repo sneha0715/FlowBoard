@@ -1,0 +1,5 @@
+com\flowboard\apigateway\util\JwtUtil.class
+com\flowboard\apigateway\ApiGatewayApplication.class
+com\flowboard\apigateway\filter\AuthenticationFilter$Config.class
+com\flowboard\apigateway\filter\AuthenticationFilter.class
+com\flowboard\apigateway\filter\GatewayLoggingFilter.class

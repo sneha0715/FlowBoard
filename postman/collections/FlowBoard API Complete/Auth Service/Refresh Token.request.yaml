@@ -1,6 +1,0 @@
-$kind: http-request
-url: "{{auth_url}}/auth/refresh"
-method: POST
-headers:
-  Authorization: Bearer {{token}}
-order: 4000

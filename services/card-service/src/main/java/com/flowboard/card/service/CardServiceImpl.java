@@ -9,6 +9,7 @@ import com.flowboard.card.model.Priority;
 import com.flowboard.card.model.Status;
 import com.flowboard.card.repository.CardRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CardServiceImpl implements CardService {
@@ -27,18 +29,14 @@ public class CardServiceImpl implements CardService {
     @Transactional
     public CardResponse createCard(CardRequest request) {
         Card card = cardMapper.toEntity(request);
-        
-        // If position is not provided, put it at the end
         if (request.getPosition() == null) {
             int count = cardRepository.countByListId(request.getListId());
             card.setPosition(count);
         }
-        
-        // Default status and priority if not provided
         if (card.getStatus() == null) card.setStatus(Status.TO_DO);
         if (card.getPriority() == null) card.setPriority(Priority.MEDIUM);
-        
         Card savedCard = cardRepository.save(card);
+        log.info("Card created: id={}, listId={}", savedCard.getCardId(), savedCard.getListId());
         return cardMapper.toResponse(savedCard);
     }
 
@@ -78,9 +76,9 @@ public class CardServiceImpl implements CardService {
     public CardResponse updateCard(Long cardId, CardRequest request) {
         Card card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new ResourceNotFoundException("Card not found with id: " + cardId));
-        
         cardMapper.updateEntityFromRequest(request, card);
         Card savedCard = cardRepository.save(card);
+        log.info("Card updated: id={}", cardId);
         return cardMapper.toResponse(savedCard);
     }
 
@@ -89,21 +87,17 @@ public class CardServiceImpl implements CardService {
     public CardResponse moveCard(Long cardId, Long newListId, int newPosition) {
         Card card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new ResourceNotFoundException("Card not found with id: " + cardId));
-        
         Long oldListId = card.getListId();
         int oldPosition = card.getPosition();
-        
         if (oldListId.equals(newListId)) {
-            // Reordering in the same list
             reorderInSameList(oldListId, card, oldPosition, newPosition);
         } else {
-            // Moving to a different list
             shiftPositionsDown(oldListId, oldPosition + 1);
             shiftPositionsUp(newListId, newPosition);
             card.setListId(newListId);
             card.setPosition(newPosition);
         }
-        
+        log.info("Card moved: id={}, fromList={}, toList={}, pos={}", cardId, oldListId, newListId, newPosition);
         return cardMapper.toResponse(cardRepository.save(card));
     }
 
@@ -165,6 +159,7 @@ public class CardServiceImpl implements CardService {
                 .orElseThrow(() -> new ResourceNotFoundException("Card not found with id: " + cardId));
         card.setArchived(true);
         cardRepository.save(card);
+        log.info("Card archived: id={}", cardId);
     }
 
     @Override
@@ -174,6 +169,7 @@ public class CardServiceImpl implements CardService {
                 .orElseThrow(() -> new ResourceNotFoundException("Card not found with id: " + cardId));
         card.setArchived(false);
         cardRepository.save(card);
+        log.info("Card unarchived: id={}", cardId);
     }
 
     @Override
@@ -183,6 +179,7 @@ public class CardServiceImpl implements CardService {
                 .orElseThrow(() -> new ResourceNotFoundException("Card not found with id: " + cardId));
         cardRepository.delete(card);
         shiftPositionsDown(card.getListId(), card.getPosition() + 1);
+        log.info("Card deleted: id={}", cardId);
     }
 
     @Override
@@ -192,6 +189,7 @@ public class CardServiceImpl implements CardService {
                 .orElseThrow(() -> new ResourceNotFoundException("Card not found with id: " + cardId));
         card.setAssigneeId(assigneeId);
         cardRepository.save(card);
+        log.info("Card assignee set: cardId={}, assigneeId={}", cardId, assigneeId);
     }
 
     @Override

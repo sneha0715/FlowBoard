@@ -1,0 +1,6 @@
+$kind: http-request
+url: "{{base_url}}/checklists/card/{{cardId}}/progress"
+method: GET
+headers:
+  Authorization: Bearer {{token}}
+order: 9000

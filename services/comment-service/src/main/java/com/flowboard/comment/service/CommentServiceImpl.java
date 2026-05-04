@@ -36,11 +36,9 @@ public class CommentServiceImpl implements CommentService {
     public CommentResponse addComment(CommentRequest request) {
         Comment comment = commentMapper.toEntity(request);
         comment.setAuthorId(getCurrentUserId());
-        
         Comment savedComment = commentRepository.save(comment);
-        
         notificationService.notifyNewComment(savedComment.getCardId(), savedComment.getCommentId(), savedComment.getAuthorId());
-        
+        log.info("Comment added: id={}, cardId={}, authorId={}", savedComment.getCommentId(), savedComment.getCardId(), savedComment.getAuthorId());
         return commentMapper.toResponse(savedComment);
     }
 
@@ -70,13 +68,14 @@ public class CommentServiceImpl implements CommentService {
     public CommentResponse updateComment(Long commentId, String content) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found with ID: " + commentId));
-        
         if (!comment.getAuthorId().equals(getCurrentUserId())) {
+            log.warn("Unauthorized comment update attempt: commentId={}", commentId);
             throw new RuntimeException("Unauthorized to update this comment");
         }
-        
         comment.setContent(content);
-        return commentMapper.toResponse(commentRepository.save(comment));
+        CommentResponse response = commentMapper.toResponse(commentRepository.save(comment));
+        log.info("Comment updated: id={}", commentId);
+        return response;
     }
 
     @Override
@@ -84,12 +83,12 @@ public class CommentServiceImpl implements CommentService {
     public void deleteComment(Long commentId) {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Comment not found with ID: " + commentId));
-        
         if (!comment.getAuthorId().equals(getCurrentUserId())) {
+            log.warn("Unauthorized comment delete attempt: commentId={}", commentId);
             throw new RuntimeException("Unauthorized to delete this comment");
         }
-        
-        commentRepository.delete(comment); // Triggers soft delete
+        commentRepository.delete(comment);
+        log.info("Comment deleted: id={}", commentId);
     }
 
     @Override
@@ -97,11 +96,9 @@ public class CommentServiceImpl implements CommentService {
     public AttachmentResponse addAttachment(AttachmentRequest request) {
         Attachment attachment = attachmentMapper.toEntity(request);
         attachment.setUploaderId(getCurrentUserId());
-        
         Attachment savedAttachment = attachmentRepository.save(attachment);
-        
         notificationService.notifyNewAttachment(savedAttachment.getCardId(), savedAttachment.getAttachmentId(), savedAttachment.getUploaderId());
-        
+        log.info("Attachment added: id={}, cardId={}", savedAttachment.getAttachmentId(), savedAttachment.getCardId());
         return attachmentMapper.toResponse(savedAttachment);
     }
 
@@ -117,12 +114,12 @@ public class CommentServiceImpl implements CommentService {
     public void deleteAttachment(Long attachmentId) {
         Attachment attachment = attachmentRepository.findById(attachmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Attachment not found with ID: " + attachmentId));
-        
         if (!attachment.getUploaderId().equals(getCurrentUserId())) {
+            log.warn("Unauthorized attachment delete attempt: attachmentId={}", attachmentId);
             throw new RuntimeException("Unauthorized to delete this attachment");
         }
-        
         attachmentRepository.delete(attachment);
+        log.info("Attachment deleted: id={}", attachmentId);
     }
 
     @Override

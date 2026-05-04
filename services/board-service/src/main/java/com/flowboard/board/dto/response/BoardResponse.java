@@ -19,6 +19,6 @@ public class BoardResponse {
     private String background;
     private String visibility;
     private Long createdById;
-    private boolean isClosed;
+    private boolean closed;
     private LocalDateTime createdAt;
 }

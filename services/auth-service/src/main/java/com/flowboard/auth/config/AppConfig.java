@@ -1,20 +1,10 @@
 package com.flowboard.auth.config;
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-
 /**
- * AppConfig — General application beans.
- * Kept separate from SecurityConfig to avoid circular dependency:
- * SecurityConfig → JwtAuthFilter → AuthServiceImpl → PasswordEncoder
+ * AppConfig — SIMPLIFIED.
+ * PasswordEncoder is now declared in SecurityConfig.
+ * This class is kept as a placeholder.
  */
-@Configuration
 public class AppConfig {
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+    // PasswordEncoder bean moved to SecurityConfig to avoid circular dependency.
 }

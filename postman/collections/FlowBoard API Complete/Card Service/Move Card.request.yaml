@@ -1,9 +1,0 @@
-$kind: http-request
-url: "{{card_url}}/api/cards/{{card_id}}/move?newListId={{list_id}}&newPosition=2"
-method: PUT
-headers:
-  Authorization: Bearer {{token}}
-queryParams:
-  newListId: "{{list_id}}"
-  newPosition: "2"
-order: 7000

@@ -1,6 +1,0 @@
-$kind: http-request
-url: "{{card_url}}/api/cards/{{card_id}}"
-method: DELETE
-headers:
-  Authorization: Bearer {{token}}
-order: 11000

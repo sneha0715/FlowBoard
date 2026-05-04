@@ -31,25 +31,34 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public User register(User user) {
         if (userRepository.existsByEmail(user.getEmail()) || userRepository.existsByUserName(user.getUserName())) {
+            log.warn("Register failed — email/username already exists: {}", user.getEmail());
             throw new CustomException("User already registered with this email or username", HttpStatus.CONFLICT);
         }
         user.setPasswordHash(passwordEncoder.encode(user.getPasswordHash()));
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        log.info("User registered: id={}, email={}", saved.getUserId(), saved.getEmail());
+        return saved;
     }
 
     @Override
     public String login(String email, String password) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> {
+                    log.warn("Login failed — user not found: {}", email);
+                    return new CustomException("User not found", HttpStatus.NOT_FOUND);
+                });
 
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+            log.warn("Login failed — wrong password for: {}", email);
             throw new CustomException("Invalid password", HttpStatus.UNAUTHORIZED);
         }
 
         if (user.getIsActive() != null && !user.getIsActive()) {
+            log.warn("Login failed — account deactivated: {}", email);
             throw new CustomException("Account is deactivated", HttpStatus.FORBIDDEN);
         }
 
+        log.info("User logged in: id={}, email={}", user.getUserId(), email);
         return jwtUtil.generateToken(user.getEmail(), user.getUserId(), user.getRole().name(), "General");
     }
 
@@ -57,7 +66,7 @@ public class AuthServiceImpl implements AuthService {
     public void logout(String token) {
         if (token != null) {
             blacklistedTokens.add(token);
-            log.info("Token blacklisted successfully");
+            log.info("User logged out — token blacklisted");
         }
     }
 
@@ -112,7 +121,9 @@ public class AuthServiceImpl implements AuthService {
         existingUser.setAvatarUrl(updatedUser.getAvatarUrl());
         // Do not update email or username here as they are usually unique identifiers
 
-        return userRepository.save(existingUser);
+        User saved = userRepository.save(existingUser);
+        log.info("Profile updated: userId={}", id);
+        return saved;
     }
 
     @Override
@@ -123,8 +134,8 @@ public class AuthServiceImpl implements AuthService {
             throw new CustomException("Failed to encode password", HttpStatus.INTERNAL_SERVER_ERROR);
         }
         user.setPasswordHash(encodedPassword);
-        log.info("Updating password for user ID: {}", id);
         userRepository.save(user);
+        log.info("Password changed: userId={}", id);
     }
 
     @Override
@@ -135,6 +146,7 @@ public class AuthServiceImpl implements AuthService {
         }
         user.setIsActive(false);
         userRepository.save(user);
+        log.info("Account deactivated: userId={}", id);
     }
 
     @Override

@@ -1,8 +1,0 @@
-$kind: http-request
-url: "{{auth_url}}/auth/users/search?query=john"
-method: GET
-headers:
-  Authorization: Bearer {{token}}
-queryParams:
-  query: john
-order: 8000

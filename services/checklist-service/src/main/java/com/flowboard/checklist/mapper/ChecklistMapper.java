@@ -14,6 +14,8 @@ import org.mapstruct.MappingTarget;
 public interface ChecklistMapper {
 
     @Mapping(target = "items", ignore = true)
+    @Mapping(target = "checklistId", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
     Checklist toEntity(ChecklistRequest request);
 
     ChecklistResponse toResponse(Checklist checklist);
@@ -23,6 +25,7 @@ public interface ChecklistMapper {
     @Mapping(target = "completed", ignore = true)
     ChecklistItem toItemEntity(ChecklistItemRequest request);
 
+    @Mapping(target = "isCompleted", source = "completed")
     ChecklistItemResponse toItemResponse(ChecklistItem item);
 
     @Mapping(target = "checklistId", ignore = true)

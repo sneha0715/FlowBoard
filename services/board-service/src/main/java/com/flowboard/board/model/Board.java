@@ -36,6 +36,7 @@ public class Board {
     private Long createdById;
 
     @Column(nullable = false)
+    @Builder.Default
     private boolean closed = false;
 
     @CreationTimestamp

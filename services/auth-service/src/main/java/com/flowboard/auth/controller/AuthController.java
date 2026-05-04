@@ -90,7 +90,6 @@ public class AuthController {
     public ResponseEntity<ApiResponse<UserResponse>> updateProfile(@RequestHeader("Authorization") String authHeader,
             @PathVariable Integer id, @RequestBody User updatedUser) {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
             User user = authService.updateProfile(id, updatedUser);
             UserResponse userResponse = userMapper.toResponse(user);
             return ResponseEntity.ok(ApiResponse.success(userResponse, "Profile updated successfully"));
@@ -104,7 +103,6 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> changePassword(@RequestHeader("Authorization") String authHeader,
             @PathVariable Integer id, @RequestBody Map<String, String> request) {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
             // In a real scenario, you'd check if the user is an admin or is changing their
             // own password
             String newPassword = request.get("newPassword");

@@ -19,7 +19,6 @@ import com.flowboard.workspace.dto.request.WorkspaceRequest;
 import com.flowboard.workspace.dto.response.ApiResponse;
 import com.flowboard.workspace.dto.response.WorkspaceMemberResponse;
 import com.flowboard.workspace.dto.response.WorkspaceResponse;
-import com.flowboard.workspace.mapper.WorkspaceMapper;
 import com.flowboard.workspace.mapper.WorkspaceMemberMapper;
 import com.flowboard.workspace.service.WorkspaceService;
 
@@ -32,7 +31,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class WorkspaceController {
     private final WorkspaceService workspaceService;
-    private final WorkspaceMapper workspaceMapper;
     private final WorkspaceMemberMapper workspaceMemberMapper;
 
     @PostMapping("/create")

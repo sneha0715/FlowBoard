@@ -1,10 +1,6 @@
 package com.flowboard.checklist.service;
 
-import com.flowboard.checklist.dto.request.ChecklistItemRequest;
-import com.flowboard.checklist.dto.request.ChecklistRequest;
 import com.flowboard.checklist.dto.request.LabelRequest;
-import com.flowboard.checklist.dto.response.ChecklistProgressResponse;
-import com.flowboard.checklist.dto.response.ChecklistResponse;
 import com.flowboard.checklist.dto.response.LabelResponse;
 
 import java.util.List;

@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-04-30T23:28:37+0530",
-    comments = "version: 1.5.5.Final, compiler: javac, environment: Java 20.0.1 (Oracle Corporation)"
+    date = "2026-05-04T11:24:02+0530",
+    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.46.0.v20260407-0427, environment: Java 21.0.10 (Eclipse Adoptium)"
 )
 @Component
 public class BoardMapperImpl implements BoardMapper {
@@ -22,11 +22,11 @@ public class BoardMapperImpl implements BoardMapper {
 
         Board.BoardBuilder board = Board.builder();
 
-        board.workspaceId( request.getWorkspaceId() );
-        board.name( request.getName() );
-        board.description( request.getDescription() );
         board.background( request.getBackground() );
+        board.description( request.getDescription() );
+        board.name( request.getName() );
         board.visibility( request.getVisibility() );
+        board.workspaceId( request.getWorkspaceId() );
 
         return board.build();
     }
@@ -39,15 +39,15 @@ public class BoardMapperImpl implements BoardMapper {
 
         BoardResponse.BoardResponseBuilder boardResponse = BoardResponse.builder();
 
-        boardResponse.boardId( board.getBoardId() );
-        boardResponse.workspaceId( board.getWorkspaceId() );
-        boardResponse.name( board.getName() );
-        boardResponse.description( board.getDescription() );
         boardResponse.background( board.getBackground() );
-        boardResponse.visibility( board.getVisibility() );
-        boardResponse.createdById( board.getCreatedById() );
+        boardResponse.boardId( board.getBoardId() );
         boardResponse.closed( board.isClosed() );
         boardResponse.createdAt( board.getCreatedAt() );
+        boardResponse.createdById( board.getCreatedById() );
+        boardResponse.description( board.getDescription() );
+        boardResponse.name( board.getName() );
+        boardResponse.visibility( board.getVisibility() );
+        boardResponse.workspaceId( board.getWorkspaceId() );
 
         return boardResponse.build();
     }
@@ -58,10 +58,10 @@ public class BoardMapperImpl implements BoardMapper {
             return;
         }
 
-        board.setWorkspaceId( request.getWorkspaceId() );
-        board.setName( request.getName() );
-        board.setDescription( request.getDescription() );
         board.setBackground( request.getBackground() );
+        board.setDescription( request.getDescription() );
+        board.setName( request.getName() );
         board.setVisibility( request.getVisibility() );
+        board.setWorkspaceId( request.getWorkspaceId() );
     }
 }

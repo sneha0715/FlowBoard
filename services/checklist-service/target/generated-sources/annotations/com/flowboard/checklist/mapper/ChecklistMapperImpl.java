@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-04-30T23:35:33+0530",
+    date = "2026-05-04T11:27:15+0530",
     comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.46.0.v20260407-0427, environment: Java 21.0.10 (Eclipse Adoptium)"
 )
 @Component
@@ -75,6 +75,7 @@ public class ChecklistMapperImpl implements ChecklistMapper {
 
         ChecklistItemResponse.ChecklistItemResponseBuilder checklistItemResponse = ChecklistItemResponse.builder();
 
+        checklistItemResponse.isCompleted( item.isCompleted() );
         checklistItemResponse.assigneeId( item.getAssigneeId() );
         checklistItemResponse.dueDate( item.getDueDate() );
         checklistItemResponse.itemId( item.getItemId() );

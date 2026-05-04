@@ -54,6 +54,7 @@ public class Card {
     private Long createdById;
 
     @Column(name = "is_archived", nullable = false)
+    @Builder.Default
     private boolean archived = false;
 
     private String coverColor;

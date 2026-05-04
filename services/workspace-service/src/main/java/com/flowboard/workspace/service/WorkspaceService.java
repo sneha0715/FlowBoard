@@ -1,12 +1,10 @@
 package com.flowboard.workspace.service;
 
 import java.util.List;
-import java.util.Optional;
 
 import com.flowboard.workspace.dto.request.WorkspaceRequest;
 import com.flowboard.workspace.dto.response.WorkspaceResponse;
 import com.flowboard.workspace.dto.response.WorkspaceMemberResponse;
-import com.flowboard.workspace.model.Workspace;
 import com.flowboard.workspace.model.WorkspaceMember;
 
 public interface WorkspaceService {

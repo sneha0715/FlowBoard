@@ -160,4 +160,11 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     public List<WorkspaceMember> getMembers(int workspaceId) {
         return workspaceMemberRepository.findByWorkspaceWorkspaceId(workspaceId);
     }
+
+    @Override
+    public String getMemberRole(int userId, int workspaceId) {
+        return workspaceMemberRepository.findByWorkspaceWorkspaceIdAndUserId(workspaceId, userId)
+                .map(WorkspaceMember::getRole)
+                .orElse("NONE");
+    }
 }

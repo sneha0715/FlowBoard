@@ -16,4 +16,5 @@ public interface ListService {
     void deleteList(Long listId);
     ListResponse moveList(Long listId, Long newBoardId);
     List<ListResponse> getArchivedLists(Long boardId);
+    Long getBoardIdByListId(Long listId);
 }

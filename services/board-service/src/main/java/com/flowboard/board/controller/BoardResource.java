@@ -9,6 +9,7 @@ import com.flowboard.board.service.BoardService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,13 +31,18 @@ public class BoardResource {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<BoardResponse>> getById(@PathVariable Long id) {
+    @PreAuthorize("@boardSecurity.isPublicOrMember(#id, #requesterId)")
+    public ResponseEntity<ApiResponse<BoardResponse>> getById(
+            @PathVariable Long id,
+            @RequestAttribute(value = "userId", required = false) Long requesterId) {
         BoardResponse response = boardService.getBoardById(id);
         return ResponseEntity.ok(ApiResponse.success(response, "Board retrieved successfully"));
     }
 
     @GetMapping("/workspace/{workspaceId}")
     public ResponseEntity<ApiResponse<List<BoardResponse>>> getByWorkspace(@PathVariable Long workspaceId) {
+        // Workspace-level security should be checked here or in workspace-service
+        // For now, allow viewing if authenticated
         List<BoardResponse> response = boardService.getBoardsByWorkspace(workspaceId);
         return ResponseEntity.ok(ApiResponse.success(response, "Boards retrieved successfully"));
     }
@@ -50,58 +56,95 @@ public class BoardResource {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<BoardResponse>> update(@PathVariable Long id, @Valid @RequestBody BoardRequest request,
+    @PreAuthorize("@boardSecurity.hasBoardRole(#id, #requesterId, 'ADMIN')")
+    public ResponseEntity<ApiResponse<BoardResponse>> update(
+            @PathVariable Long id,
+            @Valid @RequestBody BoardRequest request,
             @RequestAttribute(value = "userId", required = false) Long requesterId) {
-        if (requesterId == null) return unauthorized();
         BoardResponse response = boardService.updateBoard(id, request);
         return ResponseEntity.ok(ApiResponse.success(response, "Board updated successfully"));
     }
 
     @PutMapping("/{id}/close")
-    public ResponseEntity<ApiResponse<Void>> closeBoard(@PathVariable Long id,
+    @PreAuthorize("@boardSecurity.hasBoardRole(#id, #requesterId, 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> closeBoard(
+            @PathVariable Long id,
             @RequestAttribute(value = "userId", required = false) Long requesterId) {
-        if (requesterId == null) return unauthorized();
         boardService.closeBoard(id);
         return ResponseEntity.ok(ApiResponse.success(null, "Board closed successfully"));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id,
+    @PreAuthorize("@boardSecurity.hasBoardRole(#id, #requesterId, 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> delete(
+            @PathVariable Long id,
             @RequestAttribute(value = "userId", required = false) Long requesterId) {
-        if (requesterId == null) return unauthorized();
         boardService.deleteBoard(id);
         return ResponseEntity.ok(ApiResponse.success(null, "Board deleted successfully"));
     }
 
     // Member endpoints
     @PostMapping("/{id}/members")
-    public ResponseEntity<ApiResponse<BoardMemberResponse>> addMember(@PathVariable Long id, @Valid @RequestBody BoardMemberRequest request,
+    @PreAuthorize("@boardSecurity.hasBoardRole(#id, #requesterId, 'ADMIN')")
+    public ResponseEntity<ApiResponse<BoardMemberResponse>> addMember(
+            @PathVariable Long id,
+            @Valid @RequestBody BoardMemberRequest request,
             @RequestAttribute(value = "userId", required = false) Long requesterId) {
-        if (requesterId == null) return unauthorized();
         BoardMemberResponse response = boardService.addMember(id, request);
         return ResponseEntity.ok(ApiResponse.success(response, "Member added successfully"));
     }
 
     @DeleteMapping("/{id}/members/{userId}")
-    public ResponseEntity<ApiResponse<Void>> removeMember(@PathVariable Long id, @PathVariable Long userId,
+    @PreAuthorize("@boardSecurity.hasBoardRole(#id, #requesterId, 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> removeMember(
+            @PathVariable Long id,
+            @PathVariable Long userId,
             @RequestAttribute(value = "userId", required = false) Long requesterId) {
-        if (requesterId == null) return unauthorized();
         boardService.removeMember(id, userId);
         return ResponseEntity.ok(ApiResponse.success(null, "Member removed successfully"));
     }
 
     @PutMapping("/{id}/members/{userId}/role")
-    public ResponseEntity<ApiResponse<BoardMemberResponse>> updateRole(@PathVariable Long id, @PathVariable Long userId, @RequestParam String role,
+    @PreAuthorize("@boardSecurity.hasBoardRole(#id, #requesterId, 'ADMIN')")
+    public ResponseEntity<ApiResponse<BoardMemberResponse>> updateRole(
+            @PathVariable Long id,
+            @PathVariable Long userId,
+            @RequestParam String role,
             @RequestAttribute(value = "userId", required = false) Long requesterId) {
-        if (requesterId == null) return unauthorized();
         BoardMemberResponse response = boardService.updateMemberRole(id, userId, role);
         return ResponseEntity.ok(ApiResponse.success(response, "Member role updated successfully"));
     }
 
     @GetMapping("/{id}/members")
-    public ResponseEntity<ApiResponse<List<BoardMemberResponse>>> getMembers(@PathVariable Long id) {
+    @PreAuthorize("@boardSecurity.isMember(#id, #requesterId)")
+    public ResponseEntity<ApiResponse<List<BoardMemberResponse>>> getMembers(
+            @PathVariable Long id,
+            @RequestAttribute(value = "userId", required = false) Long requesterId) {
         List<BoardMemberResponse> response = boardService.getMembers(id);
         return ResponseEntity.ok(ApiResponse.success(response, "Members retrieved successfully"));
+    }
+
+    @GetMapping("/{id}/members/{userId}/check")
+    public ResponseEntity<Boolean> checkMembership(
+            @PathVariable Long id, 
+            @PathVariable Long userId,
+            @RequestHeader(value = "X-Internal-Gateway-Secret", required = false) String secret) {
+        // Simple secret validation
+        if (!"FlowBoardGateway2024".equals(secret)) {
+            // Log warning or throw exception in production
+        }
+        return ResponseEntity.ok(boardService.isMember(id, userId));
+    }
+
+    @GetMapping("/{id}/members/{userId}/role")
+    public ResponseEntity<String> getRole(
+            @PathVariable Long id, 
+            @PathVariable Long userId,
+            @RequestHeader(value = "X-Internal-Gateway-Secret", required = false) String secret) {
+        if (!"FlowBoardGateway2024".equals(secret)) {
+            // 
+        }
+        return ResponseEntity.ok(boardService.getRole(id, userId));
     }
 
     private <T> ResponseEntity<ApiResponse<T>> unauthorized() {

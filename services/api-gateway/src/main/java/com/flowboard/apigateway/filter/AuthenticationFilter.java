@@ -79,15 +79,13 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
             // 3. Extract Authorization header
             String authHeader = mutatedRequest.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                log.debug("Missing or malformed Authorization header for path: {}", request.getPath());
-                return reject(exchange, HttpStatus.UNAUTHORIZED, "Missing or invalid Authorization header",
-                        request.getPath().toString());
+                log.debug("No Authorization header for path: {}. Proceeding as Guest.", request.getPath());
+                return chain.filter(exchange.mutate().request(mutatedRequest).build());
             }
 
             String token = authHeader.substring(7).trim();
             if (token.contains(",")) {
                 token = token.split(",")[0].trim();
-                // If the second header was also 'Bearer ...', the split string might contain it, but we only need the first valid JWT.
                 if (token.startsWith("Bearer ")) {
                     token = token.substring(7).trim();
                 }

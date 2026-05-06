@@ -20,4 +20,5 @@ public interface CommentService {
     void deleteAttachment(Long attachmentId);
     
     long getCommentCount(Long cardId);
+    Long getCardIdByCommentId(Long commentId);
 }

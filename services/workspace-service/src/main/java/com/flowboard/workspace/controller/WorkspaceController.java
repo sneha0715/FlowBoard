@@ -12,7 +12,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import com.flowboard.workspace.dto.request.MemberRequest;
 import com.flowboard.workspace.dto.request.WorkspaceRequest;
@@ -46,7 +47,10 @@ public class WorkspaceController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<WorkspaceResponse>> getWorkspaceById(@PathVariable int id,
+    @PreAuthorize("@workspaceSecurity.isPublicOrMember(#id, #requesterId)")
+    public ResponseEntity<ApiResponse<WorkspaceResponse>> getWorkspaceById(
+            @PathVariable int id,
+            @RequestAttribute(value = "userId", required = false) Long requesterId,
             HttpServletRequest httpRequest) {
         WorkspaceResponse response = workspaceService.getById(id);
         return ResponseEntity
@@ -56,6 +60,8 @@ public class WorkspaceController {
     @GetMapping("/owner/{ownerId}")
     public ResponseEntity<ApiResponse<List<WorkspaceResponse>>> getByOwnerId(@PathVariable int ownerId,
             HttpServletRequest httpRequest) {
+        // Only owner or admin can see their own list? Or any authenticated user?
+        // Usually, users only see their own.
         List<WorkspaceResponse> response = workspaceService.getByOwnerID(ownerId);
         return ResponseEntity
                 .ok(ApiResponse.success(response, "Workspaces fetched successfully", httpRequest.getRequestURI()));
@@ -70,23 +76,35 @@ public class WorkspaceController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<WorkspaceResponse>> updateWorkspace(@PathVariable int id,
-            @Valid @RequestBody WorkspaceRequest request, HttpServletRequest httpRequest) {
+    @PreAuthorize("@workspaceSecurity.hasWorkspaceRole(#id, #requesterId, 'ADMIN')")
+    public ResponseEntity<ApiResponse<WorkspaceResponse>> updateWorkspace(
+            @PathVariable int id,
+            @Valid @RequestBody WorkspaceRequest request,
+            @RequestAttribute(value = "userId", required = false) Long requesterId,
+            HttpServletRequest httpRequest) {
         WorkspaceResponse response = workspaceService.updateWorkspace(id, request);
         return ResponseEntity
                 .ok(ApiResponse.success(response, "Workspace updated successfully", httpRequest.getRequestURI()));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> deleteWorkspace(@PathVariable int id, HttpServletRequest httpRequest) {
+    @PreAuthorize("@workspaceSecurity.hasWorkspaceRole(#id, #requesterId, 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> deleteWorkspace(
+            @PathVariable int id,
+            @RequestAttribute(value = "userId", required = false) Long requesterId,
+            HttpServletRequest httpRequest) {
         workspaceService.deleteWorkspace(id);
         return ResponseEntity
                 .ok(ApiResponse.success(null, "Workspace deleted successfully", httpRequest.getRequestURI()));
     }
 
     @PostMapping("/{workspaceId}/members/add")
-    public ResponseEntity<ApiResponse<WorkspaceMemberResponse>> addMember(@PathVariable int workspaceId,
-            @Valid @RequestBody MemberRequest request, HttpServletRequest httpRequest) {
+    @PreAuthorize("@workspaceSecurity.hasWorkspaceRole(#workspaceId, #requesterId, 'ADMIN')")
+    public ResponseEntity<ApiResponse<WorkspaceMemberResponse>> addMember(
+            @PathVariable int workspaceId,
+            @Valid @RequestBody MemberRequest request,
+            @RequestAttribute(value = "userId", required = false) Long requesterId,
+            HttpServletRequest httpRequest) {
         WorkspaceMemberResponse response = workspaceService.addMember(workspaceId, request.getUserId(), request.getRole());
         return ResponseEntity
                 .ok(ApiResponse.success(response, "Member added successfully", httpRequest.getRequestURI()));
@@ -94,28 +112,44 @@ public class WorkspaceController {
 
 
     @DeleteMapping("/{workspaceId}/members/remove/{userId}")
-    
-    public ResponseEntity<ApiResponse<Void>> removeMember(@PathVariable int workspaceId, @PathVariable int userId,
+    @PreAuthorize("@workspaceSecurity.hasWorkspaceRole(#workspaceId, #requesterId, 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> removeMember(
+            @PathVariable int workspaceId,
+            @PathVariable int userId,
+            @RequestAttribute(value = "userId", required = false) Long requesterId,
             HttpServletRequest httpRequest) {
         workspaceService.removeMember(userId, workspaceId);
         return ResponseEntity.ok(ApiResponse.success(null, "Member removed successfully", httpRequest.getRequestURI()));
     }
 
     @PutMapping("/{workspaceId}/members/role")
-    public ResponseEntity<ApiResponse<Void>> updateMemberRole(@PathVariable int workspaceId, @RequestParam int userId,
-            @RequestParam String role, HttpServletRequest httpRequest) {
+    @PreAuthorize("@workspaceSecurity.hasWorkspaceRole(#workspaceId, #requesterId, 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> updateMemberRole(
+            @PathVariable int workspaceId,
+            @RequestParam int userId,
+            @RequestParam String role,
+            @RequestAttribute(value = "userId", required = false) Long requesterId,
+            HttpServletRequest httpRequest) {
         workspaceService.updateMemberRole(userId, workspaceId, role);
         return ResponseEntity
                 .ok(ApiResponse.success(null, "Member role updated successfully", httpRequest.getRequestURI()));
     }
 
     @GetMapping("/{workspaceId}/members")
-    public ResponseEntity<ApiResponse<List<WorkspaceMemberResponse>>> getMembers(@PathVariable int workspaceId,
+    @PreAuthorize("@workspaceSecurity.isMember(#workspaceId, #requesterId)")
+    public ResponseEntity<ApiResponse<List<WorkspaceMemberResponse>>> getMembers(
+            @PathVariable int workspaceId,
+            @RequestAttribute(value = "userId", required = false) Long requesterId,
             HttpServletRequest httpRequest) {
         List<WorkspaceMemberResponse> response = workspaceService.getMembers(workspaceId).stream()
                 .map(workspaceMemberMapper::toResponse)
                 .collect(Collectors.toList());
         return ResponseEntity
                 .ok(ApiResponse.success(response, "Members fetched successfully", httpRequest.getRequestURI()));
+    }
+
+    @GetMapping("/{workspaceId}/members/{userId}/role")
+    public ResponseEntity<String> getRole(@PathVariable int workspaceId, @PathVariable int userId) {
+        return ResponseEntity.ok(workspaceService.getMemberRole(userId, workspaceId));
     }
 }

@@ -31,4 +31,8 @@ public interface BoardService {
     BoardMemberResponse updateMemberRole(Long boardId, Long userId, String role);
 
     List<BoardMemberResponse> getMembers(Long boardId);
+
+    boolean isMember(Long boardId, Long userId);
+
+    String getRole(Long boardId, Long userId);
 }

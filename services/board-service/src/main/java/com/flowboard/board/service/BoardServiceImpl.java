@@ -134,4 +134,16 @@ public class BoardServiceImpl implements BoardService {
                 .map(boardMemberMapper::toResponse)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public boolean isMember(Long boardId, Long userId) {
+        return boardMemberRepository.existsByBoardIdAndUserId(boardId, userId);
+    }
+
+    @Override
+    public String getRole(Long boardId, Long userId) {
+        return boardMemberRepository.findByBoardIdAndUserId(boardId, userId)
+                .map(BoardMember::getRole)
+                .orElse("NONE");
+    }
 }

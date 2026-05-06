@@ -64,6 +64,13 @@ public class CardServiceImpl implements CardService {
     }
 
     @Override
+    public List<CardResponse> getArchivedCardsByBoard(Long boardId) {
+        return cardRepository.findByBoardIdAndArchivedTrue(boardId).stream()
+                .map(cardMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public List<CardResponse> getCardsByAssignee(Long assigneeId) {
         return cardRepository.findByAssigneeId(assigneeId).stream()
                 .filter(card -> !card.isArchived())
@@ -215,5 +222,12 @@ public class CardServiceImpl implements CardService {
         return cardRepository.findByDueDateBeforeAndStatusNotAndArchivedFalse(LocalDate.now(), Status.DONE).stream()
                 .map(cardMapper::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public Long getBoardIdByCardId(Long cardId) {
+        return cardRepository.findById(cardId)
+                .map(Card::getBoardId)
+                .orElseThrow(() -> new ResourceNotFoundException("Card not found with id: " + cardId));
     }
 }

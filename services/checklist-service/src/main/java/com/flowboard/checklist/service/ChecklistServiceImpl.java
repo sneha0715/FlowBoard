@@ -117,4 +117,11 @@ public class ChecklistServiceImpl implements ChecklistService {
                 .progressPercentage(progress)
                 .build();
     }
+
+    @Override
+    public Long getCardIdByChecklistId(Long checklistId) {
+        return checklistRepository.findById(checklistId)
+                .map(Checklist::getCardId)
+                .orElseThrow(() -> new ResourceNotFoundException("Checklist not found"));
+    }
 }

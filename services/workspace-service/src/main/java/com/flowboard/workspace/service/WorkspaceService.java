@@ -27,5 +27,6 @@ public interface WorkspaceService {
     void updateMemberRole(int userId, int workspaceId, String role);
 
     List<WorkspaceMember> getMembers(int workspaceId);
-
+    
+    String getMemberRole(int userId, int workspaceId);
 }

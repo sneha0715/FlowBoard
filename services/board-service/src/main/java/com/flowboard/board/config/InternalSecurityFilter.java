@@ -70,6 +70,13 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
                 catch (NumberFormatException ignored) {}
             }
             log.debug("Gateway-authenticated: user={}, role={}, userId={}", username, role, userId);
+        } else {
+            // Internal service-to-service call without user context
+            UsernamePasswordAuthenticationToken auth =
+                    new UsernamePasswordAuthenticationToken("internal-service", null, 
+                            List.of(new SimpleGrantedAuthority("ROLE_INTERNAL")));
+            SecurityContextHolder.getContext().setAuthentication(auth);
+            log.debug("Internal service authentication set");
         }
 
         filterChain.doFilter(request, response);

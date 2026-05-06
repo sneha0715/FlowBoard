@@ -8,6 +8,7 @@ com\flowboard\comment\exception\GlobalExceptionHandler.class
 com\flowboard\comment\service\CommentService.class
 com\flowboard\comment\entity\Attachment$AttachmentBuilder.class
 com\flowboard\comment\dto\response\AttachmentResponse.class
+com\flowboard\comment\client\CardClient.class
 com\flowboard\comment\dto\request\AttachmentRequest.class
 com\flowboard\comment\entity\Comment$CommentBuilder.class
 com\flowboard\comment\dto\response\ApiResponse$ApiResponseBuilder.class
@@ -24,5 +25,6 @@ com\flowboard\comment\service\NotificationServiceImpl.class
 com\flowboard\comment\entity\Comment.class
 com\flowboard\comment\mapper\AttachmentMapperImpl.class
 com\flowboard\comment\service\NotificationService.class
+com\flowboard\comment\client\BoardClient.class
 com\flowboard\comment\dto\request\CommentRequest.class
 com\flowboard\comment\repository\CommentRepository.class

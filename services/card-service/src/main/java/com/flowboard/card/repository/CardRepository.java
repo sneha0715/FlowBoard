@@ -15,6 +15,7 @@ public interface CardRepository extends JpaRepository<Card, Long> {
     List<Card> findByBoardId(Long boardId);
     List<Card> findByAssigneeId(Long assigneeId);
     List<Card> findByListIdOrderByPosition(Long listId);
+    List<Card> findByBoardIdAndArchivedTrue(Long boardId);
     List<Card> findByDueDateBeforeAndStatusNotAndArchivedFalse(LocalDate date, Status status);
     List<Card> findByPriority(Priority priority);
     List<Card> findByStatus(Status status);

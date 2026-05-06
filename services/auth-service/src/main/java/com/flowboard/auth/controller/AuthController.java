@@ -132,8 +132,13 @@ public class AuthController {
             @PathVariable Integer id) {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
-            User user = authService.getProfile(token);
-            authService.deactivateAccount(user.getUserId());
+            User requester = authService.getProfile(token);
+            boolean isAdmin = requester.getRole() == com.flowboard.auth.model.Role.PLATFORM_ADMIN;
+            if (!isAdmin && !requester.getUserId().equals(id)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Forbidden: You cannot deactivate this account", "/auth/deactivate/" + id));
+            }
+            authService.deactivateAccount(id);
             return ResponseEntity.ok(ApiResponse.success(null, "Account deactivated successfully"));
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

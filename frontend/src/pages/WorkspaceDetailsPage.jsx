@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, FolderKanban, LoaderCircle, Mail, Plus, Send, Shield, Trash2, UserPlus, Users, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Edit2, FolderKanban, LoaderCircle, Mail, Plus, Send, Shield, Trash2, UserPlus, Users, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AppShell from "../components/layout/AppShell";
@@ -35,9 +35,17 @@ export default function WorkspaceDetailsPage() {
   const [showBoardForm, setShowBoardForm] = useState(false);
   const [boardDraft, setBoardDraft] = useState({ name: "", description: "", background: "Ocean", visibility: "PRIVATE" });
   const [boardSubmitting, setBoardSubmitting] = useState(false);
+  const [showWsEdit, setShowWsEdit] = useState(false);
+  const [wsEditDraft, setWsEditDraft] = useState({ name: "", description: "", visibility: "PRIVATE" });
+  const [wsUpdating, setWsUpdating] = useState(false);
 
   const load = () => dispatch(fetchWorkspaceBundle(workspaceId));
-  useEffect(() => { load(); }, [workspaceId]);
+  useEffect(() => { 
+    load(); 
+    if (workspace) {
+      setWsEditDraft({ name: workspace.name, description: workspace.description || "", visibility: workspace.visibility || "PRIVATE" });
+    }
+  }, [workspaceId, workspace?.name]);
 
   const memberIds = useMemo(() => new Set(members.map((m) => Number(m.userId))), [members]);
   const isAdmin = userRole === "ADMIN" || user?.role === "PLATFORM_ADMIN";
@@ -95,6 +103,29 @@ export default function WorkspaceDetailsPage() {
     }
   };
 
+  const updateWorkspace = async (e) => {
+    e.preventDefault();
+    setWsUpdating(true);
+    try {
+      await workspaceApi.update(workspaceId, wsEditDraft);
+      setShowWsEdit(false);
+      showToast("success", "Workspace updated!");
+      load();
+    } catch (err) {
+      showToast("error", "Failed to update workspace.");
+    } finally { setWsUpdating(false); }
+  };
+
+  const updateMemberRole = async (userId, nextRole) => {
+    try {
+      await workspaceApi.updateRole(workspaceId, userId, nextRole);
+      showToast("success", "Role updated.");
+      load();
+    } catch (err) {
+      showToast("error", "Failed to update role.");
+    }
+  };
+
   const createBoard = async (e) => {
     e.preventDefault();
     setBoardSubmitting(true);
@@ -120,7 +151,16 @@ export default function WorkspaceDetailsPage() {
 
   return (
     <AppShell
-      title={workspace?.name || "Workspace"}
+      title={
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          {workspace?.name || "Workspace"}
+          {isAdmin && (
+            <button onClick={() => setShowWsEdit(true)} className="fb-btn-ghost" style={{ padding: "0.25rem", color: "var(--color-text-muted)" }}>
+              <Edit2 size={14} />
+            </button>
+          )}
+        </div>
+      }
       subtitle={workspace?.description || `${boards.length} boards · ${members.length} members`}
       actions={actions}
     >
@@ -276,7 +316,19 @@ export default function WorkspaceDetailsPage() {
                     </div>
                     <div>
                       <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--color-text-primary)", margin: 0 }}>User #{m.userId}</p>
-                      <p style={{ fontSize: "0.7rem", color: "var(--color-text-muted)", margin: 0 }}>{m.role}</p>
+                      {isAdmin ? (
+                        <select 
+                          value={m.role} 
+                          onChange={(e) => updateMemberRole(m.userId, e.target.value)}
+                          style={{ fontSize: "0.65rem", padding: "0 0.25rem", height: "18px", marginTop: "2px", border: "none", background: "transparent", color: "var(--color-primary-light)", fontWeight: 600, cursor: "pointer" }}
+                        >
+                          <option value="MEMBER">MEMBER</option>
+                          <option value="ADMIN">ADMIN</option>
+                          <option value="OBSERVER">OBSERVER</option>
+                        </select>
+                      ) : (
+                        <p style={{ fontSize: "0.7rem", color: "var(--color-text-muted)", margin: 0 }}>{m.role}</p>
+                      )}
                     </div>
                   </div>
                   {isAdmin && Number(m.userId) !== Number(user?.userId) && (
@@ -289,6 +341,40 @@ export default function WorkspaceDetailsPage() {
               {members.length === 0 && <p style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>No members yet.</p>}
             </div>
           </div>
+
+          {/* Edit Workspace Modal */}
+          {showWsEdit && (
+            <div className="fb-modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowWsEdit(false)}>
+              <div className="fb-modal" style={{ maxWidth: 440, padding: "1.5rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1.25rem" }}>
+                  <h3 style={{ margin: 0 }}>Edit workspace</h3>
+                  <button onClick={() => setShowWsEdit(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)" }}><X size={18} /></button>
+                </div>
+                <form onSubmit={updateWorkspace} style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+                  <div className="fb-input-group">
+                    <label className="fb-input-label" htmlFor="ws-edit-name">Workspace name *</label>
+                    <input id="ws-edit-name" required value={wsEditDraft.name} onChange={(e) => setWsEditDraft(d => ({ ...d, name: e.target.value }))} />
+                  </div>
+                  <div className="fb-input-group">
+                    <label className="fb-input-label" htmlFor="ws-edit-desc">Description</label>
+                    <textarea id="ws-edit-desc" rows={3} value={wsEditDraft.description} onChange={(e) => setWsEditDraft(d => ({ ...d, description: e.target.value }))} />
+                  </div>
+                  <div className="fb-input-group">
+                    <label className="fb-input-label">Visibility</label>
+                    <select value={wsEditDraft.visibility} onChange={(e) => setWsEditDraft(d => ({ ...d, visibility: e.target.value }))}>
+                      {VISIBILITY_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", marginTop: "0.5rem" }}>
+                    <button type="button" onClick={() => setShowWsEdit(false)} className="fb-btn fb-btn-secondary">Cancel</button>
+                    <button type="submit" disabled={wsUpdating} className="fb-btn fb-btn-primary">
+                      {wsUpdating ? "Saving..." : "Save changes"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
 
           {/* Workspace info + danger */}
           {isAdmin && workspace && (

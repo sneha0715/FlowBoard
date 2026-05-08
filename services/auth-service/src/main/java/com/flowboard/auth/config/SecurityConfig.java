@@ -17,7 +17,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 /**
  * SecurityConfig for auth-service.
  *
- * <p>Public endpoints: POST /auth/login, POST /auth/register — no gateway secret required.
+ * <p>
+ * Public endpoints: POST /auth/login, POST /auth/register — no gateway secret
+ * required.
  * All other endpoints: require the gateway's X-Internal-Gateway-Secret header,
  * validated by InternalSecurityFilter.
  */
@@ -39,6 +41,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/register").permitAll()
                 // Actuator health check
                 .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 // All other requests must pass InternalSecurityFilter
                 .anyRequest().authenticated()
             )

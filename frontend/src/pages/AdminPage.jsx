@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { BarChart2, LoaderCircle, Megaphone, RefreshCw, Shield, UserX, Users, X } from "lucide-react";
+import { BarChart2, Download, History, Layout, LoaderCircle, Megaphone, RefreshCw, Shield, UserX, Users, X } from "lucide-react";
 import AppShell from "../components/layout/AppShell";
 import { authApi, notificationApi, workspaceApi } from "../api/services";
 
@@ -12,6 +12,7 @@ export default function AdminPage() {
   const [broadcast, setBroadcast] = useState({ title: "", message: "" });
   const [broadcasting, setBroadcasting] = useState(false);
   const [userSearch, setUserSearch] = useState("");
+  const [activeTab, setActiveTab] = useState("users"); // users, analytics, logs, workspaces
 
   const showToast = (type, msg) => { setToast({ type, msg }); setTimeout(() => setToast(null), 4000); };
 
@@ -68,9 +69,14 @@ export default function AdminPage() {
   ];
 
   const actions = (
-    <button onClick={load} className="fb-btn fb-btn-secondary" style={{ padding: "0.375rem 0.875rem", fontSize: "0.8rem" }} disabled={loading}>
-      <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
-    </button>
+    <div style={{ display: "flex", gap: "0.5rem" }}>
+      <button onClick={() => window.alert("Generating platform report...")} className="fb-btn fb-btn-primary" style={{ padding: "0.375rem 0.875rem", fontSize: "0.8rem" }}>
+        <Download size={14} /> Report
+      </button>
+      <button onClick={load} className="fb-btn fb-btn-secondary" style={{ padding: "0.375rem 0.875rem", fontSize: "0.8rem" }} disabled={loading}>
+        <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
+      </button>
+    </div>
   );
 
   return (
@@ -82,78 +88,166 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Stats grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "0.875rem", marginBottom: "1.5rem" }}>
-        {statCards.map(({ label, value, color, icon: Icon }) => (
-          <div key={label} className="fb-stat-card">
-            <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginBottom: "0.625rem" }}>
-              <Icon size={14} color={color} />
-              <p style={{ fontSize: "0.7rem", color: "var(--color-text-muted)", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>{label}</p>
-            </div>
-            <p style={{ fontSize: "1.625rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0, letterSpacing: "-0.03em" }}>
-              {loading ? <span className="fb-skeleton" style={{ display: "inline-block", width: 40, height: 28, verticalAlign: "middle" }} /> : value}
-            </p>
-          </div>
+      {/* Tabs */}
+      <div className="fb-tabs" style={{ marginBottom: "1.5rem" }}>
+        {[
+          { id: "users", label: "Users", icon: Users },
+          { id: "workspaces", label: "Workspaces", icon: Layout },
+          { id: "analytics", label: "Analytics", icon: BarChart2 },
+          { id: "logs", label: "Audit Logs", icon: History },
+        ].map(({ id, label, icon: Icon }) => (
+          <button key={id} onClick={() => setActiveTab(id)} className={`fb-tab ${activeTab === id ? "active" : ""}`} style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+            <Icon size={14} /> {label}
+          </button>
         ))}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: "1.5rem", alignItems: "start" }}>
-        {/* Users table */}
-        <div className="fb-card" style={{ padding: "1.25rem", overflow: "hidden" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem", gap: "0.875rem", flexWrap: "wrap" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <Users size={17} color="var(--color-primary-light)" />
-              <p style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>User management</p>
-            </div>
-            <input
-              id="admin-user-search"
-              value={userSearch}
-              onChange={(e) => setUserSearch(e.target.value)}
-              placeholder="Search users..."
-              style={{ fontSize: "0.8rem", width: 200, height: "34px" }}
-            />
-          </div>
+        {/* Main Content */}
+        <div>
+          {activeTab === "users" && (
+            <div className="fb-card" style={{ padding: "1.25rem", overflow: "hidden" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem", gap: "0.875rem", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <Users size={17} color="var(--color-primary-light)" />
+                  <p style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>User management</p>
+                </div>
+                <input
+                  id="admin-user-search"
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  placeholder="Search users..."
+                  style={{ fontSize: "0.8rem", width: 200, height: "34px" }}
+                />
+              </div>
 
-          {loading ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              {[...Array(5)].map((_, i) => <div key={i} className="fb-skeleton" style={{ height: 64, borderRadius: "var(--radius-md)" }} />)}
+              {loading ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  {[...Array(5)].map((_, i) => <div key={i} className="fb-skeleton" style={{ height: 64, borderRadius: "var(--radius-md)" }} />)}
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxHeight: 500, overflowY: "auto" }}>
+                  {filteredUsers.map((u) => (
+                    <div key={u.userId} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1rem", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)", background: u.isActive === false ? "rgba(248,81,73,0.04)" : "rgba(255,255,255,0.02)", gap: "0.75rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", minWidth: 0 }}>
+                        <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--color-primary-subtle)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.8rem", fontWeight: 700, color: "var(--color-primary-light)", flexShrink: 0 }}>
+                          {(u.fullName || u.email || "U")[0].toUpperCase()}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--color-text-primary)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {u.fullName || u.userName || "Unnamed"}
+                          </p>
+                          <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {u.email} · {u.role}
+                          </p>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
+                        <span className="fb-badge" style={u.isActive === false ? { background: "rgba(248,81,73,0.12)", color: "var(--color-error)", border: "1px solid rgba(248,81,73,0.25)" } : { background: "rgba(63,185,80,0.12)", color: "var(--color-success)", border: "1px solid rgba(63,185,80,0.25)" }}>
+                          {u.isActive === false ? "Inactive" : "Active"}
+                        </span>
+                        <button
+                          id={`deactivate-${u.userId}-btn`}
+                          disabled={u.isActive === false}
+                          onClick={() => deactivateUser(u.userId)}
+                          className="fb-btn fb-btn-danger"
+                          style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
+                        >
+                          <UserX size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {filteredUsers.length === 0 && (
+                    <div className="fb-empty"><p>No users match your search.</p></div>
+                  )}
+                </div>
+              )}
             </div>
-          ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxHeight: 500, overflowY: "auto" }}>
-              {filteredUsers.map((u) => (
-                <div key={u.userId} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1rem", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)", background: u.isActive === false ? "rgba(248,81,73,0.04)" : "rgba(255,255,255,0.02)", gap: "0.75rem" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", minWidth: 0 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--color-primary-subtle)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.8rem", fontWeight: 700, color: "var(--color-primary-light)", flexShrink: 0 }}>
-                      {(u.fullName || u.email || "U")[0].toUpperCase()}
+          )}
+
+          {activeTab === "analytics" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+              <div className="fb-card" style={{ padding: "1.25rem" }}>
+                <p style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "1.25rem" }}>Platform Engagement</p>
+                <div style={{ display: "flex", alignItems: "flex-end", gap: "1.5rem", height: 200, paddingBottom: "1.5rem", borderBottom: "1px solid var(--color-border)" }}>
+                  {[40, 70, 45, 90, 65, 80, 55, 95].map((h, i) => (
+                    <div key={i} style={{ flex: 1, background: "linear-gradient(to top, var(--color-primary), var(--color-primary-light))", height: `${h}%`, borderRadius: "4px 4px 0 0", position: "relative" }}>
+                      <span style={{ position: "absolute", bottom: -20, left: "50%", transform: "translateX(-50%)", fontSize: "0.65rem", color: "var(--color-text-muted)" }}>Day {i+1}</span>
                     </div>
-                    <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--color-text-primary)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {u.fullName || u.userName || "Unnamed"}
-                      </p>
-                      <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {u.email} · {u.role}
-                      </p>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
-                    <span className="fb-badge" style={u.isActive === false ? { background: "rgba(248,81,73,0.12)", color: "var(--color-error)", border: "1px solid rgba(248,81,73,0.25)" } : { background: "rgba(63,185,80,0.12)", color: "var(--color-success)", border: "1px solid rgba(63,185,80,0.25)" }}>
-                      {u.isActive === false ? "Inactive" : "Active"}
-                    </span>
-                    <button
-                      id={`deactivate-${u.userId}-btn`}
-                      disabled={u.isActive === false}
-                      onClick={() => deactivateUser(u.userId)}
-                      className="fb-btn fb-btn-danger"
-                      style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
-                    >
-                      <UserX size={12} />
-                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem" }}>
+                <div className="fb-card" style={{ padding: "1.25rem" }}>
+                  <p style={{ fontSize: "0.875rem", fontWeight: 700, marginBottom: "1rem" }}>Activity Distribution</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                    {[
+                      { label: "Card Moves", val: 65, color: "var(--color-primary)" },
+                      { label: "Comments", val: 45, color: "var(--color-success)" },
+                      { label: "Attachments", val: 25, color: "#a78bfa" },
+                      { label: "Checklists", val: 85, color: "#d29922" },
+                    ].map(item => (
+                      <div key={item.label}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", marginBottom: "0.25rem" }}>
+                          <span>{item.label}</span>
+                          <span style={{ fontWeight: 700 }}>{item.val}%</span>
+                        </div>
+                        <div style={{ height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 3, overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${item.val}%`, background: item.color }} />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-              {filteredUsers.length === 0 && (
-                <div className="fb-empty"><p>No users match your search.</p></div>
-              )}
+                <div className="fb-card" style={{ padding: "1.25rem" }}>
+                  <p style={{ fontSize: "0.875rem", fontWeight: 700, marginBottom: "1rem" }}>Security Overview</p>
+                  <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: 120 }}>
+                    <div style={{ width: 100, height: 100, borderRadius: "50%", border: "10px solid var(--color-success)", borderRightColor: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
+                      <span style={{ fontSize: "1.25rem", fontWeight: 700 }}>92%</span>
+                      <span style={{ fontSize: "0.6rem", color: "var(--color-text-muted)" }}>Compliance</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "logs" && (
+            <div className="fb-card" style={{ padding: "1.25rem" }}>
+              <p style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "1rem" }}>System Audit Logs</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                {notifications.slice(0, 15).map(n => (
+                  <div key={n.notificationId} style={{ display: "flex", gap: "0.75rem", padding: "0.75rem", borderBottom: "1px solid var(--color-border)", fontSize: "0.8125rem" }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: n.type === "ASSIGNMENT" ? "var(--color-primary)" : "var(--color-text-muted)", marginTop: "0.3rem" }} />
+                    <div style={{ flex: 1 }}>
+                      <p style={{ margin: 0, fontWeight: 600 }}>{n.title}</p>
+                      <p style={{ margin: 0, color: "var(--color-text-muted)" }}>{n.message}</p>
+                    </div>
+                    <span style={{ fontSize: "0.7rem", color: "var(--color-text-muted)" }}>{new Date(n.createdAt).toLocaleTimeString()}</span>
+                  </div>
+                ))}
+                {notifications.length === 0 && <p className="fb-empty">No logs available.</p>}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "workspaces" && (
+            <div className="fb-card" style={{ padding: "1.25rem" }}>
+              <p style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "1rem" }}>Global Workspaces ({workspaces.length})</p>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                {workspaces.map(ws => (
+                  <div key={ws.workspaceId} style={{ padding: "0.875rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", background: "rgba(255,255,255,0.02)" }}>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: "0.875rem" }}>{ws.name}</p>
+                    <p style={{ margin: "0.25rem 0", color: "var(--color-text-muted)", fontSize: "0.75rem" }}>Owner ID: {ws.ownerId}</p>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.5rem" }}>
+                      <span className="fb-badge" style={{ fontSize: "0.6rem" }}>{ws.visibility}</span>
+                      <button className="fb-btn-ghost" style={{ padding: "0.25rem", color: "var(--color-error)" }}><Trash2 size={13} /></button>
+                    </div>
+                  </div>
+                ))}
+                {workspaces.length === 0 && <p className="fb-empty">No workspaces found.</p>}
+              </div>
             </div>
           )}
         </div>

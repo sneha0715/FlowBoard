@@ -9,8 +9,12 @@ import {
   Trash2,
   User,
   X,
+  Reply,
+  Edit2,
+  FilePlus,
+  FileText,
 } from "lucide-react";
-import { cardApi, checklistApi, commentApi, labelApi, notificationApi } from "../../api/services";
+import { attachmentApi, cardApi, checklistApi, commentApi, labelApi, notificationApi } from "../../api/services";
 
 const PRIORITY_OPTIONS = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
 const STATUS_OPTIONS = ["TO_DO", "IN_PROGRESS", "IN_REVIEW", "DONE"];
@@ -51,6 +55,11 @@ export default function CardDetailsModal({ boardId, card, boardMembers, currentU
   const [boardLabels, setBoardLabels] = useState([]);
   const [newLabelName, setNewLabelName] = useState("");
   const [newLabelColor, setNewLabelColor] = useState("#0079BF");
+  const [attachments, setAttachments] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [editingComment, setEditingComment] = useState(null);
+  const [editCommentText, setEditCommentText] = useState("");
 
   useEffect(() => {
     if (!card) return;
@@ -68,6 +77,7 @@ export default function CardDetailsModal({ boardId, card, boardMembers, currentU
     loadComments();
     loadChecklists();
     loadLabels();
+    loadAttachments();
   }, [card?.cardId]);
 
   if (!open || !card) return null;
@@ -89,6 +99,11 @@ export default function CardDetailsModal({ boardId, card, boardMembers, currentU
     ]);
     setCardLabels(Array.isArray(cardL) ? cardL : []);
     setBoardLabels(Array.isArray(boardL) ? boardL : []);
+  };
+  
+  const loadAttachments = async () => {
+    const data = await attachmentApi.byCard(card.cardId).catch(() => []);
+    setAttachments(Array.isArray(data) ? data : []);
   };
 
   const saveCard = async (e) => {
@@ -154,6 +169,55 @@ export default function CardDetailsModal({ boardId, card, boardMembers, currentU
   const deleteComment = async (commentId) => {
     await commentApi.remove(commentId).catch(() => {});
     await loadComments();
+  };
+  
+  const handleEditComment = async (e) => {
+    e.preventDefault();
+    if (!editCommentText.trim()) return;
+    await commentApi.update(editingComment.commentId, { content: editCommentText });
+    setEditingComment(null);
+    setEditCommentText("");
+    await loadComments();
+  };
+  
+  const handleReply = async (e) => {
+    e.preventDefault();
+    if (!commentText.trim() || !replyingTo) return;
+    setCommentSubmitting(true);
+    try {
+      await commentApi.create({ 
+        cardId: card.cardId, 
+        authorId: Number(currentUser?.userId), 
+        content: commentText,
+        parentId: replyingTo.commentId 
+      });
+      setCommentText("");
+      setReplyingTo(null);
+      await loadComments();
+    } finally { setCommentSubmitting(false); }
+  };
+  
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      // Simulate upload to get a URL
+      const mockUrl = URL.createObjectURL(file);
+      await attachmentApi.create({
+        cardId: card.cardId,
+        fileName: file.name,
+        fileUrl: mockUrl,
+        fileType: file.type,
+        sizeKb: Math.round(file.size / 1024)
+      });
+      await loadAttachments();
+    } finally { setUploading(false); }
+  };
+  
+  const deleteAttachment = async (id) => {
+    await attachmentApi.remove(id).catch(() => {});
+    await loadAttachments();
   };
 
   const addChecklist = async (e) => {
@@ -249,6 +313,7 @@ export default function CardDetailsModal({ boardId, card, boardMembers, currentU
             { id: "details", label: "Details", icon: User },
             { id: "checklist", label: `Checklist${totalItems > 0 ? ` (${doneItems}/${totalItems})` : ""}`, icon: CheckSquare },
             { id: "comments", label: `Comments${comments.length > 0 ? ` (${comments.length})` : ""}`, icon: MessageCircle },
+            { id: "attachments", label: `Attachments${attachments.length > 0 ? ` (${attachments.length})` : ""}`, icon: Paperclip },
             { id: "labels", label: `Labels${cardLabels.length > 0 ? ` (${cardLabels.length})` : ""}`, icon: Tag },
           ].map(({ id, label, icon: Icon }) => (
             <button key={id} onClick={() => setActiveTab(id)} className={`fb-tab ${activeTab === id ? "active" : ""}`} style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.8rem" }}>
@@ -292,8 +357,20 @@ export default function CardDetailsModal({ boardId, card, boardMembers, currentU
                   <input type="date" value={draft.startDate} onChange={(e) => setDraft((d) => ({ ...d, startDate: e.target.value }))} readOnly={readOnly} id="card-start-date" />
                 </div>
                 <div className="fb-input-group">
-                  <label className="fb-input-label"><Calendar size={12} style={{ display: "inline", marginRight: 4 }} />Due date</label>
-                  <input type="date" value={draft.dueDate} onChange={(e) => setDraft((d) => ({ ...d, dueDate: e.target.value }))} readOnly={readOnly} id="card-due-date" />
+                  <label className="fb-input-label" style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span><Calendar size={12} style={{ display: "inline", marginRight: 4 }} />Due date</span>
+                    {draft.dueDate && draft.status !== "DONE" && new Date(draft.dueDate) < new Date() && (
+                      <span style={{ color: "var(--color-error)", fontSize: "0.7rem", fontWeight: 700 }}>OVERDUE</span>
+                    )}
+                  </label>
+                  <input 
+                    type="date" 
+                    value={draft.dueDate} 
+                    onChange={(e) => setDraft((d) => ({ ...d, dueDate: e.target.value }))} 
+                    readOnly={readOnly} 
+                    id="card-due-date" 
+                    style={draft.dueDate && draft.status !== "DONE" && new Date(draft.dueDate) < new Date() ? { borderColor: "var(--color-error)", background: "rgba(248,81,73,0.05)" } : {}}
+                  />
                 </div>
                 <div className="fb-input-group">
                   <label className="fb-input-label"><User size={12} style={{ display: "inline", marginRight: 4 }} />Assignee</label>
@@ -390,44 +467,162 @@ export default function CardDetailsModal({ boardId, card, boardMembers, currentU
 
           {/* Comments tab */}
           {activeTab === "comments" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               {!readOnly && (
-                <form onSubmit={submitComment} style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end" }}>
-                  <textarea
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    placeholder="Write a comment..."
-                    rows={2}
-                    style={{ flex: 1, resize: "none", fontSize: "0.875rem" }}
-                    id="comment-input"
-                  />
-                  <button type="submit" disabled={commentSubmitting || !commentText.trim()} className="fb-btn fb-btn-primary" style={{ flexShrink: 0 }}>
-                    {commentSubmitting ? "..." : <MessageCircle size={15} />}
-                  </button>
+                <form onSubmit={replyingTo ? handleReply : submitComment} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  {replyingTo && (
+                    <div style={{ fontSize: "0.75rem", color: "var(--color-primary-light)", display: "flex", alignItems: "center", gap: "0.375rem", background: "rgba(0,121,191,0.1)", padding: "0.25rem 0.5rem", borderRadius: "var(--radius-sm)" }}>
+                      <Reply size={12} /> Replying to User #{replyingTo.authorId}
+                      <button type="button" onClick={() => setReplyingTo(null)} style={{ marginLeft: "auto", background: "none", border: "none", color: "inherit", cursor: "pointer" }}><X size={12} /></button>
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end" }}>
+                    <textarea
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      placeholder={replyingTo ? "Write a reply..." : "Write a comment..."}
+                      rows={2}
+                      style={{ flex: 1, resize: "none", fontSize: "0.875rem" }}
+                      id="comment-input"
+                    />
+                    <button type="submit" disabled={commentSubmitting || !commentText.trim()} className="fb-btn fb-btn-primary" style={{ flexShrink: 0 }}>
+                      {commentSubmitting ? "..." : (replyingTo ? <Reply size={15} /> : <MessageCircle size={15} />)}
+                    </button>
+                  </div>
                 </form>
               )}
+              
               {comments.length === 0 && (
                 <div className="fb-empty" style={{ padding: "1.5rem" }}>
                   <MessageCircle size={24} color="var(--color-text-muted)" />
                   <p>No comments yet.</p>
                 </div>
               )}
-              {comments.map((c) => (
-                <div key={c.commentId} style={{ padding: "0.875rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", background: "rgba(255,255,255,0.02)" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-                    <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--color-text-muted)" }}>
-                      User #{c.authorId}
-                      {c.createdAt && ` · ${new Date(c.createdAt).toLocaleDateString()}`}
-                    </span>
-                    {(Number(c.authorId) === Number(currentUser?.userId) || !readOnly) && (
-                      <button onClick={() => deleteComment(c.commentId)} className="fb-btn-ghost" style={{ padding: "0.2rem", color: "var(--color-error)" }}>
-                        <Trash2 size={13} />
-                      </button>
-                    )}
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+                {comments.filter(c => !c.parentId).map((c) => {
+                  const replies = comments.filter(r => Number(r.parentId) === Number(c.commentId));
+                  return (
+                    <div key={c.commentId} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                      {/* Main comment */}
+                      <div style={{ padding: "0.875rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", background: "rgba(255,255,255,0.02)" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                          <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--color-text-muted)" }}>
+                            User #{c.authorId}
+                            {c.createdAt && ` · ${new Date(c.createdAt).toLocaleDateString()}`}
+                          </span>
+                          <div style={{ display: "flex", gap: "0.25rem" }}>
+                            {!readOnly && (
+                              <button onClick={() => setReplyingTo(c)} className="fb-btn-ghost" style={{ padding: "0.2rem", color: "var(--color-primary-light)" }} title="Reply">
+                                <Reply size={13} />
+                              </button>
+                            )}
+                            {(Number(c.authorId) === Number(currentUser?.userId)) && (
+                              <button onClick={() => { setEditingComment(c); setEditCommentText(c.content); }} className="fb-btn-ghost" style={{ padding: "0.2rem", color: "var(--color-text-muted)" }}>
+                                <Edit2 size={13} />
+                              </button>
+                            )}
+                            {(Number(c.authorId) === Number(currentUser?.userId) || !readOnly) && (
+                              <button onClick={() => deleteComment(c.commentId)} className="fb-btn-ghost" style={{ padding: "0.2rem", color: "var(--color-error)" }}>
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {editingComment?.commentId === c.commentId ? (
+                          <form onSubmit={handleEditComment} style={{ display: "flex", gap: "0.5rem" }}>
+                            <input autoFocus value={editCommentText} onChange={(e) => setEditCommentText(e.target.value)} style={{ flex: 1, fontSize: "0.875rem" }} />
+                            <button type="submit" className="fb-btn fb-btn-primary" style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}>Save</button>
+                            <button type="button" onClick={() => setEditingComment(null)} className="fb-btn fb-btn-secondary" style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}>Cancel</button>
+                          </form>
+                        ) : (
+                          <p style={{ margin: 0, fontSize: "0.875rem", color: "var(--color-text-secondary)", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{c.content}</p>
+                        )}
+                      </div>
+                      
+                      {/* Replies */}
+                      {replies.length > 0 && (
+                        <div style={{ marginLeft: "1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem", borderLeft: "2px solid var(--color-border)", paddingLeft: "0.75rem" }}>
+                          {replies.map(r => (
+                            <div key={r.commentId} style={{ padding: "0.625rem 0.75rem", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)", background: "rgba(255,255,255,0.01)" }}>
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.25rem" }}>
+                                <span style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--color-text-muted)" }}>
+                                  User #{r.authorId} · {new Date(r.createdAt).toLocaleDateString()}
+                                </span>
+                                {(Number(r.authorId) === Number(currentUser?.userId) || !readOnly) && (
+                                  <button onClick={() => deleteComment(r.commentId)} className="fb-btn-ghost" style={{ padding: "0.15rem", color: "var(--color-error)" }}>
+                                    <Trash2 size={11} />
+                                  </button>
+                                )}
+                              </div>
+                              <p style={{ margin: 0, fontSize: "0.8125rem", color: "var(--color-text-secondary)" }}>{r.content}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Attachments tab */}
+          {activeTab === "attachments" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+              {!readOnly && (
+                <div style={{ position: "relative" }}>
+                  <input
+                    type="file"
+                    onChange={handleFileUpload}
+                    style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", zIndex: 1 }}
+                    id="attachment-upload-input"
+                  />
+                  <div style={{ padding: "1.5rem", borderRadius: "var(--radius-lg)", border: "2px dashed var(--color-border)", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem", background: "rgba(255,255,255,0.01)", transition: "all var(--transition-fast)" }}>
+                    <FilePlus size={24} color={uploading ? "var(--color-primary)" : "var(--color-text-muted)"} className={uploading ? "animate-pulse" : ""} />
+                    <p style={{ margin: 0, fontSize: "0.875rem", color: "var(--color-text-secondary)", fontWeight: 600 }}>
+                      {uploading ? "Uploading..." : "Click or drag to upload"}
+                    </p>
+                    <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--color-text-muted)" }}>PDF, PNG, JPG, DOCX (Max 10MB)</p>
                   </div>
-                  <p style={{ margin: 0, fontSize: "0.875rem", color: "var(--color-text-secondary)", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{c.content}</p>
                 </div>
-              ))}
+              )}
+
+              {attachments.length === 0 && !uploading && (
+                <div className="fb-empty" style={{ padding: "1.5rem" }}>
+                  <Paperclip size={24} color="var(--color-text-muted)" />
+                  <p>No attachments yet.</p>
+                </div>
+              )}
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                {attachments.map((at) => (
+                  <div key={at.attachmentId} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", background: "rgba(255,255,255,0.02)", transition: "all var(--transition-fast)", position: "relative", group: "true" }}>
+                    <div style={{ width: 40, height: 40, borderRadius: "var(--radius-md)", background: "var(--color-bg-secondary)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {at.fileType?.includes("image") ? (
+                        <img src={at.fileUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "var(--radius-md)" }} />
+                      ) : (
+                        <FileText size={20} color="var(--color-primary-light)" />
+                      )}
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <p style={{ margin: 0, fontSize: "0.8125rem", fontWeight: 600, color: "var(--color-text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{at.fileName}</p>
+                      <p style={{ margin: 0, fontSize: "0.7rem", color: "var(--color-text-muted)" }}>{at.sizeKb} KB · {new Date(at.createdAt || Date.now()).toLocaleDateString()}</p>
+                    </div>
+                    <div style={{ display: "flex", gap: "0.25rem" }}>
+                      <a href={at.fileUrl} target="_blank" rel="noopener noreferrer" className="fb-btn-ghost" style={{ padding: "0.25rem", color: "var(--color-primary-light)" }}>
+                         <Paperclip size={13} />
+                      </a>
+                      {!readOnly && (
+                        <button onClick={() => deleteAttachment(at.attachmentId)} className="fb-btn-ghost" style={{ padding: "0.25rem", color: "var(--color-error)" }}>
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 

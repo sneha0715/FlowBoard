@@ -41,7 +41,7 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String path = request.getRequestURI();
-        if (path.startsWith("/actuator")) {
+        if (path.contains("/actuator") || path.contains("/v3/api-docs") || path.contains("/swagger-ui")) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -91,3 +91,5 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
                 "timestamp", LocalDateTime.now().toString(), "path", path));
     }
 }
+
+

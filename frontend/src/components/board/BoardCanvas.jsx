@@ -14,6 +14,8 @@ export default function BoardCanvas({
   onCreateList,
   onCreateCard,
   onRenameList,
+  onMoveList,
+  otherBoards,
   onOpenCard,
   saving,
   readOnly,
@@ -152,6 +154,8 @@ export default function BoardCanvas({
                   onCreateCard={onCreateCard}
                   onRenameList={onRenameList}
                   onOpenCard={onOpenCard}
+                  onMoveList={onMoveList}
+                  otherBoards={otherBoards}
                   saving={saving}
                   readOnly={readOnly}
                 />

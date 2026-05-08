@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { Draggable, Droppable } from "react-beautiful-dnd";
-import { GripVertical, Pencil, Plus, X } from "lucide-react";
+import { ArrowRight, GripVertical, MoreHorizontal, Pencil, Plus, Trash2, X } from "lucide-react";
 import CardTile from "./CardTile";
 
 const PRIORITY_OPTIONS = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
 const STATUS_OPTIONS = ["TO_DO", "IN_PROGRESS", "IN_REVIEW", "DONE"];
 
-export default function ColumnLane({ list, cards, onCreateCard, onRenameList, onOpenCard, saving, readOnly }) {
+export default function ColumnLane({ list, cards, onCreateCard, onRenameList, onMoveList, otherBoards, onOpenCard, saving, readOnly }) {
   const [draft, setDraft] = useState({
     title: "",
     description: "",
@@ -20,6 +20,8 @@ export default function ColumnLane({ list, cards, onCreateCard, onRenameList, on
   const [open, setOpen] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [listName, setListName] = useState(list.name);
+  const [showMoveMenu, setShowMoveMenu] = useState(false);
+  const [moving, setMoving] = useState(false);
 
   useEffect(() => { setListName(list.name); }, [list.name]);
 
@@ -40,6 +42,17 @@ export default function ColumnLane({ list, cards, onCreateCard, onRenameList, on
     if (!trimmed || trimmed === list.name) { setEditingTitle(false); setListName(list.name); return; }
     await onRenameList(list.listId, { boardId: list.boardId, name: trimmed, color: list.color, position: list.position });
     setEditingTitle(false);
+  };
+
+  const handleMove = async (newBoardId) => {
+    if (!newBoardId) return;
+    setMoving(true);
+    try {
+      await onMoveList(list.listId, Number(newBoardId));
+      setShowMoveMenu(false);
+    } catch (err) {
+      console.error(err);
+    } finally { setMoving(false); }
   };
 
   const cardCount = cards.length;
@@ -103,13 +116,40 @@ export default function ColumnLane({ list, cards, onCreateCard, onRenameList, on
                   {cardCount}
                 </span>
                 {!readOnly && !editingTitle && (
-                  <button
-                    type="button"
-                    onClick={() => setEditingTitle(true)}
-                    style={{ padding: "0.25rem", borderRadius: "var(--radius-md)", background: "transparent", border: "none", cursor: "pointer", color: "var(--color-text-muted)", display: "flex", transition: "all var(--transition-fast)" }}
-                  >
-                    <Pencil size={12} />
-                  </button>
+                  <div style={{ position: "relative", display: "flex", gap: "0.25rem" }}>
+                    <button
+                      type="button"
+                      onClick={() => setEditingTitle(true)}
+                      style={{ padding: "0.25rem", borderRadius: "var(--radius-md)", background: "transparent", border: "none", cursor: "pointer", color: "var(--color-text-muted)", display: "flex", transition: "all var(--transition-fast)" }}
+                    >
+                      <Pencil size={12} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowMoveMenu(!showMoveMenu)}
+                      style={{ padding: "0.25rem", borderRadius: "var(--radius-md)", background: "transparent", border: "none", cursor: "pointer", color: "var(--color-text-muted)", display: "flex", transition: "all var(--transition-fast)" }}
+                    >
+                      <ArrowRight size={12} />
+                    </button>
+                    
+                    {showMoveMenu && (
+                      <div className="fb-card animate-fade-in" style={{ position: "absolute", top: "100%", right: 0, zIndex: 10, width: 180, padding: "0.75rem", marginTop: "0.5rem", boxShadow: "var(--shadow-lg)" }}>
+                        <p style={{ fontSize: "0.75rem", fontWeight: 700, marginBottom: "0.5rem" }}>Move list to...</p>
+                        {otherBoards && otherBoards.length > 0 ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
+                            {otherBoards.map(b => (
+                              <button key={b.boardId} onClick={() => handleMove(b.boardId)} className="fb-btn-ghost" style={{ fontSize: "0.7rem", padding: "0.4rem", justifyContent: "flex-start", textAlign: "left", width: "100%" }}>
+                                {b.name}
+                              </button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p style={{ fontSize: "0.7rem", color: "var(--color-text-muted)", margin: 0 }}>No other boards available.</p>
+                        )}
+                        <button onClick={() => setShowMoveMenu(false)} className="fb-btn-ghost" style={{ fontSize: "0.7rem", marginTop: "0.5rem", width: "100%", borderTop: "1px solid var(--color-border)", paddingTop: "0.5rem" }}>Close</button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

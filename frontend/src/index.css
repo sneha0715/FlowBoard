@@ -596,7 +596,42 @@ button:disabled {
   border-color: rgba(0, 121, 191, 0.3);
 }
 
-/* ===== RESPONSIVE ===== */
+/* ===== ADMIN DASHBOARD EXTRAS ===== */
+.fb-chart-container {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  height: 100%;
+}
+
+.fb-chart-bar {
+  flex: 1;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(to top, var(--color-primary), var(--color-primary-light));
+  transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.fb-chart-bar:hover {
+  filter: brightness(1.2);
+}
+
+.fb-chart-bar::after {
+  content: attr(data-value);
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.65rem;
+  color: var(--color-text-secondary);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.fb-chart-bar:hover::after {
+  opacity: 1;
+}
+
 @media (max-width: 768px) {
   h1 { font-size: 1.5rem; }
   h2 { font-size: 1.25rem; }

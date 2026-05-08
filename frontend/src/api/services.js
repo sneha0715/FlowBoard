@@ -37,6 +37,7 @@ export const boardApi = {
   members: (boardId) => unwrap(http.get(`/boards/${boardId}/members`)),
   update: (boardId, payload) => unwrap(http.put(`/boards/${boardId}`, payload)),
   addMember: (boardId, payload) => unwrap(http.post(`/boards/${boardId}/members`, payload)),
+  close: (boardId) => unwrap(http.put(`/boards/${boardId}/close`, null)),
   updateMemberRole: (boardId, userId, role) =>
     unwrap(http.put(`/boards/${boardId}/members/${userId}/role`, null, { params: { role } })),
   removeMember: (boardId, userId) => unwrap(http.delete(`/boards/${boardId}/members/${userId}`)),
@@ -50,6 +51,7 @@ export const columnApi = {
   reorder: (boardId, listIds) => unwrap(http.put(`/columns/reorder/${boardId}`, listIds)),
   archive: (listId) => unwrap(http.post(`/columns/${listId}/archive`)),
   unarchive: (listId) => unwrap(http.post(`/columns/${listId}/unarchive`)),
+  move: (listId, newBoardId) => unwrap(http.put(`/columns/${listId}/move/${newBoardId}`)),
   archivedByBoard: (boardId) => unwrap(http.get(`/columns/board/${boardId}/archived`))
 };
 
@@ -97,7 +99,8 @@ export const commentApi = {
 
 export const attachmentApi = {
   byCard: (cardId) => unwrap(http.get(`/attachments/card/${cardId}`)),
-  create: (payload) => unwrap(http.post("/attachments", payload))
+  create: (payload) => unwrap(http.post("/attachments", payload)),
+  remove: (attachmentId) => unwrap(http.delete(`/attachments/${attachmentId}`))
 };
 
 export const notificationApi = {

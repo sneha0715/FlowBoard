@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArchiveRestore, CheckSquare, Grid3x3, LoaderCircle, Send, UserPlus, UserX, Users, X } from "lucide-react";
+import { ArrowLeft, ArchiveRestore, CheckSquare, Edit2, Grid3x3, LoaderCircle, MoreHorizontal, Send, Trash2, UserPlus, UserX, Users, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useParams } from "react-router-dom";
 import { authApi, boardApi, cardApi, columnApi, notificationApi } from "../api/services";
@@ -28,6 +28,10 @@ export default function BoardPage() {
   const [memberMsg, setMemberMsg] = useState({ type: "", text: "" });
   const [archivedCards, setArchivedCards] = useState([]);
   const [activeTab, setActiveTab] = useState("board"); // "board" | "members" | "archived"
+  const [showBoardEdit, setShowBoardEdit] = useState(false);
+  const [boardEditDraft, setBoardEditDraft] = useState({ name: "", description: "", background: "Ocean", visibility: "PRIVATE" });
+  const [boardUpdating, setBoardUpdating] = useState(false);
+  const [workspaceBoards, setWorkspaceBoards] = useState([]);
 
   const isBoardAdmin = userRole === "ADMIN" || user?.role === "PLATFORM_ADMIN";
   const canEdit = userRole === "ADMIN" || userRole === "MEMBER" || user?.role === "PLATFORM_ADMIN";
@@ -43,12 +47,23 @@ export default function BoardPage() {
   useEffect(() => {
     if (!boardId) return;
     boardApi.members(Number(boardId)).then(setBoardMembers).catch(() => setBoardMembers([]));
-  }, [boardId, status]);
+    if (activeBoard?.workspaceId) {
+      boardApi.byWorkspace(activeBoard.workspaceId).then(data => setWorkspaceBoards(data)).catch(() => []);
+    }
+  }, [boardId, status, activeBoard?.workspaceId]);
 
   useEffect(() => {
     if (!boardId) return;
     cardApi.archivedByBoard(Number(boardId)).then(setArchivedCards).catch(() => setArchivedCards([]));
-  }, [boardId, status]);
+    if (activeBoard) {
+      setBoardEditDraft({ 
+        name: activeBoard.name, 
+        description: activeBoard.description || "", 
+        background: activeBoard.background || "Ocean", 
+        visibility: activeBoard.visibility || "PRIVATE" 
+      });
+    }
+  }, [boardId, status, activeBoard?.name]);
 
   const handleCreateList = async ({ name, color }) => {
     await dispatch(createList({ boardId: Number(boardId), name, color })).unwrap();
@@ -57,6 +72,29 @@ export default function BoardPage() {
   const handleRenameList = async (listId, payload) => {
     await columnApi.update(listId, payload);
     await dispatch(fetchBoardBundle(Number(boardId))).unwrap();
+  };
+
+  const handleMoveList = async (listId, newBoardId) => {
+    await columnApi.move(listId, newBoardId);
+    await dispatch(fetchBoardBundle(Number(boardId))).unwrap();
+  };
+
+  const handleUpdateBoard = async (e) => {
+    e.preventDefault();
+    setBoardUpdating(true);
+    try {
+      await boardApi.update(Number(boardId), boardEditDraft);
+      setShowBoardEdit(false);
+      dispatch(fetchBoardBundle(Number(boardId)));
+    } catch (err) {
+      console.error(err);
+    } finally { setBoardUpdating(false); }
+  };
+
+  const handleCloseBoard = async () => {
+    if (!window.confirm("Close this board? It will be archived.")) return;
+    await boardApi.close(Number(boardId));
+    dispatch(fetchBoardBundle(Number(boardId)));
   };
 
   const handleCreateCard = async (listId, draft) => {
@@ -160,7 +198,16 @@ export default function BoardPage() {
 
   return (
     <AppShell
-      title={activeBoard?.name || "Board"}
+      title={
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          {activeBoard?.name || "Board"}
+          {isBoardAdmin && (
+            <button onClick={() => setShowBoardEdit(true)} className="fb-btn-ghost" style={{ padding: "0.25rem", color: "var(--color-text-muted)" }}>
+              <Edit2 size={14} />
+            </button>
+          )}
+        </div>
+      }
       subtitle={activeBoard?.description || "Manage lists, drag cards, track progress."}
       actions={actions}
     >
@@ -228,10 +275,60 @@ export default function BoardPage() {
               onCreateList={handleCreateList}
               onCreateCard={handleCreateCard}
               onRenameList={handleRenameList}
+              onMoveList={handleMoveList}
+              otherBoards={workspaceBoards.filter(b => b.boardId !== Number(boardId))}
               onOpenCard={setSelectedCard}
               saving={status === "saving"}
               readOnly={!canEdit}
             />
+          )}
+
+          {/* Edit Board Modal */}
+          {showBoardEdit && (
+            <div className="fb-modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowBoardEdit(false)}>
+              <div className="fb-modal" style={{ maxWidth: 440, padding: "1.5rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1.25rem" }}>
+                  <h3 style={{ margin: 0 }}>Edit board</h3>
+                  <button onClick={() => setShowBoardEdit(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)" }}><X size={18} /></button>
+                </div>
+                <form onSubmit={handleUpdateBoard} style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+                  <div className="fb-input-group">
+                    <label className="fb-input-label">Board name *</label>
+                    <input required value={boardEditDraft.name} onChange={(e) => setBoardEditDraft(d => ({ ...d, name: e.target.value }))} />
+                  </div>
+                  <div className="fb-input-group">
+                    <label className="fb-input-label">Description</label>
+                    <textarea rows={2} value={boardEditDraft.description} onChange={(e) => setBoardEditDraft(d => ({ ...d, description: e.target.value }))} />
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                    <div className="fb-input-group">
+                      <label className="fb-input-label">Background</label>
+                      <select value={boardEditDraft.background} onChange={(e) => setBoardEditDraft(d => ({ ...d, background: e.target.value }))}>
+                        {["Ocean", "Sunset", "Midnight", "Forest", "Aurora"].map(b => <option key={b} value={b}>{b}</option>)}
+                      </select>
+                    </div>
+                    <div className="fb-input-group">
+                      <label className="fb-input-label">Visibility</label>
+                      <select value={boardEditDraft.visibility} onChange={(e) => setBoardEditDraft(d => ({ ...d, visibility: e.target.value }))}>
+                        {["PRIVATE", "TEAM", "PUBLIC"].map(v => <option key={v} value={v}>{v}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ marginTop: "1rem", borderTop: "1px solid var(--color-border)", paddingTop: "1rem" }}>
+                    <p style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", marginBottom: "0.5rem" }}>Board Actions</p>
+                    <button type="button" onClick={handleCloseBoard} className="fb-btn fb-btn-danger" style={{ width: "100%", justifyContent: "center" }}>
+                      <ArchiveRestore size={14} /> Close board
+                    </button>
+                  </div>
+                  <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", marginTop: "0.5rem" }}>
+                    <button type="button" onClick={() => setShowBoardEdit(false)} className="fb-btn fb-btn-secondary">Cancel</button>
+                    <button type="submit" disabled={boardUpdating} className="fb-btn fb-btn-primary">
+                      {boardUpdating ? "Saving..." : "Save changes"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
           )}
 
           {/* Members tab */}

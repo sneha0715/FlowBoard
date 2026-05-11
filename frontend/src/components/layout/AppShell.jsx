@@ -17,6 +17,7 @@ import {
 import { logout } from "../../store/slices/authSlice";
 import NotificationsDrawer from "./NotificationsDrawer";
 import { notificationApi } from "../../api/services";
+import { isPlatformAdmin, platformRoleLabel, roleBadgeStyle } from "../../utils/roles";
 
 export default function AppShell({ children, title, subtitle, actions }) {
   const dispatch = useDispatch();
@@ -27,7 +28,7 @@ export default function AppShell({ children, title, subtitle, actions }) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const isAdmin = user?.role === "PLATFORM_ADMIN";
+  const isAdmin = isPlatformAdmin(user);
 
   useEffect(() => {
     if (!user?.userId) return;
@@ -139,7 +140,7 @@ export default function AppShell({ children, title, subtitle, actions }) {
             }}
             className="desktop-title"
           >
-            <p
+            <div
               style={{
                 fontSize: "0.9375rem",
                 fontWeight: 600,
@@ -148,7 +149,7 @@ export default function AppShell({ children, title, subtitle, actions }) {
               }}
             >
               {title}
-            </p>
+            </div>
           </div>
         )}
 
@@ -292,9 +293,12 @@ export default function AppShell({ children, title, subtitle, actions }) {
                   <p style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>
                     FlowBoard
                   </p>
-                  <p style={{ fontSize: "0.7rem", color: "var(--color-text-muted)", margin: 0 }}>
-                    {user?.role?.replace("_", " ")}
-                  </p>
+                  <span
+                    className="fb-badge"
+                    style={{ fontSize: "0.65rem", display: "inline-flex", marginTop: "2px", ...roleBadgeStyle(user?.role) }}
+                  >
+                    {platformRoleLabel(user?.role)}
+                  </span>
                 </div>
               </div>
               <button

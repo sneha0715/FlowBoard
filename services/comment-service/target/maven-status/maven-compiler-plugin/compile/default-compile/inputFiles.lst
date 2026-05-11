@@ -13,6 +13,7 @@ D:\FlowBoard\services\comment-service\src\main\java\com\flowboard\comment\dto\re
 D:\FlowBoard\services\comment-service\src\main\java\com\flowboard\comment\security\CommentSecurity.java
 D:\FlowBoard\services\comment-service\src\main\java\com\flowboard\comment\repository\CommentRepository.java
 D:\FlowBoard\services\comment-service\src\main\java\com\flowboard\comment\exception\GlobalExceptionHandler.java
+D:\FlowBoard\services\comment-service\src\main\java\com\flowboard\comment\config\JpaConfig.java
 D:\FlowBoard\services\comment-service\src\main\java\com\flowboard\comment\dto\request\CommentUpdateRequest.java
 D:\FlowBoard\services\comment-service\src\main\java\com\flowboard\comment\config\SecurityConfig.java
 D:\FlowBoard\services\comment-service\src\main\java\com\flowboard\comment\config\RequestLoggingFilter.java

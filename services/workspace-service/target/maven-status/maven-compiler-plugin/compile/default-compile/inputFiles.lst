@@ -7,6 +7,7 @@ D:\FlowBoard\services\workspace-service\src\main\java\com\flowboard\workspace\co
 D:\FlowBoard\services\workspace-service\src\main\java\com\flowboard\workspace\mapper\WorkspaceMemberMapper.java
 D:\FlowBoard\services\workspace-service\src\main\java\com\flowboard\workspace\dto\request\MemberRequest.java
 D:\FlowBoard\services\workspace-service\src\main\java\com\flowboard\workspace\exception\ResourceNotFoundException.java
+D:\FlowBoard\services\workspace-service\src\main\java\com\flowboard\workspace\config\JpaConfig.java
 D:\FlowBoard\services\workspace-service\src\main\java\com\flowboard\workspace\WorkspaceServiceApplication.java
 D:\FlowBoard\services\workspace-service\src\main\java\com\flowboard\workspace\model\Workspace.java
 D:\FlowBoard\services\workspace-service\src\main\java\com\flowboard\workspace\repository\WorkspaceRepository.java

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { BarChart2, Download, History, Layout, LoaderCircle, Megaphone, RefreshCw, Shield, UserX, Users, X } from "lucide-react";
+import { BarChart2, Crown, Download, History, Layout, LoaderCircle, Megaphone, RefreshCw, Shield, Trash2, UserCheck, UserX, Users, X } from "lucide-react";
 import AppShell from "../components/layout/AppShell";
 import { authApi, notificationApi, workspaceApi } from "../api/services";
+import { roleBadgeStyle } from "../utils/roles";
 
 export default function AdminPage() {
   const [users, setUsers] = useState([]);
@@ -44,6 +45,17 @@ export default function AdminPage() {
     if (!window.confirm("Deactivate this user?")) return;
     try { await authApi.deactivate(userId); showToast("success", `User #${userId} deactivated.`); await load(); }
     catch (err) { showToast("error", err?.message || "Failed to deactivate."); }
+  };
+
+  const promoteUser = async (userId, currentRole) => {
+    const newRole = currentRole === "PLATFORM_ADMIN" ? "MEMBER" : "PLATFORM_ADMIN";
+    const action = newRole === "PLATFORM_ADMIN" ? "Promote" : "Demote";
+    if (!window.confirm(`${action} this user to ${newRole.replace("_", " ")}?`)) return;
+    try {
+      await authApi.updateRole(userId, newRole);
+      showToast("success", `User ${action.toLowerCase()}d to ${newRole.replace("_", " ")}.`);
+      await load();
+    } catch (err) { showToast("error", err?.message || "Failed to update role."); }
   };
 
   const sendBroadcast = async (e) => {
@@ -142,10 +154,19 @@ export default function AdminPage() {
                           </p>
                         </div>
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
-                        <span className="fb-badge" style={u.isActive === false ? { background: "rgba(248,81,73,0.12)", color: "var(--color-error)", border: "1px solid rgba(248,81,73,0.25)" } : { background: "rgba(63,185,80,0.12)", color: "var(--color-success)", border: "1px solid rgba(63,185,80,0.25)" }}>
-                          {u.isActive === false ? "Inactive" : "Active"}
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
+                        <span className="fb-badge" style={{ fontSize: "0.7rem", ...roleBadgeStyle(u.role) }}>
+                          {u.isActive === false ? "Inactive" : u.role === "PLATFORM_ADMIN" ? "Admin" : "Member"}
                         </span>
+                        <button
+                          id={`promote-${u.userId}-btn`}
+                          onClick={() => promoteUser(u.userId, u.role)}
+                          className={`fb-btn ${u.role === "PLATFORM_ADMIN" ? "fb-btn-secondary" : "fb-btn-primary"}`}
+                          style={{ padding: "0.25rem 0.5rem", fontSize: "0.7rem" }}
+                          title={u.role === "PLATFORM_ADMIN" ? "Demote to Member" : "Promote to Admin"}
+                        >
+                          {u.role === "PLATFORM_ADMIN" ? <><UserCheck size={12} /> Demote</> : <><Crown size={12} /> Promote</>}
+                        </button>
                         <button
                           id={`deactivate-${u.userId}-btn`}
                           disabled={u.isActive === false}
@@ -246,7 +267,6 @@ export default function AdminPage() {
                     </div>
                   </div>
                 ))}
-                {workspaces.length === 0 && <p className="fb-empty">No workspaces found.</p>}
               </div>
             </div>
           )}

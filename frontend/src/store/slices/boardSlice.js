@@ -208,6 +208,16 @@ const boardSlice = createSlice({
       .addCase(persistListMove.rejected, (state, action) => {
         state.status = "failed";
         state.error = action.error.message || "Unable to save list order.";
+      })
+      // Reset board state on logout — prevents stale board role persisting.
+      .addCase("auth/logout", (state) => {
+        state.activeBoard = null;
+        state.lists = [];
+        state.cardsById = {};
+        state.cardsByListId = {};
+        state.userRole = "NONE";
+        state.status = "idle";
+        state.error = null;
       });
   }
 });

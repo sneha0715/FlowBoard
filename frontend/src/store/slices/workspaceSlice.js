@@ -58,6 +58,16 @@ const workspaceSlice = createSlice({
       .addCase(fetchWorkspaceBundle.rejected, (state, action) => {
         state.status = "failed";
         state.error = action.error.message || "Unable to load workspace.";
+      })
+      // Reset all workspace state when the user logs out — prevents stale
+      // userRole (e.g. MEMBER) showing for the next session's user (e.g. ADMIN).
+      .addCase("auth/logout", (state) => {
+        state.activeWorkspace = null;
+        state.members = [];
+        state.boards = [];
+        state.userRole = "NONE";
+        state.status = "idle";
+        state.error = null;
       });
   }
 });

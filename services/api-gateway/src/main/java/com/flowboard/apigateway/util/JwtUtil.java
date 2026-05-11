@@ -43,7 +43,7 @@ public class JwtUtil {
             }
             return null; // Valid
         } catch (io.jsonwebtoken.ExpiredJwtException ex) {
-            log.debug("Gateway token validation failed (Expired): {}", ex.getMessage());
+            log.warn("Gateway token validation failed (Expired): {}", ex.getMessage());
             return "Token has expired";
         } catch (JwtException ex) {
             log.error("Gateway token validation failed (JwtException): {}", ex.getMessage());

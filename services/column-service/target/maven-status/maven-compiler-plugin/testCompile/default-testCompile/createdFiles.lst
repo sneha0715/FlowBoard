@@ -1,1 +1,4 @@
+com\flowboard\column\repository\ListRepositoryTest.class
+com\flowboard\column\service\ListServiceImplTest.class
 com\flowboard\column\ColumnServiceApplicationTests.class
+com\flowboard\column\controller\ListControllerTest.class

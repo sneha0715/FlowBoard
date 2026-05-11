@@ -16,6 +16,31 @@ Write-Host "All services will run in this single terminal." -ForegroundColor Mag
 Write-Host "Press Ctrl+C at any time to stop all services." -ForegroundColor Magenta
 Write-Host "=========================================`n" -ForegroundColor Cyan
 
+# Clear all logs before starting
+if (Test-Path ".\logs") {
+    Write-Host "Clearing existing logs..." -ForegroundColor Yellow
+    Remove-Item -Path ".\logs\*" -Recurse -Force -ErrorAction SilentlyContinue
+    Write-Host "Logs cleared.`n" -ForegroundColor Green
+}
+
+# Force kill any existing processes on project ports to free up space
+Write-Host "Cleaning up lingering processes on project ports..." -ForegroundColor Yellow
+$ports = @(8761, 8080, 8081, 8082, 8083, 8084, 8085, 8086, 8087, 8088)
+foreach ($port in $ports) {
+    $pids = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique
+    foreach ($procId in $pids) {
+        if ($procId -and $procId -ne $PID) {
+            $pName = (Get-Process -Id $procId -ErrorAction SilentlyContinue).ProcessName
+            Write-Host "Port $port is in use by $pName (PID $procId). Killing it..." -ForegroundColor Yellow
+            Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+# Also kill any remaining java processes
+Get-Process java -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+Write-Host "Cleanup complete.`n" -ForegroundColor Green
+
+
 
 $services = @(
     "eureka-server",
@@ -30,17 +55,13 @@ $services = @(
     "notification-service"
 )
 
-if ($Clean) {
-    Write-Host "Performing a clean build across all services..." -ForegroundColor Yellow
-    Write-Host "This will run 'mvn clean' and then pause to let any IDE auto-compilers settle." -ForegroundColor Yellow
-    foreach ($service in $services) {
-        Write-Host "Cleaning $service..." -ForegroundColor DarkGray
-        $null = Start-Process -FilePath "mvn.cmd" -ArgumentList "-q", "clean" -WorkingDirectory ".\services\$service" -NoNewWindow -Wait
-    }
-    Write-Host "Waiting 5 seconds for IDE background processes to settle..." -ForegroundColor Green
-    Start-Sleep -Seconds 5
-    Write-Host "Clean complete. Proceeding to startup (Maven will safely recompile with JDK 20).`n" -ForegroundColor Green
+# Perform a clean build across all services to ensure everything is in sync
+Write-Host "Performing a clean build across all services..." -ForegroundColor Yellow
+foreach ($service in $services) {
+    Write-Host "Building $service..." -ForegroundColor DarkGray
+    $null = Start-Process -FilePath "mvn.cmd" -ArgumentList "-q", "clean", "install", "-DskipTests" -WorkingDirectory ".\services\$service" -NoNewWindow -Wait
 }
+Write-Host "Build complete. Proceeding to startup...`n" -ForegroundColor Green
 
 $global:processes = @()
 

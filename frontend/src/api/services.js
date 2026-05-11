@@ -12,7 +12,8 @@ export const authApi = {
   searchUsers: (query) => unwrap(http.get("/auth/users/search", { params: { query } })),
   deactivate: (userId) => unwrap(http.post(`/auth/deactivate/${userId}`)),
   updateProfile: (userId, payload) => unwrap(http.put(`/auth/profile/${userId}`, payload)),
-  changePassword: (userId, newPassword) => unwrap(http.post(`/auth/change-password/${userId}`, { newPassword }))
+  changePassword: (userId, newPassword) => unwrap(http.post(`/auth/change-password/${userId}`, { newPassword })),
+  updateRole: (userId, role) => unwrap(http.put(`/auth/role/${userId}`, { role }))
 };
 
 export const workspaceApi = {
@@ -22,17 +23,23 @@ export const workspaceApi = {
   create: (payload) => unwrap(http.post("/workspaces/create", payload)),
   members: (workspaceId) => unwrap(http.get(`/workspaces/${workspaceId}/members`)),
   addMember: (workspaceId, payload) => unwrap(http.post(`/workspaces/${workspaceId}/members/add`, payload)),
-  getRole: (workspaceId, userId) => http.get(`/workspaces/${workspaceId}/members/${userId}/role`).then(r => r.data),
+  getRole: (workspaceId, userId) => 
+    http.get(`/workspaces/${workspaceId}/members/${userId}/role`).then(r => typeof r.data === 'object' ? r.data.role : r.data),
   updateRole: (workspaceId, userId, role) =>
     unwrap(http.put(`/workspaces/${workspaceId}/members/role`, null, { params: { userId, role } })),
   removeMember: (workspaceId, userId) => unwrap(http.delete(`/workspaces/${workspaceId}/members/remove/${userId}`)),
-  remove: (workspaceId) => unwrap(http.delete(`/workspaces/${workspaceId}`))
+  remove: (workspaceId) => unwrap(http.delete(`/workspaces/${workspaceId}`)),
+  update: (workspaceId, payload) => unwrap(http.put(`/workspaces/${workspaceId}`, payload)),
+  acceptInvitation: (wsId) => unwrap(http.post(`/workspaces/${wsId}/accept`)),
+  pendingInvitations: () => unwrap(http.get("/workspaces/invitations/pending")),
+  leaveWorkspace: (wsId) => unwrap(http.post(`/workspaces/${wsId}/leave`))
 };
 
 export const boardApi = {
   byWorkspace: (workspaceId) => unwrap(http.get(`/boards/workspace/${workspaceId}`)),
   get: (boardId) => unwrap(http.get(`/boards/${boardId}`)),
-  getRole: (boardId, userId) => http.get(`/boards/${boardId}/members/${userId}/role`).then(r => r.data),
+  getRole: (boardId, userId) => 
+    http.get(`/boards/${boardId}/members/${userId}/role`).then(r => typeof r.data === 'object' ? r.data.role : r.data),
   create: (payload) => unwrap(http.post("/boards", payload)),
   members: (boardId) => unwrap(http.get(`/boards/${boardId}/members`)),
   update: (boardId, payload) => unwrap(http.put(`/boards/${boardId}`, payload)),

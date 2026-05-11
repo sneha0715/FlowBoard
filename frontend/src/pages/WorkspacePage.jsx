@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, FolderKanban, Layout, LoaderCircle, Plus, Search, Users, X } from "lucide-react";
+import { ArrowRight, Check, FolderKanban, Layout, LoaderCircle, Plus, Search, Users, X } from "lucide-react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import AppShell from "../components/layout/AppShell";
@@ -44,17 +44,43 @@ export default function WorkspacePage() {
 
   const [wsDraft, setWsDraft] = useState({ name: "", description: "", visibility: "PRIVATE" });
   const [boardDraft, setBoardDraft] = useState({ workspaceId: "", name: "", description: "", background: "Ocean", visibility: "PRIVATE" });
+  const [invitations, setInvitations] = useState([]);
+  const [invitationWorkspaces, setInvitationWorkspaces] = useState({}); // wsId -> wsDetails
 
   const refresh = async () => {
     if (!user?.userId) return;
     setPageStatus("loading");
     setPageError(null);
     try {
+      // 1. Fetch Active Workspaces (Member + Owner)
       const unique = new Map();
-      try { (await workspaceApi.byMember(user.userId)).forEach((w) => unique.set(w.workspaceId, w)); } catch (e) { if (!isNotFound(e)) throw e; }
-      try { (await workspaceApi.byOwner(user.userId)).forEach((w) => unique.set(w.workspaceId, w)); } catch (e) { if (!isNotFound(e)) throw e; }
+      try { 
+        const wsList = await workspaceApi.byMember(user.userId);
+        wsList.forEach((w) => unique.set(w.workspaceId, w)); 
+      } catch (e) { if (!isNotFound(e)) throw e; }
+      
+      try { 
+        const wsList = await workspaceApi.byOwner(user.userId);
+        wsList.forEach((w) => unique.set(w.workspaceId, w)); 
+      } catch (e) { if (!isNotFound(e)) throw e; }
+      
       const list = [...unique.values()];
       setWorkspaces(list);
+
+      // 2. Fetch Pending Invitations
+      try {
+        const pending = await workspaceApi.pendingInvitations();
+        setInvitations(pending);
+        // Fetch names for the invitation workspaces
+        const inviteWsMap = {};
+        await Promise.all(pending.map(async (inv) => {
+          const ws = await workspaceApi.get(inv.workspaceId).catch(() => null);
+          if (ws) inviteWsMap[inv.workspaceId] = ws;
+        }));
+        setInvitationWorkspaces(inviteWsMap);
+      } catch (e) { console.error("Invitations check failed", e); }
+
+      // 3. Fetch Boards
       const entries = await Promise.all(list.map(async (ws) => [ws.workspaceId, await boardApi.byWorkspace(ws.workspaceId).catch(() => [])]));
       setBoardsByWorkspace(Object.fromEntries(entries));
       setBoardDraft((d) => ({ ...d, workspaceId: list[0]?.workspaceId?.toString() || "" }));
@@ -63,6 +89,22 @@ export default function WorkspacePage() {
       setPageStatus("failed");
       setPageError(err?.message || "Unable to load workspaces.");
     }
+  };
+
+  const handleAcceptInvite = async (wsId) => {
+    try {
+      await workspaceApi.acceptInvitation(wsId);
+      showMessage("success", "Invitation accepted!");
+      refresh();
+    } catch (err) { showMessage("error", "Failed to accept invitation."); }
+  };
+
+  const handleDeclineInvite = async (wsId) => {
+    try {
+      await workspaceApi.leaveWorkspace(wsId);
+      showMessage("success", "Invitation declined.");
+      refresh();
+    } catch (err) { showMessage("error", "Failed to decline invitation."); }
   };
 
   useEffect(() => { refresh(); }, [user?.userId]);
@@ -143,6 +185,34 @@ export default function WorkspacePage() {
         <div style={{ marginBottom: "1rem", padding: "0.875rem 1rem", borderRadius: "var(--radius-lg)", border: "1px solid rgba(248,81,73,0.25)", background: "rgba(248,81,73,0.1)", color: "var(--color-error)", fontSize: "0.875rem", display: "flex", alignItems: "center", justifyContent: "space-between" }} className="animate-fade-in">
           {actionError}
           <button onClick={() => setActionError(null)} style={{ background: "none", border: "none", color: "inherit", cursor: "pointer" }}><X size={16} /></button>
+        </div>
+      )}
+
+      {/* Pending Invitations Banner */}
+      {invitations.length > 0 && (
+        <div style={{ marginBottom: "1.5rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          {invitations.map((inv) => {
+            const ws = invitationWorkspaces[inv.workspaceId];
+            return (
+              <div key={inv.workspaceId} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1rem 1.25rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-primary)", background: "rgba(0,121,191,0.06)", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", animation: "slideInDown 0.3s ease" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <div style={{ width: 42, height: 42, borderRadius: "var(--radius-md)", background: "var(--color-primary)", display: "flex", alignItems: "center", justifyContent: "center", color: "white" }}>
+                    <Users size={22} />
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 700, color: "var(--color-text-primary)", fontSize: "1rem" }}>Workspace Invitation</p>
+                    <p style={{ margin: 0, fontSize: "0.875rem", color: "var(--color-text-secondary)" }}>
+                      You've been invited to join <strong>{ws?.name || "a new workspace"}</strong> as <strong>{inv.role}</strong>.
+                    </p>
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: "0.75rem" }}>
+                  <button onClick={() => handleDeclineInvite(inv.workspaceId)} className="fb-btn fb-btn-secondary" style={{ padding: "0.5rem 1rem" }}>Decline</button>
+                  <button onClick={() => handleAcceptInvite(inv.workspaceId)} className="fb-btn fb-btn-primary" style={{ padding: "0.5rem 1.25rem" }}><Check size={16} /> Accept & Join</button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 

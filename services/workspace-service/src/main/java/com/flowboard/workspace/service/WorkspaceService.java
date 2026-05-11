@@ -29,4 +29,8 @@ public interface WorkspaceService {
     List<WorkspaceMember> getMembers(int workspaceId);
     
     String getMemberRole(int userId, int workspaceId);
+
+    void acceptMember(int workspaceId, int userId);
+
+    List<WorkspaceMemberResponse> getPendingInvitations(int userId);
 }

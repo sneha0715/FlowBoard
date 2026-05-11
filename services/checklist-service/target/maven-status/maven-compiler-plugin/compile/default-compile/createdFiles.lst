@@ -1,5 +1,6 @@
 com\flowboard\checklist\dto\request\ChecklistItemRequest.class
 com\flowboard\checklist\entity\Label$LabelBuilder.class
+com\flowboard\checklist\config\FeignConfig.class
 com\flowboard\checklist\repository\ChecklistItemRepository.class
 com\flowboard\checklist\dto\response\ChecklistItemResponse$ChecklistItemResponseBuilder.class
 com\flowboard\checklist\entity\Label.class

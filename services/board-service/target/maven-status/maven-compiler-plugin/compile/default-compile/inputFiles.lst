@@ -1,6 +1,7 @@
 D:\FlowBoard\services\board-service\src\main\java\com\flowboard\board\BoardServiceApplication.java
 D:\FlowBoard\services\board-service\src\main\java\com\flowboard\board\repository\BoardRepository.java
 D:\FlowBoard\services\board-service\src\main\java\com\flowboard\board\service\BoardServiceImpl.java
+D:\FlowBoard\services\board-service\src\main\java\com\flowboard\board\client\WorkspaceClient.java
 D:\FlowBoard\services\board-service\src\main\java\com\flowboard\board\dto\response\BoardMemberResponse.java
 D:\FlowBoard\services\board-service\src\main\java\com\flowboard\board\security\BoardSecurity.java
 D:\FlowBoard\services\board-service\src\main\java\com\flowboard\board\dto\request\BoardMemberRequest.java

@@ -32,4 +32,6 @@ public interface AuthService {
     
     List<User> searchUsers(String query);
 
+    User updateUserRole(Integer userId, String role);
+
 }

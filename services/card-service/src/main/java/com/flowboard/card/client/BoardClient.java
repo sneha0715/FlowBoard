@@ -17,7 +17,7 @@ public interface BoardClient {
     );
 
     @GetMapping("/boards/{id}/members/{userId}/role")
-    ResponseEntity<String> getRole(
+    ResponseEntity<java.util.Map<String, String>> getRole(
             @PathVariable("id") Long id,
             @PathVariable("userId") Long userId,
             @RequestHeader("X-Internal-Gateway-Secret") String secret

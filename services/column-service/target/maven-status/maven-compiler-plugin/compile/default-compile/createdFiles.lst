@@ -18,5 +18,6 @@ com\flowboard\column\controller\ListResource.class
 com\flowboard\column\model\TaskList.class
 com\flowboard\column\security\ColumnSecurity.class
 com\flowboard\column\ColumnServiceApplication.class
+com\flowboard\column\config\FeignConfig.class
 com\flowboard\column\mapper\ListMapperImpl.class
 com\flowboard\column\exception\ResourceNotFoundException.class

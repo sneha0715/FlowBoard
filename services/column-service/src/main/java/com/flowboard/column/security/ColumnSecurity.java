@@ -32,7 +32,8 @@ public class ColumnSecurity {
         }
 
         try {
-            String role = boardClient.getRole(boardId, userId, gatewaySecret).getBody();
+            java.util.Map<String, String> result = boardClient.getRole(boardId, userId, gatewaySecret).getBody();
+            String role = result != null ? result.get("role") : null;
             return role != null && Arrays.asList(allowedRoles).contains(role);
         } catch (Exception e) {
             log.error("Error checking board role: boardId={}, userId={}", boardId, userId, e);

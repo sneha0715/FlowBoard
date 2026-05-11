@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-05-09T00:37:38+0530",
-    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.46.0.v20260407-0427, environment: Java 21.0.10 (Eclipse Adoptium)"
+    date = "2026-05-11T23:38:21+0530",
+    comments = "version: 1.5.5.Final, compiler: javac, environment: Java 20.0.1 (Oracle Corporation)"
 )
 @Component
 public class LabelMapperImpl implements LabelMapper {
@@ -23,8 +23,8 @@ public class LabelMapperImpl implements LabelMapper {
         Label.LabelBuilder label = Label.builder();
 
         label.boardId( request.getBoardId() );
-        label.color( request.getColor() );
         label.name( request.getName() );
+        label.color( request.getColor() );
 
         return label.build();
     }
@@ -37,11 +37,11 @@ public class LabelMapperImpl implements LabelMapper {
 
         LabelResponse.LabelResponseBuilder labelResponse = LabelResponse.builder();
 
+        labelResponse.labelId( label.getLabelId() );
         labelResponse.boardId( label.getBoardId() );
+        labelResponse.name( label.getName() );
         labelResponse.color( label.getColor() );
         labelResponse.createdAt( label.getCreatedAt() );
-        labelResponse.labelId( label.getLabelId() );
-        labelResponse.name( label.getName() );
 
         return labelResponse.build();
     }
@@ -52,7 +52,7 @@ public class LabelMapperImpl implements LabelMapper {
             return;
         }
 
-        label.setColor( request.getColor() );
         label.setName( request.getName() );
+        label.setColor( request.getColor() );
     }
 }

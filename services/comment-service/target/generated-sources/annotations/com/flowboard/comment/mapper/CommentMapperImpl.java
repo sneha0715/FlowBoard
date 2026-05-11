@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-05-09T00:37:40+0530",
-    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.46.0.v20260407-0427, environment: Java 21.0.10 (Eclipse Adoptium)"
+    date = "2026-05-11T23:38:41+0530",
+    comments = "version: 1.5.5.Final, compiler: javac, environment: Java 20.0.1 (Oracle Corporation)"
 )
 @Component
 public class CommentMapperImpl implements CommentMapper {
@@ -35,16 +35,16 @@ public class CommentMapperImpl implements CommentMapper {
             return null;
         }
 
-        CommentResponse commentResponse = new CommentResponse();
+        CommentResponse.CommentResponseBuilder commentResponse = CommentResponse.builder();
 
-        commentResponse.setAuthorId( comment.getAuthorId() );
-        commentResponse.setCardId( comment.getCardId() );
-        commentResponse.setCommentId( comment.getCommentId() );
-        commentResponse.setContent( comment.getContent() );
-        commentResponse.setCreatedAt( comment.getCreatedAt() );
-        commentResponse.setParentCommentId( comment.getParentCommentId() );
-        commentResponse.setUpdatedAt( comment.getUpdatedAt() );
+        commentResponse.commentId( comment.getCommentId() );
+        commentResponse.cardId( comment.getCardId() );
+        commentResponse.authorId( comment.getAuthorId() );
+        commentResponse.content( comment.getContent() );
+        commentResponse.parentCommentId( comment.getParentCommentId() );
+        commentResponse.createdAt( comment.getCreatedAt() );
+        commentResponse.updatedAt( comment.getUpdatedAt() );
 
-        return commentResponse;
+        return commentResponse.build();
     }
 }

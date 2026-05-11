@@ -13,8 +13,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-05-09T00:37:38+0530",
-    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.46.0.v20260407-0427, environment: Java 21.0.10 (Eclipse Adoptium)"
+    date = "2026-05-11T23:38:21+0530",
+    comments = "version: 1.5.5.Final, compiler: javac, environment: Java 20.0.1 (Oracle Corporation)"
 )
 @Component
 public class ChecklistMapperImpl implements ChecklistMapper {
@@ -28,8 +28,8 @@ public class ChecklistMapperImpl implements ChecklistMapper {
         Checklist.ChecklistBuilder checklist = Checklist.builder();
 
         checklist.cardId( request.getCardId() );
-        checklist.position( request.getPosition() );
         checklist.title( request.getTitle() );
+        checklist.position( request.getPosition() );
 
         return checklist.build();
     }
@@ -42,12 +42,12 @@ public class ChecklistMapperImpl implements ChecklistMapper {
 
         ChecklistResponse.ChecklistResponseBuilder checklistResponse = ChecklistResponse.builder();
 
-        checklistResponse.cardId( checklist.getCardId() );
         checklistResponse.checklistId( checklist.getChecklistId() );
-        checklistResponse.createdAt( checklist.getCreatedAt() );
-        checklistResponse.items( checklistItemListToChecklistItemResponseList( checklist.getItems() ) );
-        checklistResponse.position( checklist.getPosition() );
+        checklistResponse.cardId( checklist.getCardId() );
         checklistResponse.title( checklist.getTitle() );
+        checklistResponse.position( checklist.getPosition() );
+        checklistResponse.items( checklistItemListToChecklistItemResponseList( checklist.getItems() ) );
+        checklistResponse.createdAt( checklist.getCreatedAt() );
 
         return checklistResponse.build();
     }
@@ -60,9 +60,9 @@ public class ChecklistMapperImpl implements ChecklistMapper {
 
         ChecklistItem.ChecklistItemBuilder checklistItem = ChecklistItem.builder();
 
+        checklistItem.text( request.getText() );
         checklistItem.assigneeId( request.getAssigneeId() );
         checklistItem.dueDate( request.getDueDate() );
-        checklistItem.text( request.getText() );
 
         return checklistItem.build();
     }
@@ -76,10 +76,10 @@ public class ChecklistMapperImpl implements ChecklistMapper {
         ChecklistItemResponse.ChecklistItemResponseBuilder checklistItemResponse = ChecklistItemResponse.builder();
 
         checklistItemResponse.isCompleted( item.isCompleted() );
-        checklistItemResponse.assigneeId( item.getAssigneeId() );
-        checklistItemResponse.dueDate( item.getDueDate() );
         checklistItemResponse.itemId( item.getItemId() );
         checklistItemResponse.text( item.getText() );
+        checklistItemResponse.assigneeId( item.getAssigneeId() );
+        checklistItemResponse.dueDate( item.getDueDate() );
 
         return checklistItemResponse.build();
     }
@@ -90,8 +90,8 @@ public class ChecklistMapperImpl implements ChecklistMapper {
             return;
         }
 
-        checklist.setPosition( request.getPosition() );
         checklist.setTitle( request.getTitle() );
+        checklist.setPosition( request.getPosition() );
     }
 
     @Override
@@ -100,9 +100,9 @@ public class ChecklistMapperImpl implements ChecklistMapper {
             return;
         }
 
+        item.setText( request.getText() );
         item.setAssigneeId( request.getAssigneeId() );
         item.setDueDate( request.getDueDate() );
-        item.setText( request.getText() );
     }
 
     protected List<ChecklistItemResponse> checklistItemListToChecklistItemResponseList(List<ChecklistItem> list) {

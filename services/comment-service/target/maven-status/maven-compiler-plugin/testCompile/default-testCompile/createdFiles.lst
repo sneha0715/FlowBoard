@@ -1,1 +1,4 @@
 com\flowboard\attachment\AttachmentServiceApplicationTests.class
+com\flowboard\comment\service\CommentServiceImplTest.class
+com\flowboard\comment\repository\CommentRepositoryTest.class
+com\flowboard\comment\controller\CommentControllerTest.class

@@ -149,7 +149,33 @@ public class WorkspaceController {
     }
 
     @GetMapping("/{workspaceId}/members/{userId}/role")
-    public ResponseEntity<String> getRole(@PathVariable int workspaceId, @PathVariable int userId) {
-        return ResponseEntity.ok(workspaceService.getMemberRole(userId, workspaceId));
+    public java.util.Map<String, String> getRole(@PathVariable int workspaceId, @PathVariable int userId) {
+        return java.util.Map.of("role", workspaceService.getMemberRole(userId, workspaceId));
+    }
+
+    @PostMapping("/{workspaceId}/accept")
+    public ResponseEntity<ApiResponse<Void>> acceptInvitation(
+            @PathVariable int workspaceId,
+            @RequestAttribute("userId") Long userId,
+            HttpServletRequest httpRequest) {
+        workspaceService.acceptMember(workspaceId, userId.intValue());
+        return ResponseEntity.ok(ApiResponse.success(null, "Invitation accepted", httpRequest.getRequestURI()));
+    }
+
+    @GetMapping("/invitations/pending")
+    public ResponseEntity<ApiResponse<List<WorkspaceMemberResponse>>> getPendingInvitations(
+            @RequestAttribute("userId") Long userId,
+            HttpServletRequest httpRequest) {
+        List<WorkspaceMemberResponse> response = workspaceService.getPendingInvitations(userId.intValue());
+        return ResponseEntity.ok(ApiResponse.success(response, "Pending invitations fetched", httpRequest.getRequestURI()));
+    }
+
+    @PostMapping("/{workspaceId}/leave")
+    public ResponseEntity<ApiResponse<Void>> leaveWorkspace(
+            @PathVariable int workspaceId,
+            @RequestAttribute("userId") Long userId,
+            HttpServletRequest httpRequest) {
+        workspaceService.removeMember(userId.intValue(), workspaceId);
+        return ResponseEntity.ok(ApiResponse.success(null, "Left workspace", httpRequest.getRequestURI()));
     }
 }

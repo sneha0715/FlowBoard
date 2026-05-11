@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArchiveRestore, CheckSquare, Edit2, Grid3x3, LoaderCircle, MoreHorizontal, Send, Trash2, UserPlus, UserX, Users, X } from "lucide-react";
+import { ArrowLeft, ArchiveRestore, CheckSquare, Edit2, Eye, Grid3x3, LoaderCircle, MoreHorizontal, Send, Trash2, UserPlus, UserX, Users, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useParams } from "react-router-dom";
 import { authApi, boardApi, cardApi, columnApi, notificationApi } from "../api/services";
@@ -15,6 +15,7 @@ import {
   persistCardMove,
   persistListMove,
 } from "../store/slices/boardSlice";
+import { isBoardAdmin as checkBoardAdmin, canEditBoard, roleBadgeStyle, workspaceRoleLabel, BOARD_ROLES } from "../utils/roles";
 
 export default function BoardPage() {
   const { boardId } = useParams();
@@ -25,7 +26,7 @@ export default function BoardPage() {
   const [boardMembers, setBoardMembers] = useState([]);
   const [selectedCard, setSelectedCard] = useState(null);
   const [memberDraft, setMemberDraft] = useState({ email: "", role: "MEMBER" });
-  const [memberMsg, setMemberMsg] = useState({ type: "", text: "" });
+  const [toast, setToast] = useState(null); // { type, msg }
   const [archivedCards, setArchivedCards] = useState([]);
   const [activeTab, setActiveTab] = useState("board"); // "board" | "members" | "archived"
   const [showBoardEdit, setShowBoardEdit] = useState(false);
@@ -33,16 +34,28 @@ export default function BoardPage() {
   const [boardUpdating, setBoardUpdating] = useState(false);
   const [workspaceBoards, setWorkspaceBoards] = useState([]);
 
-  const isBoardAdmin = userRole === "ADMIN" || user?.role === "PLATFORM_ADMIN";
-  const canEdit = userRole === "ADMIN" || userRole === "MEMBER" || user?.role === "PLATFORM_ADMIN";
+  const isBoardAdmin = checkBoardAdmin(user, userRole);
+  const canEdit = canEditBoard(user, userRole);
+  const isObserver = userRole === "OBSERVER" && user?.role !== "PLATFORM_ADMIN";
 
   const totalCards = Object.keys(cardsById).length;
   const completedCards = Object.values(cardsById).filter((c) => c.status === "DONE").length;
   const overdueCards = Object.values(cardsById).filter((c) => c.dueDate && c.status !== "DONE" && new Date(c.dueDate) < new Date()).length;
 
+  const showToast = (type, msg) => {
+    setToast({ type, msg });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   useEffect(() => {
     dispatch(fetchBoardBundle(Number(boardId)));
-  }, [boardId, dispatch]);
+  }, [boardId, user?.userId, dispatch]);
+
+  useEffect(() => {
+    if (error) {
+      showToast("error", error);
+    }
+  }, [error]);
 
   useEffect(() => {
     if (!boardId) return;
@@ -56,11 +69,11 @@ export default function BoardPage() {
     if (!boardId) return;
     cardApi.archivedByBoard(Number(boardId)).then(setArchivedCards).catch(() => setArchivedCards([]));
     if (activeBoard) {
-      setBoardEditDraft({ 
-        name: activeBoard.name, 
-        description: activeBoard.description || "", 
-        background: activeBoard.background || "Ocean", 
-        visibility: activeBoard.visibility || "PRIVATE" 
+      setBoardEditDraft({
+        name: activeBoard.name,
+        description: activeBoard.description || "",
+        background: activeBoard.background || "Ocean",
+        visibility: activeBoard.visibility || "PRIVATE"
       });
     }
   }, [boardId, status, activeBoard?.name]);
@@ -95,6 +108,16 @@ export default function BoardPage() {
     if (!window.confirm("Close this board? It will be archived.")) return;
     await boardApi.close(Number(boardId));
     dispatch(fetchBoardBundle(Number(boardId)));
+  };
+
+  const handleDeleteBoard = async () => {
+    if (!window.confirm("Permanently delete this board? This action cannot be undone.")) return;
+    try {
+      await boardApi.remove(Number(boardId));
+      window.location.href = "/workspaces/" + activeBoard?.workspaceId;
+    } catch (err) {
+      showToast("error", "Failed to delete board.");
+    }
   };
 
   const handleCreateCard = async (listId, draft) => {
@@ -146,7 +169,6 @@ export default function BoardPage() {
 
   const inviteBoardMember = async (e) => {
     e.preventDefault();
-    setMemberMsg({ type: "", text: "" });
     try {
       const users = await authApi.searchUsers(memberDraft.email);
       const match = users.find((u) => u.email?.toLowerCase() === memberDraft.email.trim().toLowerCase());
@@ -162,11 +184,11 @@ export default function BoardPage() {
         relatedType: "BOARD",
       });
       setMemberDraft({ email: "", role: "MEMBER" });
-      setMemberMsg({ type: "success", text: `${match.fullName || match.email} added.` });
+      showToast("success", `${match.fullName || match.email} added.`);
       const members = await boardApi.members(Number(boardId));
       setBoardMembers(members);
     } catch (err) {
-      setMemberMsg({ type: "error", text: err?.message || "Failed to add member." });
+      showToast("error", err?.message || "Failed to add member.");
     }
   };
 
@@ -235,10 +257,27 @@ export default function BoardPage() {
         </div>
       </div>
 
-      {/* Error */}
-      {error && (
-        <div style={{ marginBottom: "1rem", padding: "0.75rem 1rem", borderRadius: "var(--radius-lg)", border: "1px solid rgba(248,81,73,0.2)", background: "rgba(248,81,73,0.08)", color: "var(--color-error)", fontSize: "0.875rem" }}>
-          {error}
+      {/* Global Modern Toast */}
+      {toast && (
+        <div className="fb-toast-container">
+          <div className={`fb-toast fb-toast-${toast.type}`}>
+            {toast.type === "success" && <CheckSquare size={20} />}
+            {toast.type === "error" && <X size={20} />}
+            {toast.type === "info" && <Users size={20} />}
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: 0, fontWeight: 600, fontSize: "0.9rem" }}>{toast.type === "success" ? "Success" : toast.type === "error" ? "Error" : "Info"}</p>
+              <p style={{ margin: 0, fontSize: "0.8rem", opacity: 0.9 }}>{toast.msg}</p>
+            </div>
+            <button onClick={() => setToast(null)} style={{ background: "none", border: "none", color: "white", cursor: "pointer", opacity: 0.7 }}><X size={16} /></button>
+          </div>
+        </div>
+      )}
+
+      {/* Observer read-only banner */}
+      {isObserver && (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.75rem 1rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", background: "rgba(255,255,255,0.03)", marginBottom: "1rem", fontSize: "0.875rem", color: "var(--color-text-secondary)" }}>
+          <Eye size={15} color="var(--color-text-muted)" />
+          <span>You are an <strong>Observer</strong> on this board — read-only access. You can view cards but cannot create, move, or edit them.</span>
         </div>
       )}
 
@@ -316,9 +355,14 @@ export default function BoardPage() {
                   </div>
                   <div style={{ marginTop: "1rem", borderTop: "1px solid var(--color-border)", paddingTop: "1rem" }}>
                     <p style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", marginBottom: "0.5rem" }}>Board Actions</p>
-                    <button type="button" onClick={handleCloseBoard} className="fb-btn fb-btn-danger" style={{ width: "100%", justifyContent: "center" }}>
-                      <ArchiveRestore size={14} /> Close board
-                    </button>
+                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <button type="button" onClick={handleCloseBoard} className="fb-btn fb-btn-secondary" style={{ flex: 1, justifyContent: "center" }}>
+                        <ArchiveRestore size={14} /> Close
+                      </button>
+                      <button type="button" onClick={handleDeleteBoard} className="fb-btn fb-btn-danger" style={{ flex: 1, justifyContent: "center" }}>
+                        <Trash2 size={14} /> Delete
+                      </button>
+                    </div>
                   </div>
                   <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", marginTop: "0.5rem" }}>
                     <button type="button" onClick={() => setShowBoardEdit(false)} className="fb-btn fb-btn-secondary">Cancel</button>
@@ -341,11 +385,6 @@ export default function BoardPage() {
                     <UserPlus size={16} color="var(--color-primary-light)" />
                     <p style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>Add member</p>
                   </div>
-                  {memberMsg.text && (
-                    <div style={{ padding: "0.625rem 0.875rem", borderRadius: "var(--radius-md)", fontSize: "0.8rem", marginBottom: "0.75rem", background: memberMsg.type === "success" ? "rgba(63,185,80,0.1)" : "rgba(248,81,73,0.1)", color: memberMsg.type === "success" ? "var(--color-success)" : "var(--color-error)", border: `1px solid ${memberMsg.type === "success" ? "rgba(63,185,80,0.25)" : "rgba(248,81,73,0.25)"}` }}>
-                      {memberMsg.text}
-                    </div>
-                  )}
                   <form onSubmit={inviteBoardMember} style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
                     <input type="email" required placeholder="member@email.com" value={memberDraft.email} onChange={(e) => setMemberDraft((d) => ({ ...d, email: e.target.value }))} id="board-invite-email" />
                     <select value={memberDraft.role} onChange={(e) => setMemberDraft((d) => ({ ...d, role: e.target.value }))}>

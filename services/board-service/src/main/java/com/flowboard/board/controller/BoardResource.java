@@ -137,14 +137,14 @@ public class BoardResource {
     }
 
     @GetMapping("/{id}/members/{userId}/role")
-    public ResponseEntity<String> getRole(
+    public ResponseEntity<java.util.Map<String, String>> getRole(
             @PathVariable Long id, 
             @PathVariable Long userId,
             @RequestHeader(value = "X-Internal-Gateway-Secret", required = false) String secret) {
         if (!"FlowBoardGateway2024".equals(secret)) {
-            // 
+            // Internal security check
         }
-        return ResponseEntity.ok(boardService.getRole(id, userId));
+        return ResponseEntity.ok(java.util.Map.of("role", boardService.getRole(id, userId)));
     }
 
     private <T> ResponseEntity<ApiResponse<T>> unauthorized() {

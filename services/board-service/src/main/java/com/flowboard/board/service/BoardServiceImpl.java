@@ -28,6 +28,10 @@ public class BoardServiceImpl implements BoardService {
     private final BoardMemberRepository boardMemberRepository;
     private final BoardMapper boardMapper;
     private final BoardMemberMapper boardMemberMapper;
+    private final com.flowboard.board.client.WorkspaceClient workspaceClient;
+
+    @org.springframework.beans.factory.annotation.Value("${gateway.secret:FlowBoardGateway2024}")
+    private String gatewaySecret;
 
     @Override
     @Transactional
@@ -137,13 +141,47 @@ public class BoardServiceImpl implements BoardService {
 
     @Override
     public boolean isMember(Long boardId, Long userId) {
-        return boardMemberRepository.existsByBoardIdAndUserId(boardId, userId);
+        // 1. Direct board membership
+        if (boardMemberRepository.existsByBoardIdAndUserId(boardId, userId)) {
+            return true;
+        }
+        // 2. Workspace-level fallback: any workspace role grants board access
+        return boardRepository.findById(boardId).map(board -> {
+            if (board.getWorkspaceId() == null) return false;
+            try {
+                java.util.Map<String, String> result = workspaceClient.getMemberRole(
+                        board.getWorkspaceId().intValue(), userId.intValue(), gatewaySecret);
+                String role = result != null ? result.get("role") : null;
+                return role != null && !role.equalsIgnoreCase("NONE");
+            } catch (Exception e) {
+                log.error("Workspace role check failed for boardId={}, userId={}", boardId, userId, e);
+                return false;
+            }
+        }).orElse(false);
     }
 
     @Override
     public String getRole(Long boardId, Long userId) {
-        return boardMemberRepository.findByBoardIdAndUserId(boardId, userId)
+        // 1. Check explicit board-level role first
+        String boardRole = boardMemberRepository.findByBoardIdAndUserId(boardId, userId)
                 .map(BoardMember::getRole)
-                .orElse("NONE");
+                .orElse(null);
+        if (boardRole != null) return boardRole;
+
+        // 2. Fall back to workspace-level role
+        return boardRepository.findById(boardId).map(board -> {
+            if (board.getWorkspaceId() == null) return "NONE";
+            try {
+                java.util.Map<String, String> result = workspaceClient.getMemberRole(
+                        board.getWorkspaceId().intValue(), userId.intValue(), gatewaySecret);
+                String wsRole = result != null ? result.get("role") : null;
+                // Map workspace roles to board roles
+                if ("OWNER".equalsIgnoreCase(wsRole) || "ADMIN".equalsIgnoreCase(wsRole)) return "ADMIN";
+                if ("MEMBER".equalsIgnoreCase(wsRole)) return "MEMBER";
+                return "NONE";
+            } catch (Exception e) {
+                return "NONE";
+            }
+        }).orElse("NONE");
     }
 }

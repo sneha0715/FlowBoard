@@ -42,8 +42,8 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         }
 
         if (workspaceRepository.existsByNameAndOwnerId(request.getName(), request.getOwnerId())) {
-            log.warn("Workspace already exists: name={}, ownerId={}", request.getName(), request.getOwnerId());
-            throw new WorkspaceAlreadyExistsException("Workspace with this name already exists for this owner");
+            log.info("Workspace already exists, returning existing: name={}, ownerId={}", request.getName(), request.getOwnerId());
+            return workspaceMapper.toResponse(workspaceRepository.findByNameAndOwnerId(request.getName(), request.getOwnerId()));
         }
 
         Workspace workspace = workspaceMapper.toEntity(request);
@@ -53,6 +53,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
                 .workspace(savedWorkspace)
                 .userId(request.getOwnerId())
                 .role("OWNER")
+                .status("ACCEPTED")
                 .build();
         workspaceMemberRepository.save(ownerMember);
 
@@ -81,11 +82,22 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     @Override
     @Transactional(readOnly = true)
     public List<WorkspaceResponse> getByMember(int userId) {
-        List<Workspace> workspaces = workspaceRepository.findByMembersUserId(userId);
+        // Use the proper repository query to avoid LazyInitializationException
+        List<Workspace> workspaces = workspaceRepository.findAcceptedWorkspacesByUserId(userId);
+        
         if (workspaces.isEmpty()) {
-            throw new ResourceNotFoundException("No workspaces found for member id: " + userId);
+            // Log but don't throw exception if we want empty list instead of 404
+            log.info("No active workspaces for userId={}", userId);
         }
         return workspaces.stream().map(workspaceMapper::toResponse).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<WorkspaceMemberResponse> getPendingInvitations(int userId) {
+        return workspaceMemberRepository.findByUserIdAndStatus(userId, "PENDING").stream()
+                .map(workspaceMemberMapper::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -120,28 +132,51 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         Workspace workspace = workspaceRepository.findById(workspaceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
 
-        if (workspaceMemberRepository.findByWorkspaceWorkspaceIdAndUserId(workspaceId, userId).isPresent()) {
-            log.warn("Add member failed — userId={} already in workspace={}", userId, workspaceId);
-            throw new MemberAlreadyExistsException("User is already a member of this workspace");
+        java.util.Optional<WorkspaceMember> existing = workspaceMemberRepository.findByWorkspaceWorkspaceIdAndUserId(workspaceId, userId);
+        if (existing.isPresent()) {
+            log.info("Member already exists, returning existing: userId={}, workspaceId={}", userId, workspaceId);
+            return workspaceMemberMapper.toResponse(existing.get());
         }
 
         WorkspaceMember member = WorkspaceMember.builder()
                 .workspace(workspace)
                 .userId(userId)
                 .role(role)
+                .status("PENDING") // Default to pending for invitations
                 .build();
 
         WorkspaceMemberResponse response = workspaceMemberMapper.toResponse(workspaceMemberRepository.save(member));
-        log.info("Member added: userId={}, workspaceId={}, role={}", userId, workspaceId, role);
+        log.info("Invitation sent: userId={}, workspaceId={}, role={}", userId, workspaceId, role);
         return response;
     }
 
     @Override
     @Transactional
+    public void acceptMember(int workspaceId, int userId) {
+        WorkspaceMember member = workspaceMemberRepository.findByWorkspaceWorkspaceIdAndUserId(workspaceId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
+        
+        member.setStatus("ACCEPTED");
+        workspaceMemberRepository.save(member);
+        log.info("Invitation accepted: userId={}, workspaceId={}", userId, workspaceId);
+    }
+
+    @Override
+    @Transactional
     public void removeMember(int userId, int workspaceId) {
-        if (!workspaceMemberRepository.findByWorkspaceWorkspaceIdAndUserId(workspaceId, userId).isPresent()) {
-            throw new ResourceNotFoundException("Member not found in this workspace");
+        WorkspaceMember member = workspaceMemberRepository.findByWorkspaceWorkspaceIdAndUserId(workspaceId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Member not found in this workspace"));
+
+        // Prevention: Don't allow removing the last ADMIN
+        if ("ADMIN".equalsIgnoreCase(member.getRole()) || "OWNER".equalsIgnoreCase(member.getRole())) {
+            long adminCount = workspaceMemberRepository.findByWorkspaceWorkspaceId(workspaceId).stream()
+                    .filter(m -> "ADMIN".equalsIgnoreCase(m.getRole()) || "OWNER".equalsIgnoreCase(m.getRole()))
+                    .count();
+            if (adminCount <= 1) {
+                throw new CustomException("Cannot remove the last administrator of the workspace", org.springframework.http.HttpStatus.BAD_REQUEST);
+            }
         }
+
         workspaceMemberRepository.deleteByWorkspaceWorkspaceIdAndUserId(workspaceId, userId);
         log.info("Member removed: userId={}, workspaceId={}", userId, workspaceId);
     }
@@ -151,6 +186,17 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     public void updateMemberRole(int userId, int workspaceId, String role) {
         WorkspaceMember member = workspaceMemberRepository.findByWorkspaceWorkspaceIdAndUserId(workspaceId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Member not found"));
+
+        // Prevention: Don't allow demoting the last ADMIN to MEMBER/OBSERVER
+        if (!"ADMIN".equalsIgnoreCase(role) && "ADMIN".equalsIgnoreCase(member.getRole())) {
+            long adminCount = workspaceMemberRepository.findByWorkspaceWorkspaceId(workspaceId).stream()
+                    .filter(m -> "ADMIN".equalsIgnoreCase(m.getRole()) || "OWNER".equalsIgnoreCase(m.getRole()))
+                    .count();
+            if (adminCount <= 1) {
+                throw new CustomException("Cannot demote the last administrator of the workspace", org.springframework.http.HttpStatus.BAD_REQUEST);
+            }
+        }
+
         member.setRole(role);
         workspaceMemberRepository.save(member);
         log.info("Member role updated: userId={}, workspaceId={}, role={}", userId, workspaceId, role);

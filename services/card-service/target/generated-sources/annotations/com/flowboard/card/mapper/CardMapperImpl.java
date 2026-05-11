@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-05-09T00:37:37+0530",
-    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.46.0.v20260407-0427, environment: Java 21.0.10 (Eclipse Adoptium)"
+    date = "2026-05-11T23:38:00+0530",
+    comments = "version: 1.5.5.Final, compiler: javac, environment: Java 20.0.1 (Oracle Corporation)"
 )
 @Component
 public class CardMapperImpl implements CardMapper {
@@ -20,26 +20,26 @@ public class CardMapperImpl implements CardMapper {
             return null;
         }
 
-        CardResponse cardResponse = new CardResponse();
+        CardResponse.CardResponseBuilder cardResponse = CardResponse.builder();
 
-        cardResponse.setArchived( card.isArchived() );
-        cardResponse.setAssigneeId( card.getAssigneeId() );
-        cardResponse.setBoardId( card.getBoardId() );
-        cardResponse.setCardId( card.getCardId() );
-        cardResponse.setCoverColor( card.getCoverColor() );
-        cardResponse.setCreatedAt( card.getCreatedAt() );
-        cardResponse.setCreatedById( card.getCreatedById() );
-        cardResponse.setDescription( card.getDescription() );
-        cardResponse.setDueDate( card.getDueDate() );
-        cardResponse.setListId( card.getListId() );
-        cardResponse.setPosition( card.getPosition() );
-        cardResponse.setPriority( card.getPriority() );
-        cardResponse.setStartDate( card.getStartDate() );
-        cardResponse.setStatus( card.getStatus() );
-        cardResponse.setTitle( card.getTitle() );
-        cardResponse.setUpdatedAt( card.getUpdatedAt() );
+        cardResponse.cardId( card.getCardId() );
+        cardResponse.listId( card.getListId() );
+        cardResponse.boardId( card.getBoardId() );
+        cardResponse.title( card.getTitle() );
+        cardResponse.description( card.getDescription() );
+        cardResponse.position( card.getPosition() );
+        cardResponse.priority( card.getPriority() );
+        cardResponse.status( card.getStatus() );
+        cardResponse.dueDate( card.getDueDate() );
+        cardResponse.startDate( card.getStartDate() );
+        cardResponse.assigneeId( card.getAssigneeId() );
+        cardResponse.createdById( card.getCreatedById() );
+        cardResponse.archived( card.isArchived() );
+        cardResponse.coverColor( card.getCoverColor() );
+        cardResponse.createdAt( card.getCreatedAt() );
+        cardResponse.updatedAt( card.getUpdatedAt() );
 
-        return cardResponse;
+        return cardResponse.build();
     }
 
     @Override
@@ -50,19 +50,19 @@ public class CardMapperImpl implements CardMapper {
 
         Card.CardBuilder card = Card.builder();
 
-        card.assigneeId( request.getAssigneeId() );
-        card.boardId( request.getBoardId() );
-        card.coverColor( request.getCoverColor() );
-        card.description( request.getDescription() );
-        card.dueDate( request.getDueDate() );
         card.listId( request.getListId() );
+        card.boardId( request.getBoardId() );
+        card.title( request.getTitle() );
+        card.description( request.getDescription() );
         if ( request.getPosition() != null ) {
             card.position( request.getPosition() );
         }
         card.priority( request.getPriority() );
-        card.startDate( request.getStartDate() );
         card.status( request.getStatus() );
-        card.title( request.getTitle() );
+        card.dueDate( request.getDueDate() );
+        card.startDate( request.getStartDate() );
+        card.assigneeId( request.getAssigneeId() );
+        card.coverColor( request.getCoverColor() );
 
         return card.build();
     }
@@ -73,16 +73,16 @@ public class CardMapperImpl implements CardMapper {
             return;
         }
 
-        card.setAssigneeId( request.getAssigneeId() );
-        card.setCoverColor( request.getCoverColor() );
+        card.setTitle( request.getTitle() );
         card.setDescription( request.getDescription() );
-        card.setDueDate( request.getDueDate() );
         if ( request.getPosition() != null ) {
             card.setPosition( request.getPosition() );
         }
         card.setPriority( request.getPriority() );
-        card.setStartDate( request.getStartDate() );
         card.setStatus( request.getStatus() );
-        card.setTitle( request.getTitle() );
+        card.setDueDate( request.getDueDate() );
+        card.setStartDate( request.getStartDate() );
+        card.setAssigneeId( request.getAssigneeId() );
+        card.setCoverColor( request.getCoverColor() );
     }
 }

@@ -38,7 +38,7 @@ export default function App() {
       <Route
         path="/admin"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="PLATFORM_ADMIN">
             <AdminPage />
           </ProtectedRoute>
         }

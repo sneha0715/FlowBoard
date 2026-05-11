@@ -27,8 +27,10 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     List<User> findAllByRole(Role role);
 
-    @Query("SELECT u FROM User u WHERE LOWER(u.fullName) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(u.userName) LIKE LOWER(CONCAT('%', :query, '%'))")
-    List<User> searchByFullName(@Param("query") String query);
+    @Query("SELECT u FROM User u WHERE LOWER(u.fullName) LIKE LOWER(CONCAT('%', :query, '%')) " +
+           "OR LOWER(u.userName) LIKE LOWER(CONCAT('%', :query, '%')) " +
+           "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%'))")
+    List<User> searchByQuery(@Param("query") String query);
 
     @Transactional
     void deleteByUserId(int userId);

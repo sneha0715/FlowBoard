@@ -76,11 +76,15 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                     })
                     .build();
 
-            // 3. Extract Authorization header
-            String authHeader = mutatedRequest.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+            // 3. Extract Authorization header and always add Gateway Secret
+            ServerHttpRequest nextRequest = mutatedRequest.mutate()
+                    .header(INTERNAL_SECRET_HEADER, GATEWAY_SECRET)
+                    .build();
+
+            String authHeader = nextRequest.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 log.debug("No Authorization header for path: {}. Proceeding as Guest.", request.getPath());
-                return chain.filter(exchange.mutate().request(mutatedRequest).build());
+                return chain.filter(exchange.mutate().request(nextRequest).build());
             }
 
             String token = authHeader.substring(7).trim();
@@ -94,7 +98,7 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
             // 4. Validate the token
             String validationError = jwtUtil.validateToken(token);
             if (validationError != null) {
-                log.debug("Invalid or expired JWT for path: {}. Error: {}", request.getPath(), validationError);
+                log.info("Invalid or expired JWT for path: {}. Error: {}", request.getPath(), validationError);
                 return reject(exchange, HttpStatus.UNAUTHORIZED, "Token validation failed: " + validationError,
                         request.getPath().toString());
             }

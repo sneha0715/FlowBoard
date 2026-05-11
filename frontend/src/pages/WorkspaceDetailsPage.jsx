@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Edit2, FolderKanban, LoaderCircle, Mail, Plus, Send, Shield, Trash2, UserPlus, Users, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Edit2, Eye, FolderKanban, LoaderCircle, LogOut, Mail, Plus, Send, Shield, Trash2, UserPlus, Users, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AppShell from "../components/layout/AppShell";
 import { authApi, boardApi, columnApi, notificationApi, workspaceApi } from "../api/services";
 import { fetchWorkspaceBundle } from "../store/slices/workspaceSlice";
+import { canEditInWorkspace, canManageWorkspace, roleBadgeStyle, workspaceRoleLabel, WORKSPACE_ROLES } from "../utils/roles";
 
 const VISIBILITY_OPTIONS = ["PRIVATE", "TEAM", "PUBLIC"];
 const BACKGROUND_OPTIONS = ["Ocean", "Sunset", "Midnight", "Forest", "Aurora"];
@@ -38,17 +39,45 @@ export default function WorkspaceDetailsPage() {
   const [showWsEdit, setShowWsEdit] = useState(false);
   const [wsEditDraft, setWsEditDraft] = useState({ name: "", description: "", visibility: "PRIVATE" });
   const [wsUpdating, setWsUpdating] = useState(false);
+  const [memberProfiles, setMemberProfiles] = useState({}); // userId -> { fullName, email }
+  const [loadingProfiles, setLoadingProfiles] = useState(false);
 
   const load = () => dispatch(fetchWorkspaceBundle(workspaceId));
-  useEffect(() => { 
-    load(); 
+  useEffect(() => {
+    load();
     if (workspace) {
       setWsEditDraft({ name: workspace.name, description: workspace.description || "", visibility: workspace.visibility || "PRIVATE" });
     }
-  }, [workspaceId, workspace?.name]);
+  // Re-fetch when workspaceId OR authenticated user changes (fixes stale role after re-login)
+  }, [workspaceId, workspace?.name, user?.userId]);
+
+  // Fetch user profiles for members to show real names instead of User #ID
+  useEffect(() => {
+    const fetchProfiles = async () => {
+      if (members.length === 0) return;
+      setLoadingProfiles(true);
+      const profiles = { ...memberProfiles };
+      try {
+        await Promise.all(members.map(async (m) => {
+          if (profiles[m.userId]) return;
+          // Search by userId isn't directly exposed in a bulk way, 
+          // so we use searchUsers with the ID or just assume we'll get it.
+          // For now, let's just fetch all and match (simple approach for small teams)
+          const results = await authApi.searchUsers(""); 
+          results.forEach(u => { profiles[u.userId] = u; });
+        }));
+        setMemberProfiles(profiles);
+      } catch (err) { console.error("Failed to fetch member profiles", err); }
+      finally { setLoadingProfiles(false); }
+    };
+    fetchProfiles();
+  }, [members]);
 
   const memberIds = useMemo(() => new Set(members.map((m) => Number(m.userId))), [members]);
-  const isAdmin = userRole === "ADMIN" || user?.role === "PLATFORM_ADMIN";
+  const isAdmin = canManageWorkspace(user, userRole);
+  const canEdit = canEditInWorkspace(user, userRole);
+  const isObserver = userRole === "OBSERVER" && user?.role !== "PLATFORM_ADMIN";
+  const isPending = members.find(m => Number(m.userId) === Number(user?.userId))?.status === "PENDING";
 
   const showToast = (type, msg) => {
     setToast({ type, msg });
@@ -60,9 +89,27 @@ export default function WorkspaceDetailsPage() {
     setInviteStatus("sending");
     try {
       const users = await authApi.searchUsers(inviteDraft.email);
-      const match = users.find((u) => u.email?.toLowerCase() === inviteDraft.email.trim().toLowerCase());
-      if (!match) throw new Error("No registered user with that email.");
-      if (memberIds.has(Number(match.userId))) throw new Error("User is already a member.");
+      let match = users.find((u) => u.email?.toLowerCase() === inviteDraft.email.trim().toLowerCase());
+      if (!match) {
+        // Automatically create a stub user if they aren't registered yet
+        const tempName = "PENDING_STUB";
+        const tempUsername = inviteDraft.email.split("@")[0] + Math.floor(Math.random() * 10000);
+        await authApi.register({
+          email: inviteDraft.email.trim().toLowerCase(),
+          userName: tempUsername,
+          fullName: tempName,
+          password: "TemporaryPassword123!"
+        });
+        // Fetch them again to get the userId
+        const newUsers = await authApi.searchUsers(inviteDraft.email);
+        match = newUsers.find((u) => u.email?.toLowerCase() === inviteDraft.email.trim().toLowerCase());
+      }
+      
+      if (memberIds.has(Number(match.userId))) {
+        showToast("info", "User is already a member of this workspace.");
+        setInviteStatus("idle");
+        return;
+      }
       await workspaceApi.addMember(workspaceId, { userId: Number(match.userId), role: inviteDraft.role });
       await notificationApi.send({
         recipientId: Number(match.userId),
@@ -90,6 +137,26 @@ export default function WorkspaceDetailsPage() {
       load();
     } catch (err) {
       showToast("error", err?.message || "Failed to remove member.");
+    }
+  };
+
+  const leaveWorkspace = async () => {
+    if (!window.confirm(`Leave workspace "${workspace?.name}"? You will lose access until invited back.`)) return;
+    try {
+      await workspaceApi.leaveWorkspace(workspaceId);
+      navigate("/");
+    } catch (err) {
+      showToast("error", err?.message || "Failed to leave workspace.");
+    }
+  };
+
+  const acceptInvitation = async () => {
+    try {
+      await workspaceApi.acceptInvitation(workspaceId);
+      showToast("success", "Welcome to the workspace!");
+      load();
+    } catch (err) {
+      showToast("error", "Failed to accept invitation.");
     }
   };
 
@@ -164,17 +231,19 @@ export default function WorkspaceDetailsPage() {
       subtitle={workspace?.description || `${boards.length} boards · ${members.length} members`}
       actions={actions}
     >
-      {/* Toast */}
+      {/* Global Modern Toast */}
       {toast && (
-        <div className="animate-fade-in" style={{
-          marginBottom: "1rem", padding: "0.75rem 1rem", borderRadius: "var(--radius-lg)", fontSize: "0.875rem",
-          border: `1px solid ${toast.type === "success" ? "rgba(63,185,80,0.25)" : "rgba(248,81,73,0.25)"}`,
-          background: toast.type === "success" ? "rgba(63,185,80,0.1)" : "rgba(248,81,73,0.1)",
-          color: toast.type === "success" ? "var(--color-success)" : "var(--color-error)",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-        }}>
-          {toast.msg}
-          <button onClick={() => setToast(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit" }}><X size={15} /></button>
+        <div className="fb-toast-container">
+          <div className={`fb-toast fb-toast-${toast.type}`}>
+            {toast.type === "success" && <Check size={20} />}
+            {toast.type === "error" && <X size={20} />}
+            {toast.type === "info" && <Users size={20} />}
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: 0, fontWeight: 600, fontSize: "0.9rem" }}>{toast.type === "success" ? "Success" : toast.type === "error" ? "Error" : "Info"}</p>
+              <p style={{ margin: 0, fontSize: "0.8rem", opacity: 0.9 }}>{toast.msg}</p>
+            </div>
+            <button onClick={() => setToast(null)} style={{ background: "none", border: "none", color: "white", cursor: "pointer", opacity: 0.7 }}><X size={16} /></button>
+          </div>
         </div>
       )}
 
@@ -188,9 +257,36 @@ export default function WorkspaceDetailsPage() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "1.5rem", alignItems: "start" }}>
         {/* Boards grid */}
         <div>
+          {/* Pending Invite Banner */}
+          {isPending && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", padding: "1rem 1.25rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-primary)", background: "rgba(0,121,191,0.08)", marginBottom: "1.5rem", boxShadow: "0 0 20px rgba(0,121,191,0.1)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--color-primary)", display: "flex", alignItems: "center", justifyContent: "center", color: "white" }}>
+                  <Users size={20} />
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontWeight: 700, color: "var(--color-text-primary)" }}>You've been invited!</p>
+                  <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>Join the team to start collaborating on boards.</p>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: "0.625rem" }}>
+                <button onClick={leaveWorkspace} className="fb-btn fb-btn-secondary">Decline</button>
+                <button onClick={acceptInvitation} className="fb-btn fb-btn-primary"><Check size={16} /> Accept & Join</button>
+              </div>
+            </div>
+          )}
+
+          {/* Observer banner */}
+          {isObserver && !isPending && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.75rem 1rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", background: "rgba(255,255,255,0.03)", marginBottom: "1rem", fontSize: "0.875rem", color: "var(--color-text-secondary)" }}>
+              <Eye size={15} color="var(--color-text-muted)" />
+              <span>You are an <strong>Observer</strong> in this workspace — read-only access.</span>
+            </div>
+          )}
+
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
             <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: 700 }}>Boards</h2>
-            {isAdmin && (
+            {canEdit && (
               <button id="new-board-btn" onClick={() => setShowBoardForm(true)} className="fb-btn fb-btn-primary" style={{ padding: "0.4rem 0.875rem", fontSize: "0.8rem" }}>
                 <Plus size={13} /> New board
               </button>
@@ -290,9 +386,9 @@ export default function WorkspaceDetailsPage() {
                   <input type="email" required placeholder="user@email.com" value={inviteDraft.email} onChange={(e) => setInviteDraft((d) => ({ ...d, email: e.target.value }))} style={{ paddingLeft: "2rem", fontSize: "0.8125rem" }} id="invite-email-input" />
                 </div>
                 <select value={inviteDraft.role} onChange={(e) => setInviteDraft((d) => ({ ...d, role: e.target.value }))} style={{ fontSize: "0.8125rem" }}>
-                  <option value="MEMBER">Member</option>
-                  <option value="ADMIN">Admin</option>
-                  <option value="OBSERVER">Observer</option>
+                  {WORKSPACE_ROLES.filter(r => r !== "OWNER").map(r => (
+                    <option key={r} value={r}>{workspaceRoleLabel(r)}</option>
+                  ))}
                 </select>
                 <button id="send-invite-btn" type="submit" disabled={inviteStatus === "sending"} className="fb-btn fb-btn-primary" style={{ width: "100%" }}>
                   {inviteStatus === "sending" ? <><LoaderCircle size={13} className="animate-spin" /> Sending...</> : <><Send size={13} /> Send invite</>}
@@ -307,37 +403,57 @@ export default function WorkspaceDetailsPage() {
               <Users size={16} color="var(--color-text-secondary)" />
               <p style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>Team ({members.length})</p>
             </div>
+            {/* Your role badge */}
+            {userRole && userRole !== "NONE" && (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem", padding: "0.5rem 0.75rem", borderRadius: "var(--radius-md)", background: "rgba(255,255,255,0.02)", border: "1px solid var(--color-border)" }}>
+                <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Your role:</span>
+                <span className="fb-badge" style={{ fontSize: "0.7rem", ...roleBadgeStyle(userRole) }}>{workspaceRoleLabel(userRole)}</span>
+              </div>
+            )}
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              {members.map((m) => (
-                <div key={m.workspaceMemberId || m.userId} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.625rem 0.75rem", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)", background: "rgba(255,255,255,0.02)" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
-                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--color-primary-subtle)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 700, color: "var(--color-primary-light)", flexShrink: 0 }}>
-                      {String(m.userId).slice(-2)}
+              {members.map((m) => {
+                const profile = memberProfiles[m.userId];
+                const isMe = Number(m.userId) === Number(user?.userId);
+                return (
+                  <div key={m.workspaceMemberId || m.userId} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", background: isMe ? "rgba(0,121,191,0.04)" : "rgba(255,255,255,0.02)", transition: "all 0.2s ease" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "var(--radius-md)", background: m.status === 'PENDING' ? "rgba(255,255,255,0.05)" : "var(--color-primary-subtle)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.8rem", fontWeight: 700, color: "var(--color-primary-light)", border: "1px solid var(--color-border)", flexShrink: 0 }}>
+                        {profile ? profile.fullName?.split(" ").map(n => n[0]).join("").toUpperCase() : "?"}
+                      </div>
+                      <div style={{ overflow: "hidden" }}>
+                        <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--color-text-primary)", margin: 0, whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+                          {profile?.fullName || `User #${m.userId}`}{isMe ? " (You)" : ""}
+                        </p>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginTop: "2px" }}>
+                          {isAdmin && m.role !== "OWNER" ? (
+                            <select
+                              value={m.role}
+                              onChange={(e) => updateMemberRole(m.userId, e.target.value)}
+                              style={{ fontSize: "0.65rem", padding: "0", border: "none", background: "transparent", color: "var(--color-primary-light)", fontWeight: 600, cursor: "pointer" }}
+                            >
+                              {WORKSPACE_ROLES.filter(r => r !== "OWNER").map(r => (
+                                <option key={r} value={r}>{workspaceRoleLabel(r)}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span style={{ fontSize: "0.65rem", color: "var(--color-text-muted)", fontWeight: 600 }}>{workspaceRoleLabel(m.role)}</span>
+                          )}
+                          {m.status === "PENDING" && (
+                            <span className="fb-badge" style={{ fontSize: "0.6rem", background: "rgba(245,158,11,0.12)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.25)" }}>
+                              Pending
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--color-text-primary)", margin: 0 }}>User #{m.userId}</p>
-                      {isAdmin ? (
-                        <select 
-                          value={m.role} 
-                          onChange={(e) => updateMemberRole(m.userId, e.target.value)}
-                          style={{ fontSize: "0.65rem", padding: "0 0.25rem", height: "18px", marginTop: "2px", border: "none", background: "transparent", color: "var(--color-primary-light)", fontWeight: 600, cursor: "pointer" }}
-                        >
-                          <option value="MEMBER">MEMBER</option>
-                          <option value="ADMIN">ADMIN</option>
-                          <option value="OBSERVER">OBSERVER</option>
-                        </select>
-                      ) : (
-                        <p style={{ fontSize: "0.7rem", color: "var(--color-text-muted)", margin: 0 }}>{m.role}</p>
-                      )}
-                    </div>
+                    {isAdmin && !isMe && m.role !== "OWNER" && (
+                      <button onClick={() => removeMember(m.userId)} className="fb-btn-ghost" style={{ padding: "0.375rem", color: "var(--color-error)", borderRadius: "var(--radius-md)" }}>
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
-                  {isAdmin && Number(m.userId) !== Number(user?.userId) && (
-                    <button onClick={() => removeMember(m.userId)} className="fb-btn-ghost" style={{ padding: "0.25rem", color: "var(--color-error)", borderRadius: "var(--radius-md)" }}>
-                      <Trash2 size={13} />
-                    </button>
-                  )}
-                </div>
-              ))}
+                );
+              })}
               {members.length === 0 && <p style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>No members yet.</p>}
             </div>
           </div>
@@ -377,16 +493,28 @@ export default function WorkspaceDetailsPage() {
           )}
 
           {/* Workspace info + danger */}
-          {isAdmin && workspace && (
+          {workspace && (
             <div className="fb-card" style={{ padding: "1.25rem" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.875rem" }}>
-                <Shield size={15} color="var(--color-error)" />
-                <p style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>Danger zone</p>
+                <Shield size={15} color={isAdmin ? "var(--color-error)" : "var(--color-text-muted)"} />
+                <p style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>Workspace settings</p>
               </div>
-              <p style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", marginBottom: "0.75rem" }}>Permanently delete this workspace and all its boards.</p>
-              <button id="delete-workspace-btn" onClick={deleteWorkspace} className="fb-btn fb-btn-danger" style={{ width: "100%" }}>
-                <Trash2 size={13} /> Delete workspace
-              </button>
+              
+              {isAdmin ? (
+                <>
+                  <p style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", marginBottom: "0.75rem" }}>Permanently delete this workspace and all its boards.</p>
+                  <button id="delete-workspace-btn" onClick={deleteWorkspace} className="fb-btn fb-btn-danger" style={{ width: "100%" }}>
+                    <Trash2 size={13} /> Delete workspace
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", marginBottom: "0.75rem" }}>Leave this workspace and remove your access.</p>
+                  <button onClick={leaveWorkspace} className="fb-btn fb-btn-danger" style={{ width: "100%", background: "transparent", borderColor: "rgba(248,81,73,0.3)" }}>
+                    <LogOut size={13} /> Leave workspace
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>

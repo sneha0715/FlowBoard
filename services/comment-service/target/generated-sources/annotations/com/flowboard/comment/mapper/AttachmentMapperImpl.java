@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-05-09T00:37:40+0530",
-    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.46.0.v20260407-0427, environment: Java 21.0.10 (Eclipse Adoptium)"
+    date = "2026-05-11T23:38:41+0530",
+    comments = "version: 1.5.5.Final, compiler: javac, environment: Java 20.0.1 (Oracle Corporation)"
 )
 @Component
 public class AttachmentMapperImpl implements AttachmentMapper {
@@ -24,8 +24,8 @@ public class AttachmentMapperImpl implements AttachmentMapper {
 
         attachment.cardId( request.getCardId() );
         attachment.fileName( request.getFileName() );
-        attachment.fileType( request.getFileType() );
         attachment.fileUrl( request.getFileUrl() );
+        attachment.fileType( request.getFileType() );
         attachment.sizeKb( request.getSizeKb() );
 
         return attachment.build();
@@ -37,17 +37,17 @@ public class AttachmentMapperImpl implements AttachmentMapper {
             return null;
         }
 
-        AttachmentResponse attachmentResponse = new AttachmentResponse();
+        AttachmentResponse.AttachmentResponseBuilder attachmentResponse = AttachmentResponse.builder();
 
-        attachmentResponse.setAttachmentId( attachment.getAttachmentId() );
-        attachmentResponse.setCardId( attachment.getCardId() );
-        attachmentResponse.setFileName( attachment.getFileName() );
-        attachmentResponse.setFileType( attachment.getFileType() );
-        attachmentResponse.setFileUrl( attachment.getFileUrl() );
-        attachmentResponse.setSizeKb( attachment.getSizeKb() );
-        attachmentResponse.setUploadedAt( attachment.getUploadedAt() );
-        attachmentResponse.setUploaderId( attachment.getUploaderId() );
+        attachmentResponse.attachmentId( attachment.getAttachmentId() );
+        attachmentResponse.cardId( attachment.getCardId() );
+        attachmentResponse.uploaderId( attachment.getUploaderId() );
+        attachmentResponse.fileName( attachment.getFileName() );
+        attachmentResponse.fileUrl( attachment.getFileUrl() );
+        attachmentResponse.fileType( attachment.getFileType() );
+        attachmentResponse.sizeKb( attachment.getSizeKb() );
+        attachmentResponse.uploadedAt( attachment.getUploadedAt() );
 
-        return attachmentResponse;
+        return attachmentResponse.build();
     }
 }

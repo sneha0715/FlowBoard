@@ -1,15 +1,13 @@
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import { Bell, CheckCheck, MailWarning, X } from "lucide-react";
-import { cardApi, notificationApi } from "../../api/services";
+import { motion, AnimatePresence } from "framer-motion";
+import { Bell, CheckCheck, X, Sparkles, Inbox, Trash2, Clock, CheckCircle2 } from "lucide-react";
+import { notificationApi, workspaceApi } from "../../api/services";
 
-const TYPE_CONFIG = {
-  ASSIGNMENT: { color: "var(--color-primary-light)", bg: "rgba(0,121,191,0.1)", border: "rgba(0,121,191,0.25)" },
-  MENTION: { color: "#d29922", bg: "rgba(210,153,34,0.1)", border: "rgba(210,153,34,0.25)" },
-  MOVE: { color: "#3fb950", bg: "rgba(63,185,80,0.1)", border: "rgba(63,185,80,0.25)" },
-  DUE: { color: "#f85149", bg: "rgba(248,81,73,0.1)", border: "rgba(248,81,73,0.25)" },
-  SYSTEM: { color: "var(--color-text-secondary)", bg: "rgba(255,255,255,0.04)", border: "var(--color-border)" },
-};
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 function timeAgo(dateStr) {
   if (!dateStr) return "";
@@ -26,37 +24,20 @@ export default function NotificationsDrawer({ onClose }) {
   const user = useSelector((state) => state.auth.user);
   const [notifications, setNotifications] = useState([]);
   const [status, setStatus] = useState("loading");
-  const [overdueCards, setOverdueCards] = useState([]);
-  const [dueSoonCards, setDueSoonCards] = useState([]);
 
   const load = async () => {
     if (!user?.userId) return;
     setStatus("loading");
     try {
-      const [notifData, overdueData] = await Promise.all([
-        notificationApi.byRecipient(user.userId),
-        cardApi.overdue().catch(() => []),
-      ]);
+      const notifData = await notificationApi.byRecipient(user.userId);
       setNotifications(Array.isArray(notifData) ? notifData : []);
-
-      const now = new Date();
-      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      setOverdueCards(Array.isArray(overdueData) ? overdueData : []);
-      setDueSoonCards(
-        (Array.isArray(overdueData) ? overdueData : []).filter((c) => {
-          const d = c.dueDate ? new Date(c.dueDate) : null;
-          return d && d >= now && d <= tomorrow;
-        })
-      );
       setStatus("ready");
     } catch {
       setStatus("error");
     }
   };
 
-  useEffect(() => {
-    load();
-  }, [user?.userId]);
+  useEffect(() => { load(); }, [user?.userId]);
 
   const markRead = async (notifId) => {
     await notificationApi.markRead(notifId).catch(() => {});
@@ -74,257 +55,142 @@ export default function NotificationsDrawer({ onClose }) {
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex" }}>
+    <div className="fixed inset-0 z-[100] flex justify-end">
       {/* Backdrop */}
-      <div
-        onClick={onClose}
-        style={{
-          position: "absolute",
-          inset: 0,
-          background: "rgba(0,0,0,0.5)",
-          backdropFilter: "blur(4px)",
-          WebkitBackdropFilter: "blur(4px)",
-        }}
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose} 
+        className="absolute inset-0 bg-background/80 backdrop-blur-sm" 
       />
 
-      {/* Panel */}
-      <div
-        style={{
-          position: "absolute",
-          top: 0,
-          right: 0,
-          height: "100vh",
-          width: "min(420px, 100vw)",
-          background: "var(--color-bg-secondary)",
-          borderLeft: "1px solid var(--color-border)",
-          display: "flex",
-          flexDirection: "column",
-          animation: "slideInRight 0.25s ease",
-          overflowY: "auto",
-        }}
+      {/* Side Panel */}
+      <motion.div 
+        initial={{ x: "100%" }}
+        animate={{ x: 0 }}
+        exit={{ x: "100%" }}
+        transition={{ type: "spring", damping: 30, stiffness: 300 }}
+        className="relative w-full max-w-[420px] bg-card border-l border-border flex flex-col shadow-2xl"
       >
-        {/* Header */}
-        <div
-          style={{
-            padding: "1.25rem 1.5rem",
-            borderBottom: "1px solid var(--color-border)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            background: "rgba(0, 121, 191, 0.05)",
-            position: "sticky",
-            top: 0,
-            zIndex: 10,
-            backdropFilter: "blur(12px)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
-            <div
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: "var(--radius-md)",
-                background: "var(--color-primary-subtle)",
-                border: "1px solid rgba(0,121,191,0.3)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Bell size={18} color="var(--color-primary-light)" />
+        <div className="p-8 border-b border-border/50 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+              <Bell size={20} />
             </div>
             <div>
-              <p style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>
-                Notifications
-              </p>
-              <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", margin: 0 }}>
-                {unreadCount} unread
-              </p>
+              <h2 className="text-xl font-bold tracking-tight">Notifications</h2>
+              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{unreadCount} Unread Alerts</p>
             </div>
           </div>
-          <div style={{ display: "flex", gap: "0.5rem" }}>
+          <div className="flex gap-2">
             {unreadCount > 0 && (
-              <button
-                id="mark-all-read-btn"
-                onClick={markAllRead}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.375rem",
-                  padding: "0.375rem 0.75rem",
-                  borderRadius: "var(--radius-full)",
-                  background: "var(--color-primary)",
-                  color: "white",
-                  fontSize: "0.8rem",
-                  fontWeight: 600,
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                <CheckCheck size={14} />
-                Mark all read
-              </button>
+              <Button variant="ghost" size="icon" onClick={markAllRead} className="rounded-xl h-10 w-10" title="Mark all as read">
+                <CheckCheck size={18} />
+              </Button>
             )}
-            <button
-              id="close-notif-drawer-btn"
-              onClick={onClose}
-              style={{
-                padding: "0.375rem",
-                borderRadius: "var(--radius-md)",
-                color: "var(--color-text-muted)",
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid var(--color-border)",
-                display: "flex",
-                cursor: "pointer",
-              }}
-            >
+            <Button variant="ghost" size="icon" onClick={onClose} className="rounded-xl h-10 w-10">
               <X size={18} />
-            </button>
+            </Button>
           </div>
         </div>
 
-        {/* Content */}
-        <div style={{ flex: 1, padding: "1rem 1.25rem", display: "flex", flexDirection: "column", gap: "0.875rem" }}>
-          {/* Due Soon */}
-          {dueSoonCards.length > 0 && (
-            <div
-              style={{
-                borderRadius: "var(--radius-lg)",
-                border: "1px solid rgba(210,153,34,0.25)",
-                background: "rgba(210,153,34,0.08)",
-                padding: "1rem",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.625rem" }}>
-                <MailWarning size={15} color="#d29922" />
-                <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "#d29922", margin: 0 }}>Due soon</p>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
-                {dueSoonCards.map((card) => (
-                  <p key={`due-${card.cardId}`} style={{ fontSize: "0.8rem", color: "var(--color-text-secondary)", margin: 0 }}>
-                    <strong style={{ color: "var(--color-text-primary)" }}>{card.title}</strong> is due within 24 hours.
-                  </p>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Overdue */}
-          {overdueCards.length > 0 && (
-            <div
-              style={{
-                borderRadius: "var(--radius-lg)",
-                border: "1px solid rgba(248,81,73,0.2)",
-                background: "rgba(248,81,73,0.08)",
-                padding: "1rem",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.625rem" }}>
-                <Bell size={15} color="var(--color-error)" />
-                <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--color-error)", margin: 0 }}>
-                  Overdue ({overdueCards.length})
-                </p>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
-                {overdueCards.slice(0, 5).map((card) => (
-                  <p key={`overdue-${card.cardId}`} style={{ fontSize: "0.8rem", color: "var(--color-text-secondary)", margin: 0 }}>
-                    <strong style={{ color: "var(--color-text-primary)" }}>{card.title}</strong> is overdue.
-                  </p>
-                ))}
-                {overdueCards.length > 5 && (
-                  <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", margin: 0 }}>
-                    +{overdueCards.length - 5} more overdue tasks
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Activity Feed */}
-          <div>
-            <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--color-text-muted)", margin: "0 0 0.5rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Activity
-            </p>
+        <ScrollArea className="flex-1 p-6">
+          <div className="space-y-4">
             {status === "loading" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="fb-skeleton" style={{ height: 72, borderRadius: "var(--radius-lg)" }} />
-                ))}
+              <div className="space-y-4">
+                {[1, 2, 3, 4].map(i => <div key={i} className="h-32 w-full bg-muted/50 rounded-2xl animate-pulse" />)}
               </div>
             )}
+
             {status === "ready" && notifications.length === 0 && (
-              <div className="fb-empty">
-                <Bell size={32} color="var(--color-text-muted)" />
-                <p>No notifications yet</p>
+              <div className="flex flex-col items-center justify-center text-center py-20 gap-4">
+                <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center">
+                  <Inbox size={32} className="text-muted-foreground/30" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Inbox Clear</p>
+                  <p className="text-xs text-muted-foreground italic">You're all caught up for now.</p>
+                </div>
               </div>
             )}
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              {notifications.map((n) => {
-                const conf = TYPE_CONFIG[n.type] || TYPE_CONFIG.SYSTEM;
-                return (
-                  <button
-                    key={n.notificationId}
-                    onClick={() => markRead(n.notificationId)}
-                    style={{
-                      width: "100%",
-                      padding: "0.875rem",
-                      borderRadius: "var(--radius-lg)",
-                      border: `1px solid ${n.isRead ? "var(--color-border)" : conf.border}`,
-                      background: n.isRead ? "rgba(255,255,255,0.02)" : conf.bg,
-                      textAlign: "left",
-                      cursor: "pointer",
-                      transition: "all var(--transition-fast)",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "0.25rem",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
-                      <p style={{ fontSize: "0.875rem", fontWeight: 600, color: n.isRead ? "var(--color-text-secondary)" : "var(--color-text-primary)", margin: 0 }}>
-                        {n.title}
-                      </p>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", flexShrink: 0 }}>
-                        <span
-                          style={{
-                            fontSize: "0.65rem",
-                            fontWeight: 600,
-                            padding: "0.15rem 0.4rem",
-                            borderRadius: "var(--radius-full)",
-                            background: conf.bg,
-                            color: conf.color,
-                            border: `1px solid ${conf.border}`,
-                            textTransform: "uppercase",
-                            letterSpacing: "0.04em",
-                          }}
-                        >
-                          {n.type}
-                        </span>
-                        {!n.isRead && (
-                          <div
-                            style={{
-                              width: 7,
-                              height: 7,
-                              borderRadius: "50%",
-                              background: "var(--color-primary)",
-                              flexShrink: 0,
-                            }}
-                          />
-                        )}
+
+            <div className="space-y-3">
+              {notifications.map(n => (
+                <motion.div
+                  layout
+                  key={n.notificationId}
+                  onClick={() => !n.isRead && markRead(n.notificationId)}
+                  className={`relative group p-6 rounded-[24px] border transition-all cursor-pointer ${n.isRead ? 'bg-muted/10 border-border/30 opacity-70' : 'bg-card border-primary/20 shadow-md ring-1 ring-primary/5 hover:border-primary/40'}`}
+                >
+                  {!n.isRead && (
+                    <div className="absolute left-[-1px] top-1/2 -translate-y-1/2 w-1.5 h-12 bg-primary rounded-r-full" />
+                  )}
+                  
+                  <div className="flex justify-between items-start mb-3">
+                    <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-tighter px-2 h-5 border-border/50 ${n.isRead ? 'text-muted-foreground' : 'text-primary bg-primary/5 border-primary/20'}`}>
+                      {n.type}
+                    </Badge>
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                       <Clock size={10} />
+                       {timeAgo(n.createdAt)}
+                    </div>
+                  </div>
+                  
+                  <h4 className={`text-sm font-bold mb-1 tracking-tight ${n.isRead ? 'text-muted-foreground' : 'text-foreground'}`}>{n.title}</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2 font-medium">{n.message}</p>
+                  
+                  {n.type === "ASSIGNMENT" && n.relatedType === "WORKSPACE" && !n.isRead && (
+                    <div className="mt-4 flex gap-2">
+                      <Button 
+                        size="sm" 
+                        className="h-9 px-5 text-[10px] font-black uppercase tracking-widest bg-primary hover:bg-primary/90 rounded-xl gap-2 shadow-lg shadow-primary/20"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            await workspaceApi.acceptInvitation(n.relatedId);
+                            await markRead(n.notificationId);
+                            window.location.href = `/workspaces/${n.relatedId}`;
+                          } catch (err) {
+                            console.error("Failed to accept from notification:", err);
+                          }
+                        }}
+                      >
+                        <CheckCircle2 size={14} /> Accept & Join
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="h-9 px-5 text-[10px] font-black uppercase tracking-widest rounded-xl border-border/50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          markRead(n.notificationId);
+                        }}
+                      >
+                        Dismiss
+                      </Button>
+                    </div>
+                  )}
+
+                  {!n.isRead && n.type !== "ASSIGNMENT" && (
+                    <div className="mt-4 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 text-[10px] font-black text-primary uppercase tracking-widest">
+                        Acknowledge <CheckCircle2 size={12} className="ml-1" />
                       </div>
                     </div>
-                    <p style={{ fontSize: "0.8125rem", color: "var(--color-text-secondary)", margin: 0 }}>
-                      {n.message}
-                    </p>
-                    <p style={{ fontSize: "0.7rem", color: "var(--color-text-muted)", margin: 0 }}>
-                      {timeAgo(n.createdAt)}
-                    </p>
-                  </button>
-                );
-              })}
+                  )}
+                </motion.div>
+              ))}
             </div>
           </div>
+        </ScrollArea>
+
+        <div className="p-6 border-t border-border/50 bg-muted/5">
+           <Button variant="outline" className="w-full rounded-xl text-xs font-black uppercase tracking-widest h-12 border-border/50" onClick={onClose}>
+             Close Drawer
+           </Button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

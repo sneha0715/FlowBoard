@@ -1,7 +1,27 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArchiveRestore, CheckSquare, Edit2, Eye, Grid3x3, LoaderCircle, MoreHorizontal, Send, Trash2, UserPlus, UserX, Users, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useParams } from "react-router-dom";
+import { 
+  ArrowLeft, 
+  ArchiveRestore, 
+  CheckSquare, 
+  Edit2, 
+  Eye, 
+  Grid3x3, 
+  LoaderCircle, 
+  MoreHorizontal, 
+  Send, 
+  Trash2, 
+  UserPlus, 
+  UserX, 
+  Users, 
+  X,
+  Plus,
+  Clock,
+  Activity,
+  Settings2
+} from "lucide-react";
+
 import { authApi, boardApi, cardApi, columnApi, notificationApi } from "../api/services";
 import BoardCanvas from "../components/board/BoardCanvas";
 import CardDetailsModal from "../components/board/CardDetailsModal";
@@ -15,7 +35,32 @@ import {
   persistCardMove,
   persistListMove,
 } from "../store/slices/boardSlice";
-import { isBoardAdmin as checkBoardAdmin, canEditBoard, roleBadgeStyle, workspaceRoleLabel, BOARD_ROLES } from "../utils/roles";
+import { isBoardAdmin as checkBoardAdmin, canEditBoard, workspaceRoleLabel, BOARD_ROLES } from "../utils/roles";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function BoardPage() {
   const { boardId } = useParams();
@@ -26,9 +71,9 @@ export default function BoardPage() {
   const [boardMembers, setBoardMembers] = useState([]);
   const [selectedCard, setSelectedCard] = useState(null);
   const [memberDraft, setMemberDraft] = useState({ email: "", role: "MEMBER" });
-  const [toast, setToast] = useState(null); // { type, msg }
+  const [toast, setToast] = useState(null);
   const [archivedCards, setArchivedCards] = useState([]);
-  const [activeTab, setActiveTab] = useState("board"); // "board" | "members" | "archived"
+  const [activeTab, setActiveTab] = useState("board");
   const [showBoardEdit, setShowBoardEdit] = useState(false);
   const [boardEditDraft, setBoardEditDraft] = useState({ name: "", description: "", background: "Ocean", visibility: "PRIVATE" });
   const [boardUpdating, setBoardUpdating] = useState(false);
@@ -52,9 +97,7 @@ export default function BoardPage() {
   }, [boardId, user?.userId, dispatch]);
 
   useEffect(() => {
-    if (error) {
-      showToast("error", error);
-    }
+    if (error) showToast("error", error);
   }, [error]);
 
   useEffect(() => {
@@ -99,24 +142,23 @@ export default function BoardPage() {
       await boardApi.update(Number(boardId), boardEditDraft);
       setShowBoardEdit(false);
       dispatch(fetchBoardBundle(Number(boardId)));
+      showToast("success", "Board updated.");
     } catch (err) {
-      console.error(err);
+      showToast("error", "Update failed.");
     } finally { setBoardUpdating(false); }
   };
 
   const handleCloseBoard = async () => {
-    if (!window.confirm("Close this board? It will be archived.")) return;
     await boardApi.close(Number(boardId));
     dispatch(fetchBoardBundle(Number(boardId)));
   };
 
   const handleDeleteBoard = async () => {
-    if (!window.confirm("Permanently delete this board? This action cannot be undone.")) return;
     try {
       await boardApi.remove(Number(boardId));
       window.location.href = "/workspaces/" + activeBoard?.workspaceId;
     } catch (err) {
-      showToast("error", "Failed to delete board.");
+      showToast("error", "Failed to delete.");
     }
   };
 
@@ -126,6 +168,7 @@ export default function BoardPage() {
 
   const handleDragEnd = async (result) => {
     const { destination, source, type, draggableId } = result;
+    console.log("Drag result:", result);
     if (!destination) return;
     if (destination.droppableId === source.droppableId && destination.index === source.index) return;
 
@@ -172,7 +215,7 @@ export default function BoardPage() {
     try {
       const users = await authApi.searchUsers(memberDraft.email);
       const match = users.find((u) => u.email?.toLowerCase() === memberDraft.email.trim().toLowerCase());
-      if (!match) throw new Error("No registered user with that email.");
+      if (!match) throw new Error("User not found.");
       await boardApi.addMember(Number(boardId), { userId: Number(match.userId), role: memberDraft.role });
       await notificationApi.send({
         recipientId: Number(match.userId),
@@ -185,10 +228,9 @@ export default function BoardPage() {
       });
       setMemberDraft({ email: "", role: "MEMBER" });
       showToast("success", `${match.fullName || match.email} added.`);
-      const members = await boardApi.members(Number(boardId));
-      setBoardMembers(members);
+      setBoardMembers(await boardApi.members(Number(boardId)));
     } catch (err) {
-      showToast("error", err?.message || "Failed to add member.");
+      showToast("error", err?.message || "Failed to add.");
     }
   };
 
@@ -212,101 +254,143 @@ export default function BoardPage() {
 
   const progressPercent = totalCards > 0 ? Math.round((completedCards / totalCards) * 100) : 0;
 
-  const actions = (
-    <Link to="/" className="fb-btn fb-btn-secondary" style={{ padding: "0.375rem 0.875rem", fontSize: "0.8rem" }}>
-      <ArrowLeft size={14} /> Back
-    </Link>
-  );
-
   return (
-    <AppShell
-      title={
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          {activeBoard?.name || "Board"}
-          {isBoardAdmin && (
-            <button onClick={() => setShowBoardEdit(true)} className="fb-btn-ghost" style={{ padding: "0.25rem", color: "var(--color-text-muted)" }}>
-              <Edit2 size={14} />
-            </button>
-          )}
+    <AppShell>
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-24 right-10 z-[100] animate-in fade-in slide-in-from-right-4 duration-300">
+          <Badge variant={toast.type === "error" ? "destructive" : "default"} className="px-4 py-2 text-sm shadow-lg gap-2">
+            {toast.type === "success" && <CheckSquare size={14} />}
+            {toast.type === "error" && <X size={14} />}
+            {toast.msg}
+          </Badge>
         </div>
-      }
-      subtitle={activeBoard?.description || "Manage lists, drag cards, track progress."}
-      actions={actions}
-    >
-      {/* Stats bar */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.875rem", marginBottom: "1.25rem" }}>
-        <div className="fb-stat-card">
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
-            <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>Progress</p>
-            <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--color-primary-light)" }}>{progressPercent}%</span>
+      )}
+
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-3">
+             <h1 className="text-3xl font-bold tracking-tight text-foreground">{activeBoard?.name || "Board"}</h1>
+             {isBoardAdmin && (
+               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => setShowBoardEdit(true)}>
+                 <Edit2 size={16} />
+               </Button>
+             )}
           </div>
-          <div className="fb-progress-bar">
-            <div className="fb-progress-fill" style={{ width: `${progressPercent}%` }} />
-          </div>
-          <p style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", margin: "0.5rem 0 0" }}>{completedCards}/{totalCards} cards done</p>
+          <p className="text-sm text-muted-foreground">{activeBoard?.description || "Visual workflow management."}</p>
         </div>
-        <div className="fb-stat-card">
-          <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", margin: "0 0 0.5rem", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>Status</p>
-          <p style={{ fontSize: "1.125rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>{activeBoard?.closed ? "Closed" : "Active"}</p>
-          <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", margin: "0.25rem 0 0" }}>{activeBoard?.visibility || "PRIVATE"} · {boardMembers.length} members</p>
-        </div>
-        <div className="fb-stat-card" style={{ borderColor: overdueCards > 0 ? "rgba(248,81,73,0.25)" : undefined }}>
-          <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", margin: "0 0 0.5rem", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>Overdue</p>
-          <p style={{ fontSize: "1.5rem", fontWeight: 700, color: overdueCards > 0 ? "var(--color-error)" : "var(--color-text-primary)", margin: 0 }}>{overdueCards}</p>
-          <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", margin: "0.25rem 0 0" }}>tasks past due date</p>
+        <div className="flex items-center gap-2">
+           <Button variant="outline" size="sm" asChild>
+             <Link to={`/workspaces/${activeBoard?.workspaceId}`}><ArrowLeft className="mr-2 h-4 w-4" /> Workspace</Link>
+           </Button>
+           {isBoardAdmin && (
+             <Button size="sm" variant="outline" onClick={() => setShowBoardEdit(true)} className="border-primary/20 hover:bg-primary/5 text-primary">
+               <Settings2 size={16} className="mr-2 h-4 w-4" /> Settings
+             </Button>
+           )}
         </div>
       </div>
 
-      {/* Global Modern Toast */}
-      {toast && (
-        <div className="fb-toast-container">
-          <div className={`fb-toast fb-toast-${toast.type}`}>
-            {toast.type === "success" && <CheckSquare size={20} />}
-            {toast.type === "error" && <X size={20} />}
-            {toast.type === "info" && <Users size={20} />}
-            <div style={{ flex: 1 }}>
-              <p style={{ margin: 0, fontWeight: 600, fontSize: "0.9rem" }}>{toast.type === "success" ? "Success" : toast.type === "error" ? "Error" : "Info"}</p>
-              <p style={{ margin: 0, fontSize: "0.8rem", opacity: 0.9 }}>{toast.msg}</p>
+      {/* Stats Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <Card className="bg-card/50 backdrop-blur-sm border-primary/10">
+          <CardHeader className="py-4 pb-2">
+            <CardTitle className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold flex items-center justify-between">
+              Progress
+              <Activity className="h-3.5 w-3.5 text-primary" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-end justify-between mb-2">
+              <span className="text-2xl font-bold">{progressPercent}%</span>
+              <span className="text-xs text-muted-foreground">{completedCards}/{totalCards} tasks</span>
             </div>
-            <button onClick={() => setToast(null)} style={{ background: "none", border: "none", color: "white", cursor: "pointer", opacity: 0.7 }}><X size={16} /></button>
-          </div>
-        </div>
-      )}
+            <Progress value={progressPercent} className="h-1.5" />
+          </CardContent>
+        </Card>
 
-      {/* Observer read-only banner */}
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <CardHeader className="py-4 pb-2">
+            <CardTitle className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold flex items-center justify-between">
+              Visibility
+              <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold uppercase tracking-tighter">{activeBoard?.visibility || "PRIVATE"}</div>
+            <p className="text-xs text-muted-foreground mt-1">Visible to {activeBoard?.visibility === 'PUBLIC' ? 'Everyone' : 'Team Members'}</p>
+          </CardContent>
+        </Card>
+
+        <Card className={`bg-card/50 backdrop-blur-sm ${overdueCards > 0 ? 'border-destructive/30 ring-1 ring-destructive/10' : 'border-border/50'}`}>
+          <CardHeader className="py-4 pb-2">
+            <CardTitle className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold flex items-center justify-between">
+              Overdue
+              <Clock className={`h-3.5 w-3.5 ${overdueCards > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${overdueCards > 0 ? 'text-destructive' : ''}`}>{overdueCards}</div>
+            <p className="text-xs text-muted-foreground mt-1">Critical tasks past due date</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <CardHeader className="py-4 pb-2">
+            <CardTitle className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold flex items-center justify-between">
+              Team
+              <Users className="h-3.5 w-3.5 text-muted-foreground" />
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <div className="flex -space-x-2">
+                {boardMembers.slice(0, 3).map((m, i) => (
+                  <Avatar key={i} className="h-7 w-7 border-2 border-background">
+                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${m.userId}`} />
+                    <AvatarFallback>U</AvatarFallback>
+                  </Avatar>
+                ))}
+                {boardMembers.length > 3 && (
+                  <div className="h-7 w-7 rounded-full bg-muted border-2 border-background flex items-center justify-center text-[10px] font-bold">
+                    +{boardMembers.length - 3}
+                  </div>
+                )}
+              </div>
+              <span className="text-sm font-medium ml-1">{boardMembers.length} Members</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2 font-medium underline cursor-pointer" onClick={() => setActiveTab("members")}>Manage Access</p>
+          </CardContent>
+        </Card>
+      </div>
+
       {isObserver && (
-        <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.75rem 1rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", background: "rgba(255,255,255,0.03)", marginBottom: "1rem", fontSize: "0.875rem", color: "var(--color-text-secondary)" }}>
-          <Eye size={15} color="var(--color-text-muted)" />
-          <span>You are an <strong>Observer</strong> on this board — read-only access. You can view cards but cannot create, move, or edit them.</span>
+        <div className="flex items-center gap-2 p-3 px-4 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground mb-6">
+          <Eye size={14} />
+          <span>You have <strong>read-only</strong> access as an observer. You can view tasks but cannot modify the board.</span>
         </div>
       )}
 
-      {/* Loading */}
-      {status === "loading" && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "40vh", gap: "0.75rem", color: "var(--color-text-secondary)" }}>
-          <LoaderCircle size={20} className="animate-spin" />
-          Loading board...
+      {status === "loading" ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
+          <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm font-medium animate-pulse">Initializing Board Workspace...</p>
         </div>
-      )}
+      ) : (
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="bg-muted/50 p-1 h-12 mb-8">
+            <TabsTrigger value="board" className="gap-2 px-6"><Grid3x3 size={14} /> Board</TabsTrigger>
+            <TabsTrigger value="members" className="gap-2 px-6"><Users size={14} /> Members</TabsTrigger>
+            {isBoardAdmin && archivedCards.length > 0 && (
+              <TabsTrigger value="archived" className="gap-2 px-6"><ArchiveRestore size={14} /> Archived</TabsTrigger>
+            )}
+          </TabsList>
 
-      {/* Tabs */}
-      {status !== "loading" && (
-        <>
-          <div className="fb-tabs">
-            {[
-              { id: "board", label: "Board", icon: Grid3x3 },
-              { id: "members", label: `Members (${boardMembers.length})`, icon: Users },
-              ...(isBoardAdmin && archivedCards.length > 0 ? [{ id: "archived", label: `Archived (${archivedCards.length})`, icon: ArchiveRestore }] : []),
-            ].map(({ id, label, icon: Icon }) => (
-              <button key={id} onClick={() => setActiveTab(id)} className={`fb-tab ${activeTab === id ? "active" : ""}`} style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
-                <Icon size={14} /> {label}
-              </button>
-            ))}
-          </div>
-
-          {/* Board tab */}
-          {activeTab === "board" && (
+          <TabsContent value="board" className="outline-none">
             <BoardCanvas
+              board={activeBoard}
+              members={boardMembers}
               lists={lists}
               cardsByListId={cardsByListId}
               cardsById={cardsById}
@@ -320,136 +404,193 @@ export default function BoardPage() {
               saving={status === "saving"}
               readOnly={!canEdit}
             />
-          )}
+          </TabsContent>
 
-          {/* Edit Board Modal */}
-          {showBoardEdit && (
-            <div className="fb-modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowBoardEdit(false)}>
-              <div className="fb-modal" style={{ maxWidth: 440, padding: "1.5rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1.25rem" }}>
-                  <h3 style={{ margin: 0 }}>Edit board</h3>
-                  <button onClick={() => setShowBoardEdit(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)" }}><X size={18} /></button>
-                </div>
-                <form onSubmit={handleUpdateBoard} style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
-                  <div className="fb-input-group">
-                    <label className="fb-input-label">Board name *</label>
-                    <input required value={boardEditDraft.name} onChange={(e) => setBoardEditDraft(d => ({ ...d, name: e.target.value }))} />
-                  </div>
-                  <div className="fb-input-group">
-                    <label className="fb-input-label">Description</label>
-                    <textarea rows={2} value={boardEditDraft.description} onChange={(e) => setBoardEditDraft(d => ({ ...d, description: e.target.value }))} />
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                    <div className="fb-input-group">
-                      <label className="fb-input-label">Background</label>
-                      <select value={boardEditDraft.background} onChange={(e) => setBoardEditDraft(d => ({ ...d, background: e.target.value }))}>
-                        {["Ocean", "Sunset", "Midnight", "Forest", "Aurora"].map(b => <option key={b} value={b}>{b}</option>)}
-                      </select>
-                    </div>
-                    <div className="fb-input-group">
-                      <label className="fb-input-label">Visibility</label>
-                      <select value={boardEditDraft.visibility} onChange={(e) => setBoardEditDraft(d => ({ ...d, visibility: e.target.value }))}>
-                        {["PRIVATE", "TEAM", "PUBLIC"].map(v => <option key={v} value={v}>{v}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  <div style={{ marginTop: "1rem", borderTop: "1px solid var(--color-border)", paddingTop: "1rem" }}>
-                    <p style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", marginBottom: "0.5rem" }}>Board Actions</p>
-                    <div style={{ display: "flex", gap: "0.5rem" }}>
-                      <button type="button" onClick={handleCloseBoard} className="fb-btn fb-btn-secondary" style={{ flex: 1, justifyContent: "center" }}>
-                        <ArchiveRestore size={14} /> Close
-                      </button>
-                      <button type="button" onClick={handleDeleteBoard} className="fb-btn fb-btn-danger" style={{ flex: 1, justifyContent: "center" }}>
-                        <Trash2 size={14} /> Delete
-                      </button>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", marginTop: "0.5rem" }}>
-                    <button type="button" onClick={() => setShowBoardEdit(false)} className="fb-btn fb-btn-secondary">Cancel</button>
-                    <button type="submit" disabled={boardUpdating} className="fb-btn fb-btn-primary">
-                      {boardUpdating ? "Saving..." : "Save changes"}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {/* Members tab */}
-          {activeTab === "members" && (
-            <div style={{ display: "grid", gridTemplateColumns: isBoardAdmin ? "1fr 1fr" : "1fr", gap: "1.25rem" }}>
-              {/* Invite form */}
+          <TabsContent value="members" className="outline-none">
+            <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-8 items-start">
               {isBoardAdmin && (
-                <div className="fb-card" style={{ padding: "1.25rem" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem" }}>
-                    <UserPlus size={16} color="var(--color-primary-light)" />
-                    <p style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>Add member</p>
-                  </div>
-                  <form onSubmit={inviteBoardMember} style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-                    <input type="email" required placeholder="member@email.com" value={memberDraft.email} onChange={(e) => setMemberDraft((d) => ({ ...d, email: e.target.value }))} id="board-invite-email" />
-                    <select value={memberDraft.role} onChange={(e) => setMemberDraft((d) => ({ ...d, role: e.target.value }))}>
-                      <option value="MEMBER">Member</option>
-                      <option value="ADMIN">Admin</option>
-                      <option value="OBSERVER">Observer</option>
-                    </select>
-                    <button id="board-invite-submit" type="submit" className="fb-btn fb-btn-primary"><Send size={13} /> Add member</button>
-                  </form>
-                </div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <UserPlus className="h-4 w-4 text-primary" />
+                      Add Board Member
+                    </CardTitle>
+                    <CardDescription>Grant specific access to this project board.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <form onSubmit={inviteBoardMember} className="space-y-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Email Address</Label>
+                        <Input 
+                          type="email" 
+                          required 
+                          placeholder="collaborator@email.com" 
+                          value={memberDraft.email} 
+                          onChange={(e) => setMemberDraft(d => ({ ...d, email: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Role</Label>
+                        <select 
+                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                          value={memberDraft.role} 
+                          onChange={(e) => setMemberDraft(d => ({ ...d, role: e.target.value }))}
+                        >
+                          <option value="MEMBER">Member (Edit)</option>
+                          <option value="ADMIN">Admin (Full Control)</option>
+                          <option value="OBSERVER">Observer (View Only)</option>
+                        </select>
+                      </div>
+                      <Button type="submit" className="w-full gap-2">
+                        <Send size={14} /> Add to Board
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
               )}
 
-              {/* Members list */}
-              <div className="fb-card" style={{ padding: "1.25rem" }}>
-                <p style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)", marginBottom: "0.875rem" }}>Team</p>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  {boardMembers.map((m) => (
-                    <div key={m.boardMemberId} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.625rem 0.75rem", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)", background: "rgba(255,255,255,0.02)" }}>
-                      <div>
-                        <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--color-text-primary)", margin: 0 }}>User #{m.userId}</p>
-                        <p style={{ fontSize: "0.7rem", color: "var(--color-text-muted)", margin: 0 }}>{m.role}</p>
-                      </div>
-                      {isBoardAdmin && (
-                        <div style={{ display: "flex", gap: "0.375rem" }}>
-                          <button onClick={() => updateBoardRole(m)} className="fb-btn fb-btn-secondary" style={{ padding: "0.2rem 0.5rem", fontSize: "0.7rem" }}>Change role</button>
-                          {Number(m.userId) !== Number(activeBoard?.createdById) && (
-                            <button onClick={() => removeBoardMember(m)} className="fb-btn fb-btn-danger" style={{ padding: "0.2rem 0.5rem", fontSize: "0.7rem" }}>
-                              <UserX size={12} />
-                            </button>
-                          )}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Board Personnel</CardTitle>
+                  <CardDescription>Users with access to this board.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {boardMembers.map((m) => (
+                      <div key={m.userId} className="flex items-center justify-between p-3 rounded-xl border border-border/50 bg-accent/10">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${m.userId}`} />
+                            <AvatarFallback>U</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm font-semibold">User #{m.userId}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <Badge variant="outline" className="text-[10px] font-bold py-0 h-4 uppercase tracking-wider">
+                                {m.role}
+                              </Badge>
+                              {Number(m.userId) === Number(activeBoard?.createdById) && <Badge className="text-[8px] h-3.5 px-1 bg-primary/10 text-primary border-primary/20">Creator</Badge>}
+                            </div>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Archived tab */}
-          {activeTab === "archived" && isBoardAdmin && (
-            <div className="fb-card" style={{ padding: "1.25rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem" }}>
-                <ArchiveRestore size={16} color="#d29922" />
-                <p style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>Archived cards ({archivedCards.length})</p>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {archivedCards.map((c) => (
-                  <div key={c.cardId} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1rem", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)", background: "rgba(255,255,255,0.02)" }}>
-                    <div>
-                      <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--color-text-primary)", margin: 0 }}>{c.title}</p>
-                      <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", margin: 0 }}>{c.priority} · {c.status}</p>
-                    </div>
-                    <button onClick={() => restoreCard(c.cardId)} className="fb-btn fb-btn-success" style={{ padding: "0.3rem 0.75rem", fontSize: "0.8rem" }}>
-                      <ArchiveRestore size={13} /> Restore
-                    </button>
+                        {isBoardAdmin && Number(m.userId) !== Number(activeBoard?.createdById) && (
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm" onClick={() => updateBoardRole(m)}>Change Role</Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => removeBoardMember(m)}>
+                              <UserX size={14} />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </CardContent>
+              </Card>
             </div>
-          )}
-        </>
+          </TabsContent>
+
+          <TabsContent value="archived" className="outline-none">
+            <Card>
+               <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ArchiveRestore className="h-5 w-5 text-amber-500" />
+                    Archived Records
+                  </CardTitle>
+                  <CardDescription>Recently removed items that can be restored to the active board.</CardDescription>
+               </CardHeader>
+               <CardContent>
+                 <div className="space-y-3">
+                   {archivedCards.map((c) => (
+                     <div key={c.cardId} className="flex items-center justify-between p-4 rounded-xl border bg-accent/5">
+                        <div className="space-y-1">
+                          <p className="text-sm font-bold">{c.title}</p>
+                          <div className="flex gap-2 items-center">
+                            <Badge variant="outline" className="text-[10px]">{c.priority}</Badge>
+                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">{c.status}</span>
+                          </div>
+                        </div>
+                        <Button variant="outline" size="sm" className="gap-2" onClick={() => restoreCard(c.cardId)}>
+                           <ArchiveRestore size={14} /> Restore Item
+                        </Button>
+                     </div>
+                   ))}
+                   {archivedCards.length === 0 && (
+                     <div className="text-center py-10 text-muted-foreground italic text-sm">
+                       No archived items found.
+                     </div>
+                   )}
+                 </div>
+               </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       )}
 
-      {/* Card detail modal */}
+      {/* Edit Board Dialog */}
+      <Dialog open={showBoardEdit} onOpenChange={setShowBoardEdit}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>Board Configurations</DialogTitle>
+            <DialogDescription>Modify global settings and visual identity for this board.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateBoard} className="space-y-5 pt-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-board-name">Board Name *</Label>
+              <Input id="edit-board-name" required value={boardEditDraft.name} onChange={(e) => setBoardEditDraft(d => ({ ...d, name: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-board-desc">Description</Label>
+              <textarea 
+                id="edit-board-desc" 
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={boardEditDraft.description} 
+                onChange={(e) => setBoardEditDraft(d => ({ ...d, description: e.target.value }))} 
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+               <div className="space-y-1.5">
+                 <Label>Visual Theme</Label>
+                 <select 
+                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                   value={boardEditDraft.background} 
+                   onChange={(e) => setBoardEditDraft(d => ({ ...d, background: e.target.value }))}
+                 >
+                   {["Ocean", "Sunset", "Midnight", "Forest", "Aurora"].map(b => <option key={b} value={b}>{b}</option>)}
+                 </select>
+               </div>
+               <div className="space-y-1.5">
+                 <Label>Visibility</Label>
+                 <select 
+                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                   value={boardEditDraft.visibility} 
+                   onChange={(e) => setBoardEditDraft(d => ({ ...d, visibility: e.target.value }))}
+                 >
+                   {["PRIVATE", "TEAM", "PUBLIC"].map(v => <option key={v} value={v}>{v}</option>)}
+                 </select>
+               </div>
+            </div>
+
+            <div className="p-4 rounded-xl border border-destructive/20 bg-destructive/5 space-y-3">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-destructive/80 flex items-center gap-2">
+                <Trash2 size={12} /> Danger Zone
+              </h4>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm" className="flex-1 text-xs border-destructive/20 hover:bg-destructive/10 text-destructive" onClick={handleCloseBoard}>Archive Board</Button>
+                <Button type="button" variant="outline" size="sm" className="flex-1 text-xs bg-destructive text-white hover:bg-destructive/90 border-transparent" onClick={handleDeleteBoard}>Delete Forever</Button>
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button type="button" variant="ghost" onClick={() => setShowBoardEdit(false)}>Cancel</Button>
+              <Button type="submit" disabled={boardUpdating}>
+                {boardUpdating ? <LoaderCircle size={14} className="mr-2 animate-spin" /> : <CheckSquare size={14} className="mr-2" />}
+                Save Configuration
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <CardDetailsModal
         boardId={Number(boardId)}
         card={selectedCard}

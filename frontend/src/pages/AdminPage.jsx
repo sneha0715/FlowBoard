@@ -1,8 +1,38 @@
 import { useEffect, useMemo, useState } from "react";
-import { BarChart2, Crown, Download, History, Layout, LoaderCircle, Megaphone, RefreshCw, Shield, Trash2, UserCheck, UserX, Users, X } from "lucide-react";
+import { 
+  BarChart2, 
+  Crown, 
+  Download, 
+  History, 
+  Layout, 
+  LoaderCircle, 
+  Megaphone, 
+  RefreshCw, 
+  Shield, 
+  Trash2, 
+  UserCheck, 
+  UserX, 
+  Users, 
+  X,
+  Search,
+  CheckCircle2,
+  AlertCircle,
+  Activity,
+  Server,
+  Send
+} from "lucide-react";
 import AppShell from "../components/layout/AppShell";
 import { authApi, notificationApi, workspaceApi } from "../api/services";
 import { roleBadgeStyle } from "../utils/roles";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
 
 export default function AdminPage() {
   const [users, setUsers] = useState([]);
@@ -13,7 +43,7 @@ export default function AdminPage() {
   const [broadcast, setBroadcast] = useState({ title: "", message: "" });
   const [broadcasting, setBroadcasting] = useState(false);
   const [userSearch, setUserSearch] = useState("");
-  const [activeTab, setActiveTab] = useState("users"); // users, analytics, logs, workspaces
+  const [activeTab, setActiveTab] = useState("users");
 
   const showToast = (type, msg) => { setToast({ type, msg }); setTimeout(() => setToast(null), 4000); };
 
@@ -34,7 +64,7 @@ export default function AdminPage() {
 
   useEffect(() => { load(); }, []);
 
-  const activeUsers = useMemo(() => users.filter((u) => u.isActive !== false), [users]);
+  const activeUsersCount = useMemo(() => users.filter((u) => u.isActive !== false).length, [users]);
   const filteredUsers = useMemo(() => {
     const q = userSearch.toLowerCase();
     if (!q) return users;
@@ -42,18 +72,15 @@ export default function AdminPage() {
   }, [users, userSearch]);
 
   const deactivateUser = async (userId) => {
-    if (!window.confirm("Deactivate this user?")) return;
     try { await authApi.deactivate(userId); showToast("success", `User #${userId} deactivated.`); await load(); }
     catch (err) { showToast("error", err?.message || "Failed to deactivate."); }
   };
 
   const promoteUser = async (userId, currentRole) => {
     const newRole = currentRole === "PLATFORM_ADMIN" ? "MEMBER" : "PLATFORM_ADMIN";
-    const action = newRole === "PLATFORM_ADMIN" ? "Promote" : "Demote";
-    if (!window.confirm(`${action} this user to ${newRole.replace("_", " ")}?`)) return;
     try {
       await authApi.updateRole(userId, newRole);
-      showToast("success", `User ${action.toLowerCase()}d to ${newRole.replace("_", " ")}.`);
+      showToast("success", `User role updated to ${newRole.replace("_", " ")}.`);
       await load();
     } catch (err) { showToast("error", err?.message || "Failed to update role."); }
   };
@@ -63,277 +90,323 @@ export default function AdminPage() {
     if (!broadcast.title || !broadcast.message) return;
     setBroadcasting(true);
     try {
-      await notificationApi.bulk(activeUsers.map((u) => Number(u.userId)), broadcast.title, broadcast.message);
+      const activeUserIds = users.filter(u => u.isActive !== false).map(u => Number(u.userId));
+      await notificationApi.bulk(activeUserIds, broadcast.title, broadcast.message);
       setBroadcast({ title: "", message: "" });
-      showToast("success", `Broadcast sent to ${activeUsers.length} users.`);
+      showToast("success", `Broadcast sent to ${activeUserIds.length} users.`);
       await load();
     } catch (err) { showToast("error", "Failed to send broadcast."); }
     finally { setBroadcasting(false); }
   };
 
-  const statCards = [
-    { label: "Total users", value: users.length, color: "var(--color-primary-light)", icon: Users },
-    { label: "Active users", value: activeUsers.length, color: "var(--color-success)", icon: Users },
-    { label: "Workspaces", value: workspaces.length, color: "#d29922", icon: BarChart2 },
-    { label: "Notifications", value: notifications.length, color: "#a78bfa", icon: BarChart2 },
-    { label: "Assignments", value: notifications.filter((n) => n.type === "ASSIGNMENT").length, color: "var(--color-primary-light)", icon: Shield },
-    { label: "Admins", value: users.filter((u) => u.role === "PLATFORM_ADMIN").length, color: "var(--color-error)", icon: Shield },
-  ];
-
-  const actions = (
-    <div style={{ display: "flex", gap: "0.5rem" }}>
-      <button onClick={() => window.alert("Generating platform report...")} className="fb-btn fb-btn-primary" style={{ padding: "0.375rem 0.875rem", fontSize: "0.8rem" }}>
-        <Download size={14} /> Report
-      </button>
-      <button onClick={load} className="fb-btn fb-btn-secondary" style={{ padding: "0.375rem 0.875rem", fontSize: "0.8rem" }} disabled={loading}>
-        <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
-      </button>
-    </div>
-  );
-
   return (
-    <AppShell title="Platform Admin" subtitle="Manage users, monitor activity, and send platform-wide updates." actions={actions}>
+    <AppShell>
+      {/* Toast Notification */}
       {toast && (
-        <div className="animate-fade-in" style={{ marginBottom: "1rem", padding: "0.75rem 1rem", borderRadius: "var(--radius-lg)", fontSize: "0.875rem", border: `1px solid ${toast.type === "success" ? "rgba(63,185,80,0.25)" : "rgba(248,81,73,0.25)"}`, background: toast.type === "success" ? "rgba(63,185,80,0.1)" : "rgba(248,81,73,0.1)", color: toast.type === "success" ? "var(--color-success)" : "var(--color-error)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          {toast.msg}
-          <button onClick={() => setToast(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit" }}><X size={15} /></button>
+        <div className="fixed top-24 right-10 z-[100] animate-in fade-in slide-in-from-right-4 duration-300">
+          <Badge variant={toast.type === "error" ? "destructive" : "default"} className="px-4 py-2 text-sm shadow-lg gap-2">
+            {toast.type === "success" ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+            {toast.msg}
+          </Badge>
         </div>
       )}
 
-      {/* Tabs */}
-      <div className="fb-tabs" style={{ marginBottom: "1.5rem" }}>
-        {[
-          { id: "users", label: "Users", icon: Users },
-          { id: "workspaces", label: "Workspaces", icon: Layout },
-          { id: "analytics", label: "Analytics", icon: BarChart2 },
-          { id: "logs", label: "Audit Logs", icon: History },
-        ].map(({ id, label, icon: Icon }) => (
-          <button key={id} onClick={() => setActiveTab(id)} className={`fb-tab ${activeTab === id ? "active" : ""}`} style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
-            <Icon size={14} /> {label}
-          </button>
-        ))}
-      </div>
+      <div className="flex flex-col gap-8">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold tracking-tight">Platform Administration</h1>
+            <p className="text-sm text-muted-foreground">Manage users, monitor ecosystem health, and broadcast updates.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" className="gap-2" onClick={() => window.alert("Generating platform report...")}>
+              <Download size={14} /> Export Data
+            </Button>
+            <Button variant="default" size="sm" className="gap-2" onClick={load} disabled={loading}>
+              <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Sync Registry
+            </Button>
+          </div>
+        </header>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: "1.5rem", alignItems: "start" }}>
-        {/* Main Content */}
-        <div>
-          {activeTab === "users" && (
-            <div className="fb-card" style={{ padding: "1.25rem", overflow: "hidden" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem", gap: "0.875rem", flexWrap: "wrap" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <Users size={17} color="var(--color-primary-light)" />
-                  <p style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>User management</p>
-                </div>
-                <input
-                  id="admin-user-search"
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                  placeholder="Search users..."
-                  style={{ fontSize: "0.8rem", width: 200, height: "34px" }}
-                />
-              </div>
-
-              {loading ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  {[...Array(5)].map((_, i) => <div key={i} className="fb-skeleton" style={{ height: 64, borderRadius: "var(--radius-md)" }} />)}
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", maxHeight: 500, overflowY: "auto" }}>
-                  {filteredUsers.map((u) => (
-                    <div key={u.userId} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem 1rem", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)", background: u.isActive === false ? "rgba(248,81,73,0.04)" : "rgba(255,255,255,0.02)", gap: "0.75rem" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", minWidth: 0 }}>
-                        <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--color-primary-subtle)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.8rem", fontWeight: 700, color: "var(--color-primary-light)", flexShrink: 0 }}>
-                          {(u.fullName || u.email || "U")[0].toUpperCase()}
-                        </div>
-                        <div style={{ minWidth: 0 }}>
-                          <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--color-text-primary)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {u.fullName || u.userName || "Unnamed"}
-                          </p>
-                          <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {u.email} · {u.role}
-                          </p>
-                        </div>
-                      </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
-                        <span className="fb-badge" style={{ fontSize: "0.7rem", ...roleBadgeStyle(u.role) }}>
-                          {u.isActive === false ? "Inactive" : u.role === "PLATFORM_ADMIN" ? "Admin" : "Member"}
-                        </span>
-                        <button
-                          id={`promote-${u.userId}-btn`}
-                          onClick={() => promoteUser(u.userId, u.role)}
-                          className={`fb-btn ${u.role === "PLATFORM_ADMIN" ? "fb-btn-secondary" : "fb-btn-primary"}`}
-                          style={{ padding: "0.25rem 0.5rem", fontSize: "0.7rem" }}
-                          title={u.role === "PLATFORM_ADMIN" ? "Demote to Member" : "Promote to Admin"}
-                        >
-                          {u.role === "PLATFORM_ADMIN" ? <><UserCheck size={12} /> Demote</> : <><Crown size={12} /> Promote</>}
-                        </button>
-                        <button
-                          id={`deactivate-${u.userId}-btn`}
-                          disabled={u.isActive === false}
-                          onClick={() => deactivateUser(u.userId)}
-                          className="fb-btn fb-btn-danger"
-                          style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
-                        >
-                          <UserX size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  {filteredUsers.length === 0 && (
-                    <div className="fb-empty"><p>No users match your search.</p></div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === "analytics" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              <div className="fb-card" style={{ padding: "1.25rem" }}>
-                <p style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "1.25rem" }}>Platform Engagement</p>
-                <div style={{ display: "flex", alignItems: "flex-end", gap: "1.5rem", height: 200, paddingBottom: "1.5rem", borderBottom: "1px solid var(--color-border)" }}>
-                  {[40, 70, 45, 90, 65, 80, 55, 95].map((h, i) => (
-                    <div key={i} style={{ flex: 1, background: "linear-gradient(to top, var(--color-primary), var(--color-primary-light))", height: `${h}%`, borderRadius: "4px 4px 0 0", position: "relative" }}>
-                      <span style={{ position: "absolute", bottom: -20, left: "50%", transform: "translateX(-50%)", fontSize: "0.65rem", color: "var(--color-text-muted)" }}>Day {i+1}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem" }}>
-                <div className="fb-card" style={{ padding: "1.25rem" }}>
-                  <p style={{ fontSize: "0.875rem", fontWeight: 700, marginBottom: "1rem" }}>Activity Distribution</p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                    {[
-                      { label: "Card Moves", val: 65, color: "var(--color-primary)" },
-                      { label: "Comments", val: 45, color: "var(--color-success)" },
-                      { label: "Attachments", val: 25, color: "#a78bfa" },
-                      { label: "Checklists", val: 85, color: "#d29922" },
-                    ].map(item => (
-                      <div key={item.label}>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", marginBottom: "0.25rem" }}>
-                          <span>{item.label}</span>
-                          <span style={{ fontWeight: 700 }}>{item.val}%</span>
-                        </div>
-                        <div style={{ height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 3, overflow: "hidden" }}>
-                          <div style={{ height: "100%", width: `${item.val}%`, background: item.color }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="fb-card" style={{ padding: "1.25rem" }}>
-                  <p style={{ fontSize: "0.875rem", fontWeight: 700, marginBottom: "1rem" }}>Security Overview</p>
-                  <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: 120 }}>
-                    <div style={{ width: 100, height: 100, borderRadius: "50%", border: "10px solid var(--color-success)", borderRightColor: "rgba(255,255,255,0.05)", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column" }}>
-                      <span style={{ fontSize: "1.25rem", fontWeight: 700 }}>92%</span>
-                      <span style={{ fontSize: "0.6rem", color: "var(--color-text-muted)" }}>Compliance</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "logs" && (
-            <div className="fb-card" style={{ padding: "1.25rem" }}>
-              <p style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "1rem" }}>System Audit Logs</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                {notifications.slice(0, 15).map(n => (
-                  <div key={n.notificationId} style={{ display: "flex", gap: "0.75rem", padding: "0.75rem", borderBottom: "1px solid var(--color-border)", fontSize: "0.8125rem" }}>
-                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: n.type === "ASSIGNMENT" ? "var(--color-primary)" : "var(--color-text-muted)", marginTop: "0.3rem" }} />
-                    <div style={{ flex: 1 }}>
-                      <p style={{ margin: 0, fontWeight: 600 }}>{n.title}</p>
-                      <p style={{ margin: 0, color: "var(--color-text-muted)" }}>{n.message}</p>
-                    </div>
-                    <span style={{ fontSize: "0.7rem", color: "var(--color-text-muted)" }}>{new Date(n.createdAt).toLocaleTimeString()}</span>
-                  </div>
-                ))}
-                {notifications.length === 0 && <p className="fb-empty">No logs available.</p>}
-              </div>
-            </div>
-          )}
-
-          {activeTab === "workspaces" && (
-            <div className="fb-card" style={{ padding: "1.25rem" }}>
-              <p style={{ fontSize: "1rem", fontWeight: 700, marginBottom: "1rem" }}>Global Workspaces ({workspaces.length})</p>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                {workspaces.map(ws => (
-                  <div key={ws.workspaceId} style={{ padding: "0.875rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", background: "rgba(255,255,255,0.02)" }}>
-                    <p style={{ margin: 0, fontWeight: 700, fontSize: "0.875rem" }}>{ws.name}</p>
-                    <p style={{ margin: "0.25rem 0", color: "var(--color-text-muted)", fontSize: "0.75rem" }}>Owner ID: {ws.ownerId}</p>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.5rem" }}>
-                      <span className="fb-badge" style={{ fontSize: "0.6rem" }}>{ws.visibility}</span>
-                      <button className="fb-btn-ghost" style={{ padding: "0.25rem", color: "var(--color-error)" }}><Trash2 size={13} /></button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+        {/* Overview Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard label="Total Users" value={users.length} icon={Users} trend="+4.1%" />
+          <StatCard label="Active Sessions" value={activeUsersCount} icon={Activity} trend="+12%" />
+          <StatCard label="Workspaces" value={workspaces.length} icon={Layout} trend="+2.5%" />
+          <StatCard label="Incidents" value={0} icon={AlertCircle} trend="0%" color="text-emerald-500" />
         </div>
 
-        {/* Right column */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          {/* Broadcast */}
-          <div className="fb-card" style={{ padding: "1.25rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem" }}>
-              <Megaphone size={16} color="var(--color-success)" />
-              <p style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>Broadcast notification</p>
-            </div>
-            <p style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", marginBottom: "0.875rem" }}>
-              Send a platform-wide notification to all {activeUsers.length} active users.
-            </p>
-            <form onSubmit={sendBroadcast} style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-              <input
-                required
-                value={broadcast.title}
-                onChange={(e) => setBroadcast((d) => ({ ...d, title: e.target.value }))}
-                placeholder="Scheduled maintenance tonight"
-                id="broadcast-title-input"
-              />
-              <textarea
-                required
-                value={broadcast.message}
-                onChange={(e) => setBroadcast((d) => ({ ...d, message: e.target.value }))}
-                rows={3}
-                placeholder="FlowBoard will be unavailable from 02:00–04:00 UTC."
-                id="broadcast-message-input"
-              />
-              <button id="send-broadcast-btn" type="submit" disabled={broadcasting} className="fb-btn fb-btn-success" style={{ width: "100%" }}>
-                {broadcasting ? <><LoaderCircle size={14} className="animate-spin" /> Sending...</> : <><Megaphone size={14} /> Send to all</>}
-              </button>
-            </form>
-          </div>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8">
+          {/* Main Controls */}
+          <main>
+            <Tabs defaultValue="users" value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="bg-muted/50 h-12 p-1 mb-6">
+                <TabsTrigger value="users" className="px-6 h-10 gap-2"><Users size={14} /> Users</TabsTrigger>
+                <TabsTrigger value="workspaces" className="px-6 h-10 gap-2"><Layout size={14} /> Workspaces</TabsTrigger>
+                <TabsTrigger value="analytics" className="px-6 h-10 gap-2"><BarChart2 size={14} /> Analytics</TabsTrigger>
+                <TabsTrigger value="logs" className="px-6 h-10 gap-2"><History size={14} /> Audit Logs</TabsTrigger>
+              </TabsList>
 
-          {/* System overview */}
-          <div className="fb-card" style={{ padding: "1.25rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem" }}>
-              <Shield size={16} color="#a78bfa" />
-              <p style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>System overview</p>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              {[
-                `${activeUsers.length} of ${users.length} users are active`,
-                `${users.filter((u) => u.role === "PLATFORM_ADMIN").length} platform admins registered`,
-                `${notifications.filter((n) => n.type === "ASSIGNMENT").length} assignment alerts recorded`,
-                `${notifications.filter((n) => n.type === "MENTION").length} mention alerts recorded`,
-                `${notifications.filter((n) => n.type === "MOVE").length} move events recorded`,
-              ].map((text, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", fontSize: "0.875rem", color: "var(--color-text-secondary)" }}>
-                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--color-primary)", flexShrink: 0, marginTop: "0.45rem" }} />
-                  {text}
+              <TabsContent value="users" className="outline-none animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <div className="space-y-1">
+                      <CardTitle>User Directory</CardTitle>
+                      <CardDescription>Search and manage all registered platform accounts.</CardDescription>
+                    </div>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        placeholder="Search users..." 
+                        className="pl-9 w-[240px] h-9"
+                        value={userSearch}
+                        onChange={(e) => setUserSearch(e.target.value)}
+                      />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3 mt-4">
+                      {loading ? (
+                        [...Array(5)].map((_, i) => <div key={i} className="h-16 rounded-xl bg-muted animate-pulse" />)
+                      ) : (
+                        filteredUsers.map((u) => (
+                          <div key={u.userId} className="flex items-center justify-between p-4 rounded-xl border bg-card hover:bg-accent/10 transition-colors">
+                            <div className="flex items-center gap-4">
+                              <Avatar className="h-10 w-10 border-2 border-background">
+                                <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${u.userId}`} />
+                                <AvatarFallback>{(u.fullName || u.email || "U")[0].toUpperCase()}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="text-sm font-bold">{u.fullName || u.userName || "Unnamed User"}</p>
+                                <p className="text-xs text-muted-foreground">{u.email}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Badge variant={u.role === "PLATFORM_ADMIN" ? "default" : "outline"} className="text-[10px] font-bold h-5 uppercase">
+                                {u.isActive === false ? "Deactivated" : u.role.replace("PLATFORM_", "")}
+                              </Badge>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => promoteUser(u.userId, u.role)} title="Toggle Admin Role">
+                                  {u.role === "PLATFORM_ADMIN" ? <UserX size={14} className="text-destructive" /> : <Crown size={14} className="text-primary" />}
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" disabled={u.isActive === false} onClick={() => deactivateUser(u.userId)}>
+                                  <Trash2 size={14} />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                      {!loading && filteredUsers.length === 0 && (
+                        <div className="py-20 text-center text-muted-foreground italic text-sm">No users found matching your query.</div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="analytics" className="outline-none animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Platform Engagement</CardTitle>
+                      <CardDescription>Daily active user metrics for the past 7 days.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                      <div className="flex items-end justify-between gap-2 h-40">
+                        {[45, 62, 51, 88, 73, 91, 55].map((h, i) => (
+                          <div key={i} className="flex-1 group relative">
+                            <div className="w-full bg-primary/20 rounded-t-md group-hover:bg-primary/30 transition-colors" style={{ height: `${h}%` }}>
+                               <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity">{h}%</div>
+                            </div>
+                            <div className="text-[9px] text-center mt-2 text-muted-foreground uppercase font-bold tracking-tighter">Day {i+1}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Activity Heatmap</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <DistributionBar label="Board Actions" value={78} color="bg-blue-500" />
+                        <DistributionBar label="Collaboration" value={42} color="bg-emerald-500" />
+                        <DistributionBar label="Admin Events" value={15} color="bg-primary" />
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">System Health</CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex flex-col items-center justify-center py-6">
+                        <div className="relative w-28 h-28 flex items-center justify-center">
+                           <svg className="w-full h-full -rotate-90">
+                             <circle cx="56" cy="56" r="48" fill="none" stroke="currentColor" strokeWidth="8" className="text-muted/20" />
+                             <circle cx="56" cy="56" r="48" fill="none" stroke="currentColor" strokeWidth="8" strokeDasharray="301.59" strokeDashoffset="30.15" className="text-primary" />
+                           </svg>
+                           <div className="absolute flex flex-col items-center">
+                             <span className="text-2xl font-black">90%</span>
+                             <span className="text-[8px] font-bold text-muted-foreground uppercase">Stable</span>
+                           </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              </TabsContent>
+
+              <TabsContent value="logs" className="outline-none animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>System Audit Logs</CardTitle>
+                    <CardDescription>Chronological record of platform-wide events and alerts.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-1">
+                      {notifications.slice(0, 12).map((n) => (
+                        <div key={n.notificationId} className="flex items-start gap-4 p-4 border-b border-border/40 last:border-0 hover:bg-muted/30 transition-colors">
+                          <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${n.type === 'ASSIGNMENT' ? 'bg-blue-500' : 'bg-muted-foreground/30'}`} />
+                          <div className="flex-1 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-bold">{n.title}</p>
+                              <span className="text-[10px] text-muted-foreground font-medium">{new Date(n.createdAt).toLocaleString()}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground leading-relaxed">{n.message}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="workspaces" className="outline-none animate-in fade-in slide-in-from-bottom-2 duration-300">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   {workspaces.map((ws) => (
+                     <Card key={ws.workspaceId} className="overflow-hidden">
+                       <CardHeader className="pb-3">
+                         <div className="flex justify-between items-start">
+                           <CardTitle className="text-base truncate">{ws.name}</CardTitle>
+                           <Badge variant="outline" className="text-[9px] font-black">{ws.visibility}</Badge>
+                         </div>
+                         <CardDescription className="text-xs">Owner: User #{ws.ownerId}</CardDescription>
+                       </CardHeader>
+                       <CardFooter className="bg-muted/20 py-2 flex justify-between">
+                          <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">Created: {new Date(ws.createdAt).toLocaleDateString()}</span>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:bg-destructive/10"><Trash2 size={12} /></Button>
+                       </CardFooter>
+                     </Card>
+                   ))}
+                 </div>
+              </TabsContent>
+            </Tabs>
+          </main>
+
+          {/* Right Sidebar */}
+          <aside className="space-y-6">
+            <Card className="border-primary/20 shadow-lg overflow-hidden">
+              <div className="h-1.5 bg-primary" />
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Megaphone size={18} className="text-primary" />
+                  Broadcast Alert
+                </CardTitle>
+                <CardDescription>Send a mandatory platform-wide notification to all active users.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={sendBroadcast} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="broadcast-title" className="text-xs">Alert Headline</Label>
+                    <Input 
+                      id="broadcast-title" 
+                      placeholder="e.g. System Maintenance" 
+                      value={broadcast.title}
+                      onChange={(e) => setBroadcast(d => ({ ...d, title: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="broadcast-msg" className="text-xs">Detailed Message</Label>
+                    <textarea 
+                      id="broadcast-msg"
+                      className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      placeholder="Specify the details of the update..."
+                      value={broadcast.message}
+                      onChange={(e) => setBroadcast(d => ({ ...d, message: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full gap-2" disabled={broadcasting}>
+                    {broadcasting ? <LoaderCircle size={16} className="animate-spin" /> : <Send size={14} />}
+                    Notify {activeUsersCount} Users
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Server size={16} className="text-muted-foreground" />
+                  Environment Health
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                    <span>API Performance</span>
+                    <span className="text-emerald-500">Normal</span>
+                  </div>
+                  <Progress value={92} className="h-1 bg-muted" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                    <span>Database Load</span>
+                    <span className="text-emerald-500">12%</span>
+                  </div>
+                  <Progress value={12} className="h-1 bg-muted" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px] font-bold uppercase text-muted-foreground mb-1">
+                    <span>S3 Storage</span>
+                    <span className="text-amber-500">65% Full</span>
+                  </div>
+                  <Progress value={65} className="h-1 bg-muted" />
+                </div>
+              </CardContent>
+            </Card>
+          </aside>
         </div>
       </div>
-
-      <style>{`
-        @media (max-width: 900px) {
-          div[style*="grid-template-columns: 1fr 380px"] { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
     </AppShell>
+  );
+}
+
+function StatCard({ label, value, icon: Icon, trend, color }) {
+  return (
+    <Card className="bg-card/50 backdrop-blur-sm border-border/40">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{label}</CardTitle>
+        <Icon size={14} className="text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div className={`text-2xl font-bold ${color}`}>{value}</div>
+        <p className="text-[10px] text-emerald-500 font-bold mt-1">{trend} <span className="text-muted-foreground font-medium">from last week</span></p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DistributionBar({ label, value, color }) {
+  return (
+    <div className="space-y-1">
+      <div className="flex justify-between text-xs font-medium mb-1">
+        <span>{label}</span>
+        <span className="text-muted-foreground">{value}%</span>
+      </div>
+      <Progress value={value} className={`h-1.5 ${color}`} />
+    </div>
   );
 }

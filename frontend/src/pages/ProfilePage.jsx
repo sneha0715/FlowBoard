@@ -1,10 +1,18 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Eye, EyeOff, LoaderCircle, Lock, Save, User, X } from "lucide-react";
+import { Eye, EyeOff, LoaderCircle, Lock, Save, User, X, Shield, Calendar, Mail, Fingerprint } from "lucide-react";
 import AppShell from "../components/layout/AppShell";
 import { authApi } from "../api/services";
 import { fetchProfile, logout } from "../store/slices/authSlice";
 import { useNavigate } from "react-router-dom";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ProfilePage() {
   const dispatch = useDispatch();
@@ -55,131 +63,210 @@ export default function ProfilePage() {
     : "?";
 
   return (
-    <AppShell title="Profile & Settings" subtitle="Manage your personal information and security settings.">
+    <AppShell>
+      {/* Toast Notification */}
       {toast && (
-        <div className="animate-fade-in" style={{ marginBottom: "1rem", padding: "0.75rem 1rem", borderRadius: "var(--radius-lg)", fontSize: "0.875rem", border: `1px solid ${toast.type === "success" ? "rgba(63,185,80,0.25)" : "rgba(248,81,73,0.25)"}`, background: toast.type === "success" ? "rgba(63,185,80,0.1)" : "rgba(248,81,73,0.1)", color: toast.type === "success" ? "var(--color-success)" : "var(--color-error)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          {toast.msg}
-          <button onClick={() => setToast(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit" }}><X size={15} /></button>
+        <div className="fixed top-24 right-10 z-[100] animate-in fade-in slide-in-from-right-4 duration-300">
+          <Badge variant={toast.type === "error" ? "destructive" : "default"} className="px-4 py-2 text-sm shadow-lg gap-2">
+            {toast.type === "success" ? <Shield size={14} /> : <X size={14} />}
+            {toast.msg}
+          </Badge>
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", maxWidth: 900 }}>
-        {/* Profile info */}
-        <div className="fb-card" style={{ padding: "1.5rem" }}>
-          {/* Avatar */}
-          <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.5rem" }}>
-            <div style={{ width: 64, height: 64, borderRadius: "50%", background: "var(--color-primary-subtle)", border: "3px solid var(--color-primary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.25rem", fontWeight: 700, color: "var(--color-primary-light)", flexShrink: 0 }}>
-              {profileDraft.avatarUrl ? (
-                <img src={profileDraft.avatarUrl} alt="Avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} onError={(e) => { e.target.style.display = "none"; }} />
-              ) : initials}
-            </div>
-            <div>
-              <p style={{ fontSize: "1.0625rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>{user?.fullName || "User"}</p>
-              <p style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", margin: 0 }}>{user?.email}</p>
-              <span className="fb-badge" style={{ marginTop: "0.375rem", background: "var(--color-primary-subtle)", color: "var(--color-primary-light)", border: "1px solid rgba(0,121,191,0.25)", display: "inline-flex" }}>
-                {user?.role?.replace("_", " ")}
-              </span>
-            </div>
-          </div>
+      <div className="flex flex-col gap-8 max-w-5xl mx-auto">
+        <header className="flex flex-col gap-2">
+          <h1 className="text-3xl font-bold tracking-tight">Profile Settings</h1>
+          <p className="text-muted-foreground text-sm">Manage your account identity, security preferences, and personal information.</p>
+        </header>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.25rem" }}>
-            <User size={16} color="var(--color-primary-light)" />
-            <p style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>Personal info</p>
-          </div>
-          <form onSubmit={saveProfile} style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
-            <div className="fb-input-group">
-              <label className="fb-input-label" htmlFor="profile-name">Full name</label>
-              <input id="profile-name" value={profileDraft.fullName} onChange={(e) => setProfileDraft((d) => ({ ...d, fullName: e.target.value }))} placeholder="Your full name" />
-            </div>
-            <div className="fb-input-group">
-              <label className="fb-input-label" htmlFor="profile-username">Username</label>
-              <input id="profile-username" value={profileDraft.userName} onChange={(e) => setProfileDraft((d) => ({ ...d, userName: e.target.value }))} placeholder="@handle" />
-            </div>
-            <div className="fb-input-group">
-              <label className="fb-input-label" htmlFor="profile-avatar">Avatar URL <span style={{ color: "var(--color-text-muted)" }}>(optional)</span></label>
-              <input id="profile-avatar" type="url" value={profileDraft.avatarUrl} onChange={(e) => setProfileDraft((d) => ({ ...d, avatarUrl: e.target.value }))} placeholder="https://..." />
-            </div>
-            <div style={{ padding: "0.875rem", borderRadius: "var(--radius-md)", background: "rgba(255,255,255,0.02)", border: "1px solid var(--color-border)", fontSize: "0.8rem", color: "var(--color-text-muted)" }}>
-              <p style={{ margin: 0 }}>Email: <strong style={{ color: "var(--color-text-secondary)" }}>{user?.email}</strong></p>
-              <p style={{ margin: "0.25rem 0 0" }}>Account ID: <strong style={{ color: "var(--color-text-secondary)" }}>#{user?.userId}</strong></p>
-              <p style={{ margin: "0.25rem 0 0" }}>Member since: <strong style={{ color: "var(--color-text-secondary)" }}>{user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "–"}</strong></p>
-            </div>
-            <button id="save-profile-btn" type="submit" disabled={saving} className="fb-btn fb-btn-primary" style={{ width: "100%" }}>
-              {saving ? <><LoaderCircle size={14} className="animate-spin" /> Saving...</> : <><Save size={14} /> Save changes</>}
-            </button>
-          </form>
-        </div>
-
-        {/* Security */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <div className="fb-card" style={{ padding: "1.5rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.25rem" }}>
-              <Lock size={16} color="#d29922" />
-              <p style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>Change password</p>
-            </div>
-            <form onSubmit={changePassword} style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
-              <div className="fb-input-group">
-                <label className="fb-input-label" htmlFor="new-password">New password</label>
-                <div style={{ position: "relative" }}>
-                  <input
-                    id="new-password"
-                    type={showPw ? "text" : "password"}
-                    required
-                    minLength={6}
-                    value={passwordDraft.newPassword}
-                    onChange={(e) => setPasswordDraft((d) => ({ ...d, newPassword: e.target.value }))}
-                    placeholder="Min. 6 characters"
-                    style={{ paddingRight: "2.5rem" }}
-                  />
-                  <button type="button" onClick={() => setShowPw(!showPw)} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)", display: "flex" }}>
-                    {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
-                  </button>
+        <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-8">
+          {/* Sidebar Info */}
+          <aside className="space-y-6">
+            <Card className="overflow-hidden">
+              <div className="h-24 bg-primary/10" />
+              <CardContent className="pt-0 -mt-12 flex flex-col items-center text-center">
+                <Avatar className="h-24 w-24 border-4 border-background shadow-xl">
+                  <AvatarImage src={profileDraft.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} />
+                  <AvatarFallback className="text-2xl font-bold">{initials}</AvatarFallback>
+                </Avatar>
+                <div className="mt-4 space-y-1">
+                  <h3 className="text-xl font-bold">{user?.fullName || "User"}</h3>
+                  <p className="text-sm text-muted-foreground">{user?.email}</p>
                 </div>
-              </div>
-              <div className="fb-input-group">
-                <label className="fb-input-label" htmlFor="confirm-password">Confirm new password</label>
-                <input
-                  id="confirm-password"
-                  type={showPw ? "text" : "password"}
-                  required
-                  value={passwordDraft.confirm}
-                  onChange={(e) => setPasswordDraft((d) => ({ ...d, confirm: e.target.value }))}
-                  placeholder="Repeat password"
-                />
-              </div>
-              <div style={{ padding: "0.625rem 0.875rem", borderRadius: "var(--radius-md)", background: "rgba(210,153,34,0.08)", border: "1px solid rgba(210,153,34,0.2)", fontSize: "0.8rem", color: "#d29922" }}>
-                ⚠️ Changing your password will log you out automatically.
-              </div>
-              <button id="change-pw-btn" type="submit" disabled={saving} className="fb-btn fb-btn-secondary" style={{ width: "100%" }}>
-                {saving ? <><LoaderCircle size={14} className="animate-spin" /> Changing...</> : <><Lock size={14} /> Change password</>}
-              </button>
-            </form>
-          </div>
+                <Badge variant="secondary" className="mt-4 uppercase font-bold tracking-widest text-[10px] px-3">
+                  {user?.role?.replace("_", " ")}
+                </Badge>
+              </CardContent>
+              <CardFooter className="bg-muted/30 border-t border-border/50 py-4 grid grid-cols-1 gap-3">
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <Fingerprint size={14} className="text-primary" />
+                  <span>ID: #{user?.userId}</span>
+                </div>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <Calendar size={14} className="text-primary" />
+                  <span>Joined: {user?.createdAt ? new Date(user.createdAt).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : "–"}</span>
+                </div>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <Shield size={14} className="text-primary" />
+                  <span className="flex items-center gap-1">Status: <Badge variant="outline" className="h-4 px-1 text-[8px] border-emerald-500/20 text-emerald-500 bg-emerald-500/5">Active</Badge></span>
+                </div>
+              </CardFooter>
+            </Card>
 
-          {/* Account status */}
-          <div className="fb-card" style={{ padding: "1.25rem" }}>
-            <p style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--color-text-primary)", marginBottom: "0.5rem" }}>Account status</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.875rem" }}>
-                <span style={{ color: "var(--color-text-secondary)" }}>Status</span>
-                <span className="fb-badge" style={{ background: "rgba(63,185,80,0.12)", color: "var(--color-success)", border: "1px solid rgba(63,185,80,0.25)" }}>
-                  {user?.isActive === false ? "Inactive" : "Active"}
-                </span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.875rem" }}>
-                <span style={{ color: "var(--color-text-secondary)" }}>Provider</span>
-                <span style={{ color: "var(--color-text-primary)", fontWeight: 600 }}>{user?.provider || "Local"}</span>
-              </div>
-            </div>
-          </div>
+            <Card className="bg-primary/5 border-primary/10">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                    <Shield size={16} />
+                  </div>
+                  <h4 className="text-sm font-bold">Security Notice</h4>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Your account is currently protected by standard authentication. Consider enabling two-factor authentication for enhanced security in the future.
+                </p>
+              </CardContent>
+            </Card>
+          </aside>
+
+          {/* Main Content Tabs */}
+          <main>
+            <Tabs defaultValue="general" className="w-full">
+              <TabsList className="w-full justify-start h-12 bg-muted/50 p-1 mb-6">
+                <TabsTrigger value="general" className="px-6 h-10 gap-2"><User size={14} /> General</TabsTrigger>
+                <TabsTrigger value="security" className="px-6 h-10 gap-2"><Lock size={14} /> Security</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="general" className="animate-in fade-in slide-in-from-bottom-2 duration-300 outline-none">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Personal Information</CardTitle>
+                    <CardDescription>Update your public profile and handle.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={saveProfile} className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="full-name">Full Name</Label>
+                          <Input 
+                            id="full-name" 
+                            placeholder="John Doe" 
+                            value={profileDraft.fullName} 
+                            onChange={(e) => setProfileDraft(d => ({ ...d, fullName: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="username">Username</Label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">@</span>
+                            <Input 
+                              id="username" 
+                              className="pl-8" 
+                              placeholder="johndoe" 
+                              value={profileDraft.userName} 
+                              onChange={(e) => setProfileDraft(d => ({ ...d, userName: e.target.value }))}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="avatar-url">Avatar URL</Label>
+                        <Input 
+                          id="avatar-url" 
+                          type="url" 
+                          placeholder="https://images.unsplash.com/..." 
+                          value={profileDraft.avatarUrl} 
+                          onChange={(e) => setProfileDraft(d => ({ ...d, avatarUrl: e.target.value }))}
+                        />
+                        <p className="text-[10px] text-muted-foreground italic">Link to an image file or leave empty to use your default generated avatar.</p>
+                      </div>
+
+                      <div className="p-4 rounded-xl border bg-muted/20 flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground">
+                          <Mail size={18} />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm font-bold">Email Address</p>
+                          <p className="text-xs text-muted-foreground">{user?.email}</p>
+                        </div>
+                        <Badge variant="outline" className="ml-auto text-[10px] font-bold">PRIMARY</Badge>
+                      </div>
+
+                      <Button type="submit" className="w-full md:w-auto px-8 gap-2" disabled={saving}>
+                        {saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Save size={16} />}
+                        Save Changes
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="security" className="animate-in fade-in slide-in-from-bottom-2 duration-300 outline-none">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Authentication</CardTitle>
+                    <CardDescription>Secure your account with a strong password.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={changePassword} className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="new-password">New Password</Label>
+                          <div className="relative">
+                            <Input 
+                              id="new-password" 
+                              type={showPw ? "text" : "password"} 
+                              className="pr-10"
+                              placeholder="••••••••"
+                              value={passwordDraft.newPassword}
+                              onChange={(e) => setPasswordDraft(d => ({ ...d, newPassword: e.target.value }))}
+                            />
+                            <button 
+                              type="button" 
+                              onClick={() => setShowPw(!showPw)} 
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="confirm-password">Confirm Password</Label>
+                          <Input 
+                            id="confirm-password" 
+                            type={showPw ? "text" : "password"} 
+                            placeholder="••••••••"
+                            value={passwordDraft.confirm}
+                            onChange={(e) => setPasswordDraft(d => ({ ...d, confirm: e.target.value }))}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0">
+                          <X size={18} />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm font-bold text-amber-600 dark:text-amber-500">Security Warning</p>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            Changing your password will invalidate your current session. You will be logged out and required to sign in again with your new credentials.
+                          </p>
+                        </div>
+                      </div>
+
+                      <Button type="submit" variant="outline" className="w-full md:w-auto px-8 gap-2 border-primary/20 text-primary hover:bg-primary/5" disabled={saving}>
+                        {saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Lock size={16} />}
+                        Update Password
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </main>
         </div>
       </div>
-
-      <style>{`
-        @media (max-width: 768px) {
-          div[style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
     </AppShell>
   );
 }

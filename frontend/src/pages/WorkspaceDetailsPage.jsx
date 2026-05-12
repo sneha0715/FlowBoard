@@ -1,11 +1,55 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, Edit2, Eye, FolderKanban, LoaderCircle, LogOut, Mail, Plus, Send, Shield, Trash2, UserPlus, Users, X } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { 
+  ArrowLeft, 
+  ArrowRight, 
+  Check, 
+  Edit2, 
+  Eye, 
+  FolderKanban, 
+  LoaderCircle, 
+  LogOut, 
+  Mail, 
+  Plus, 
+  Send, 
+  Shield, 
+  Trash2, 
+  UserPlus, 
+  Users, 
+  X,
+  MoreVertical,
+  Lock,
+  Globe
+} from "lucide-react";
+
 import AppShell from "../components/layout/AppShell";
 import { authApi, boardApi, columnApi, notificationApi, workspaceApi } from "../api/services";
 import { fetchWorkspaceBundle } from "../store/slices/workspaceSlice";
-import { canEditInWorkspace, canManageWorkspace, roleBadgeStyle, workspaceRoleLabel, WORKSPACE_ROLES } from "../utils/roles";
+import { canEditInWorkspace, canManageWorkspace, workspaceRoleLabel, WORKSPACE_ROLES } from "../utils/roles";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const VISIBILITY_OPTIONS = ["PRIVATE", "TEAM", "PUBLIC"];
 const BACKGROUND_OPTIONS = ["Ocean", "Sunset", "Midnight", "Forest", "Aurora"];
@@ -30,7 +74,7 @@ export default function WorkspaceDetailsPage() {
   const user = useSelector((s) => s.auth.user);
   const { activeWorkspace: workspace, members, boards, userRole, status, error } = useSelector((s) => s.workspace);
 
-  const [toast, setToast] = useState(null); // { type: "success"|"error", msg }
+  const [toast, setToast] = useState(null);
   const [inviteDraft, setInviteDraft] = useState({ email: "", role: "MEMBER" });
   const [inviteStatus, setInviteStatus] = useState("idle");
   const [showBoardForm, setShowBoardForm] = useState(false);
@@ -39,33 +83,33 @@ export default function WorkspaceDetailsPage() {
   const [showWsEdit, setShowWsEdit] = useState(false);
   const [wsEditDraft, setWsEditDraft] = useState({ name: "", description: "", visibility: "PRIVATE" });
   const [wsUpdating, setWsUpdating] = useState(false);
-  const [memberProfiles, setMemberProfiles] = useState({}); // userId -> { fullName, email }
+  const [memberProfiles, setMemberProfiles] = useState({});
   const [loadingProfiles, setLoadingProfiles] = useState(false);
 
   const load = () => dispatch(fetchWorkspaceBundle(workspaceId));
+
   useEffect(() => {
     load();
-    if (workspace) {
-      setWsEditDraft({ name: workspace.name, description: workspace.description || "", visibility: workspace.visibility || "PRIVATE" });
-    }
-  // Re-fetch when workspaceId OR authenticated user changes (fixes stale role after re-login)
-  }, [workspaceId, workspace?.name, user?.userId]);
+  }, [workspaceId]);
 
-  // Fetch user profiles for members to show real names instead of User #ID
+  useEffect(() => {
+    if (workspace) {
+      setWsEditDraft({ 
+        name: workspace.name, 
+        description: workspace.description || "", 
+        visibility: workspace.visibility || "PRIVATE" 
+      });
+    }
+  }, [workspace]);
+
   useEffect(() => {
     const fetchProfiles = async () => {
       if (members.length === 0) return;
       setLoadingProfiles(true);
       const profiles = { ...memberProfiles };
       try {
-        await Promise.all(members.map(async (m) => {
-          if (profiles[m.userId]) return;
-          // Search by userId isn't directly exposed in a bulk way, 
-          // so we use searchUsers with the ID or just assume we'll get it.
-          // For now, let's just fetch all and match (simple approach for small teams)
-          const results = await authApi.searchUsers(""); 
-          results.forEach(u => { profiles[u.userId] = u; });
-        }));
+        const results = await authApi.searchUsers(""); 
+        results.forEach(u => { profiles[u.userId] = u; });
         setMemberProfiles(profiles);
       } catch (err) { console.error("Failed to fetch member profiles", err); }
       finally { setLoadingProfiles(false); }
@@ -90,43 +134,37 @@ export default function WorkspaceDetailsPage() {
     try {
       const users = await authApi.searchUsers(inviteDraft.email);
       let match = users.find((u) => u.email?.toLowerCase() === inviteDraft.email.trim().toLowerCase());
-      if (!match) {
-        // Automatically create a stub user if they aren't registered yet
-        const tempName = "PENDING_STUB";
-        const tempUsername = inviteDraft.email.split("@")[0] + Math.floor(Math.random() * 10000);
-        await authApi.register({
-          email: inviteDraft.email.trim().toLowerCase(),
-          userName: tempUsername,
-          fullName: tempName,
-          password: "TemporaryPassword123!"
-        });
-        // Fetch them again to get the userId
-        const newUsers = await authApi.searchUsers(inviteDraft.email);
-        match = newUsers.find((u) => u.email?.toLowerCase() === inviteDraft.email.trim().toLowerCase());
-      }
       
-      if (memberIds.has(Number(match.userId))) {
-        showToast("info", "User is already a member of this workspace.");
+      if (!match) {
+        showToast("error", "User not found. They must register first.");
         setInviteStatus("idle");
         return;
       }
+      
+      if (memberIds.has(Number(match.userId))) {
+        showToast("info", "User is already a member.");
+        setInviteStatus("idle");
+        return;
+      }
+
       await workspaceApi.addMember(workspaceId, { userId: Number(match.userId), role: inviteDraft.role });
       await notificationApi.send({
         recipientId: Number(match.userId),
         actorId: Number(user.userId),
         type: "ASSIGNMENT",
         title: `Workspace invite: ${workspace?.name || "Workspace"}`,
-        message: `${user.fullName || user.email} added you to ${workspace?.name} as ${inviteDraft.role}.`,
+        message: `${user.fullName || user.email} invited you to join ${workspace?.name}.`,
         relatedId: Number(workspaceId),
         relatedType: "WORKSPACE",
       });
+
       setInviteDraft({ email: "", role: "MEMBER" });
       setInviteStatus("idle");
       showToast("success", `${match.fullName || match.email} invited!`);
       load();
     } catch (err) {
       setInviteStatus("failed");
-      showToast("error", err?.message || "Failed to invite member.");
+      showToast("error", err?.message || "Failed to invite.");
     }
   };
 
@@ -136,37 +174,35 @@ export default function WorkspaceDetailsPage() {
       showToast("success", "Member removed.");
       load();
     } catch (err) {
-      showToast("error", err?.message || "Failed to remove member.");
+      showToast("error", "Failed to remove member.");
     }
   };
 
   const leaveWorkspace = async () => {
-    if (!window.confirm(`Leave workspace "${workspace?.name}"? You will lose access until invited back.`)) return;
     try {
       await workspaceApi.leaveWorkspace(workspaceId);
       navigate("/");
     } catch (err) {
-      showToast("error", err?.message || "Failed to leave workspace.");
+      showToast("error", "Failed to leave workspace.");
     }
   };
 
   const acceptInvitation = async () => {
     try {
       await workspaceApi.acceptInvitation(workspaceId);
-      showToast("success", "Welcome to the workspace!");
+      showToast("success", "Welcome!");
       load();
     } catch (err) {
-      showToast("error", "Failed to accept invitation.");
+      showToast("error", "Failed to accept.");
     }
   };
 
   const deleteWorkspace = async () => {
-    if (!window.confirm(`Delete workspace "${workspace?.name}"? This cannot be undone.`)) return;
     try {
       await workspaceApi.remove(workspaceId);
       navigate("/");
     } catch (err) {
-      showToast("error", err?.message || "Failed to delete workspace.");
+      showToast("error", "Failed to delete.");
     }
   };
 
@@ -176,10 +212,10 @@ export default function WorkspaceDetailsPage() {
     try {
       await workspaceApi.update(workspaceId, wsEditDraft);
       setShowWsEdit(false);
-      showToast("success", "Workspace updated!");
+      showToast("success", "Updated!");
       load();
     } catch (err) {
-      showToast("error", "Failed to update workspace.");
+      showToast("error", "Failed to update.");
     } finally { setWsUpdating(false); }
   };
 
@@ -198,333 +234,403 @@ export default function WorkspaceDetailsPage() {
     setBoardSubmitting(true);
     try {
       const board = await boardApi.create({ ...boardDraft, workspaceId: Number(workspaceId) });
-      await Promise.all(DEFAULT_LISTS.map((l, i) => columnApi.create({ boardId: board.boardId, name: l.name, color: l.color, position: i })));
+      await Promise.all(DEFAULT_LISTS.map((l, i) => 
+        columnApi.create({ boardId: board.boardId, name: l.name, color: l.color, position: i })
+      ));
       setBoardDraft({ name: "", description: "", background: "Ocean", visibility: "PRIVATE" });
       setShowBoardForm(false);
       showToast("success", "Board created!");
       load();
     } catch (err) {
-      showToast("error", err?.response?.data?.message || err?.message || "Failed to create board.");
+      showToast("error", "Failed to create board.");
     } finally {
       setBoardSubmitting(false);
     }
   };
 
-  const actions = (
-    <Link to="/" className="fb-btn fb-btn-secondary" style={{ padding: "0.375rem 0.875rem", fontSize: "0.8rem" }}>
-      <ArrowLeft size={14} /> Back
-    </Link>
-  );
-
   return (
-    <AppShell
-      title={
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-          {workspace?.name || "Workspace"}
-          {isAdmin && (
-            <button onClick={() => setShowWsEdit(true)} className="fb-btn-ghost" style={{ padding: "0.25rem", color: "var(--color-text-muted)" }}>
-              <Edit2 size={14} />
-            </button>
-          )}
-        </div>
-      }
-      subtitle={workspace?.description || `${boards.length} boards · ${members.length} members`}
-      actions={actions}
-    >
-      {/* Global Modern Toast */}
+    <AppShell>
+      {/* Toast Notification */}
       {toast && (
-        <div className="fb-toast-container">
-          <div className={`fb-toast fb-toast-${toast.type}`}>
-            {toast.type === "success" && <Check size={20} />}
-            {toast.type === "error" && <X size={20} />}
-            {toast.type === "info" && <Users size={20} />}
-            <div style={{ flex: 1 }}>
-              <p style={{ margin: 0, fontWeight: 600, fontSize: "0.9rem" }}>{toast.type === "success" ? "Success" : toast.type === "error" ? "Error" : "Info"}</p>
-              <p style={{ margin: 0, fontSize: "0.8rem", opacity: 0.9 }}>{toast.msg}</p>
-            </div>
-            <button onClick={() => setToast(null)} style={{ background: "none", border: "none", color: "white", cursor: "pointer", opacity: 0.7 }}><X size={16} /></button>
+        <div className="fixed top-24 right-10 z-[100] animate-in fade-in slide-in-from-right-4 duration-300">
+          <Badge variant={toast.type === "error" ? "destructive" : "default"} className="px-4 py-2 text-sm shadow-lg gap-2">
+            {toast.type === "success" && <Check size={14} />}
+            {toast.type === "error" && <X size={14} />}
+            {toast.msg}
+          </Badge>
+        </div>
+      )}
+
+      {/* Header with Title and Breadcrumbs */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-3">
+             <h1 className="text-3xl font-bold tracking-tight text-foreground">{workspace?.name || "Workspace"}</h1>
+             {isAdmin && (
+               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => setShowWsEdit(true)}>
+                 <Edit2 size={16} />
+               </Button>
+             )}
           </div>
+          <p className="text-sm text-muted-foreground">{workspace?.description || "Collaborative environment for your team."}</p>
         </div>
-      )}
-
-      {/* Error state */}
-      {status === "failed" && (
-        <div style={{ padding: "1rem", borderRadius: "var(--radius-lg)", border: "1px solid rgba(248,81,73,0.2)", background: "rgba(248,81,73,0.08)", color: "var(--color-error)", marginBottom: "1.25rem" }}>
-          {error}
+        <div className="flex items-center gap-2">
+           <Button variant="outline" size="sm" asChild>
+             <Link to="/"><ArrowLeft className="mr-2 h-4 w-4" /> All Workspaces</Link>
+           </Button>
+           {canEdit && (
+             <Button size="sm" onClick={() => setShowBoardForm(true)}>
+               <Plus className="mr-2 h-4 w-4" /> New Board
+             </Button>
+           )}
         </div>
-      )}
+      </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "1.5rem", alignItems: "start" }}>
-        {/* Boards grid */}
-        <div>
-          {/* Pending Invite Banner */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
+        {/* Left Column: Boards */}
+        <div className="space-y-6">
+          {/* Status Banners */}
           {isPending && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", padding: "1rem 1.25rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-primary)", background: "rgba(0,121,191,0.08)", marginBottom: "1.5rem", boxShadow: "0 0 20px rgba(0,121,191,0.1)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--color-primary)", display: "flex", alignItems: "center", justifyContent: "center", color: "white" }}>
-                  <Users size={20} />
+            <Card className="border-primary/50 bg-primary/5">
+              <CardContent className="flex items-center justify-between p-4">
+                <div className="flex items-center gap-3">
+                  <Users className="text-primary h-5 w-5" />
+                  <div>
+                    <p className="text-sm font-semibold">You've been invited to join this team!</p>
+                    <p className="text-xs text-muted-foreground">Accept to start collaborating on boards.</p>
+                  </div>
                 </div>
-                <div>
-                  <p style={{ margin: 0, fontWeight: 700, color: "var(--color-text-primary)" }}>You've been invited!</p>
-                  <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--color-text-secondary)" }}>Join the team to start collaborating on boards.</p>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={leaveWorkspace}>Decline</Button>
+                  <Button size="sm" onClick={acceptInvitation}>Accept & Join</Button>
                 </div>
-              </div>
-              <div style={{ display: "flex", gap: "0.625rem" }}>
-                <button onClick={leaveWorkspace} className="fb-btn fb-btn-secondary">Decline</button>
-                <button onClick={acceptInvitation} className="fb-btn fb-btn-primary"><Check size={16} /> Accept & Join</button>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           )}
 
-          {/* Observer banner */}
           {isObserver && !isPending && (
-            <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.75rem 1rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", background: "rgba(255,255,255,0.03)", marginBottom: "1rem", fontSize: "0.875rem", color: "var(--color-text-secondary)" }}>
-              <Eye size={15} color="var(--color-text-muted)" />
-              <span>You are an <strong>Observer</strong> in this workspace — read-only access.</span>
+            <div className="flex items-center gap-2 p-3 px-4 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground">
+              <Eye size={14} />
+              <span>You have <strong>read-only</strong> access as an observer.</span>
             </div>
           )}
 
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
-            <h2 style={{ margin: 0, fontSize: "1rem", fontWeight: 700 }}>Boards</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <FolderKanban className="h-5 w-5 text-primary" />
+              Boards
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            {boards.map((board) => (
+              <Link key={board.boardId} to={`/boards/${board.boardId}`}>
+                <Card className="h-40 relative overflow-hidden group hover:border-primary/50 transition-all cursor-pointer">
+                  <div 
+                    className="absolute inset-0 opacity-80 group-hover:opacity-100 transition-opacity" 
+                    style={{ background: BG_GRADIENTS[board.background] || BG_GRADIENTS.Ocean }} 
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  <CardHeader className="relative p-4 pb-0">
+                    <div className="flex justify-between items-start">
+                      <Badge variant="outline" className="bg-black/20 text-white border-white/20 backdrop-blur-sm text-[10px]">
+                        {board.visibility}
+                      </Badge>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-white/70 hover:text-white hover:bg-white/10 rounded-full">
+                        <MoreVertical size={14} />
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="relative p-4 pt-8">
+                    <CardTitle className="text-lg text-white group-hover:translate-x-1 transition-transform">{board.name}</CardTitle>
+                    <p className="text-xs text-white/70 line-clamp-1 mt-1">{board.description}</p>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+            
             {canEdit && (
-              <button id="new-board-btn" onClick={() => setShowBoardForm(true)} className="fb-btn fb-btn-primary" style={{ padding: "0.4rem 0.875rem", fontSize: "0.8rem" }}>
-                <Plus size={13} /> New board
+              <button 
+                onClick={() => setShowBoardForm(true)}
+                className="h-40 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-xl bg-card/50 hover:bg-card hover:border-primary/50 group transition-all"
+              >
+                <div className="h-10 w-10 rounded-full border border-dashed border-muted-foreground flex items-center justify-center text-muted-foreground group-hover:border-primary group-hover:text-primary transition-all">
+                  <Plus size={20} />
+                </div>
+                <span className="text-sm font-medium mt-3 text-muted-foreground group-hover:text-foreground">New Board</span>
               </button>
             )}
           </div>
 
-          {/* New board modal */}
-          {showBoardForm && (
-            <div className="fb-modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowBoardForm(false)}>
-              <div className="fb-modal" style={{ maxWidth: 440, padding: "1.5rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1.25rem" }}>
-                  <h3 style={{ margin: 0 }}>Create board</h3>
-                  <button onClick={() => setShowBoardForm(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)" }}><X size={18} /></button>
-                </div>
-                <form onSubmit={createBoard} style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
-                  <div className="fb-input-group">
-                    <label className="fb-input-label" htmlFor="bd-name">Board name *</label>
-                    <input id="bd-name" required placeholder="Sprint 19" value={boardDraft.name} onChange={(e) => setBoardDraft((d) => ({ ...d, name: e.target.value }))} />
-                  </div>
-                  <div className="fb-input-group">
-                    <label className="fb-input-label" htmlFor="bd-desc">Description</label>
-                    <textarea id="bd-desc" rows={2} placeholder="Track delivery..." value={boardDraft.description} onChange={(e) => setBoardDraft((d) => ({ ...d, description: e.target.value }))} />
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                    <div className="fb-input-group">
-                      <label className="fb-input-label">Background</label>
-                      <select value={boardDraft.background} onChange={(e) => setBoardDraft((d) => ({ ...d, background: e.target.value }))}>
-                        {BACKGROUND_OPTIONS.map((b) => <option key={b} value={b}>{b}</option>)}
-                      </select>
-                    </div>
-                    <div className="fb-input-group">
-                      <label className="fb-input-label">Visibility</label>
-                      <select value={boardDraft.visibility} onChange={(e) => setBoardDraft((d) => ({ ...d, visibility: e.target.value }))}>
-                        {VISIBILITY_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  <div style={{ height: 40, borderRadius: "var(--radius-md)", background: BG_GRADIENTS[boardDraft.background] || "var(--color-primary)" }} />
-                  <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
-                    <button type="button" onClick={() => setShowBoardForm(false)} className="fb-btn fb-btn-secondary">Cancel</button>
-                    <button id="bd-submit-btn" type="submit" disabled={boardSubmitting} className="fb-btn fb-btn-primary">
-                      {boardSubmitting ? <><LoaderCircle size={14} className="animate-spin" /> Creating...</> : <><Plus size={14} /> Create</>}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {status === "loading" && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "0.875rem" }}>
-              {[...Array(4)].map((_, i) => <div key={i} className="fb-skeleton" style={{ height: 120, borderRadius: "var(--radius-xl)" }} />)}
-            </div>
-          )}
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "0.875rem" }}>
-            {boards.map((board) => (
-              <Link key={board.boardId} to={`/boards/${board.boardId}`} style={{ textDecoration: "none" }}>
-                <div className="fb-card-hover" style={{ borderRadius: "var(--radius-xl)", overflow: "hidden", border: "1px solid var(--color-border)", display: "flex", flexDirection: "column", cursor: "pointer" }}>
-                  <div style={{ height: 80, background: BG_GRADIENTS[board.background] || BG_GRADIENTS.Ocean, display: "flex", alignItems: "flex-end", padding: "0.75rem" }}>
-                    <span className="fb-badge" style={{ background: "rgba(255,255,255,0.15)", color: "white", border: "1px solid rgba(255,255,255,0.2)", fontSize: "0.65rem" }}>
-                      {board.visibility || "PRIVATE"}
-                    </span>
-                  </div>
-                  <div style={{ padding: "0.875rem", background: "var(--color-bg-card)" }}>
-                    <p style={{ fontSize: "0.9375rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0, letterSpacing: "-0.01em" }}>{board.name}</p>
-                    {board.description && <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", margin: "0.25rem 0 0" }}>{board.description}</p>}
-                    <div style={{ marginTop: "0.625rem", display: "flex", justifyContent: "flex-end" }}>
-                      <ArrowRight size={14} color="var(--color-primary-light)" />
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          {status === "ready" && boards.length === 0 && (
-            <div className="fb-card fb-empty">
-              <FolderKanban size={32} color="var(--color-text-muted)" />
-              <p>No boards yet. Create one to get started.</p>
+          {boards.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-xl">
+              <FolderKanban className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-sm text-muted-foreground">No boards found in this workspace.</p>
+              {canEdit && <Button variant="link" onClick={() => setShowBoardForm(true)}>Create your first board</Button>}
             </div>
           )}
         </div>
 
-        {/* Right sidebar */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem", position: "sticky", top: "76px" }}>
-          {/* Invite member */}
+        {/* Right Column: Sidebar */}
+        <div className="space-y-6">
+          {/* Invite Member Card */}
           {isAdmin && (
-            <div className="fb-card" style={{ padding: "1.25rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1rem" }}>
-                <UserPlus size={16} color="var(--color-primary-light)" />
-                <p style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>Invite member</p>
-              </div>
-              <form onSubmit={sendInvite} style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-                <div style={{ position: "relative" }}>
-                  <Mail size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)", pointerEvents: "none" }} />
-                  <input type="email" required placeholder="user@email.com" value={inviteDraft.email} onChange={(e) => setInviteDraft((d) => ({ ...d, email: e.target.value }))} style={{ paddingLeft: "2rem", fontSize: "0.8125rem" }} id="invite-email-input" />
-                </div>
-                <select value={inviteDraft.role} onChange={(e) => setInviteDraft((d) => ({ ...d, role: e.target.value }))} style={{ fontSize: "0.8125rem" }}>
-                  {WORKSPACE_ROLES.filter(r => r !== "OWNER").map(r => (
-                    <option key={r} value={r}>{workspaceRoleLabel(r)}</option>
-                  ))}
-                </select>
-                <button id="send-invite-btn" type="submit" disabled={inviteStatus === "sending"} className="fb-btn fb-btn-primary" style={{ width: "100%" }}>
-                  {inviteStatus === "sending" ? <><LoaderCircle size={13} className="animate-spin" /> Sending...</> : <><Send size={13} /> Send invite</>}
-                </button>
-              </form>
-            </div>
-          )}
-
-          {/* Members list */}
-          <div className="fb-card" style={{ padding: "1.25rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.875rem" }}>
-              <Users size={16} color="var(--color-text-secondary)" />
-              <p style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>Team ({members.length})</p>
-            </div>
-            {/* Your role badge */}
-            {userRole && userRole !== "NONE" && (
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem", padding: "0.5rem 0.75rem", borderRadius: "var(--radius-md)", background: "rgba(255,255,255,0.02)", border: "1px solid var(--color-border)" }}>
-                <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>Your role:</span>
-                <span className="fb-badge" style={{ fontSize: "0.7rem", ...roleBadgeStyle(userRole) }}>{workspaceRoleLabel(userRole)}</span>
-              </div>
-            )}
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-              {members.map((m) => {
-                const profile = memberProfiles[m.userId];
-                const isMe = Number(m.userId) === Number(user?.userId);
-                return (
-                  <div key={m.workspaceMemberId || m.userId} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.75rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", background: isMe ? "rgba(0,121,191,0.04)" : "rgba(255,255,255,0.02)", transition: "all 0.2s ease" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                      <div style={{ width: 36, height: 36, borderRadius: "var(--radius-md)", background: m.status === 'PENDING' ? "rgba(255,255,255,0.05)" : "var(--color-primary-subtle)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.8rem", fontWeight: 700, color: "var(--color-primary-light)", border: "1px solid var(--color-border)", flexShrink: 0 }}>
-                        {profile ? profile.fullName?.split(" ").map(n => n[0]).join("").toUpperCase() : "?"}
-                      </div>
-                      <div style={{ overflow: "hidden" }}>
-                        <p style={{ fontSize: "0.875rem", fontWeight: 600, color: "var(--color-text-primary)", margin: 0, whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
-                          {profile?.fullName || `User #${m.userId}`}{isMe ? " (You)" : ""}
-                        </p>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", marginTop: "2px" }}>
-                          {isAdmin && m.role !== "OWNER" ? (
-                            <select
-                              value={m.role}
-                              onChange={(e) => updateMemberRole(m.userId, e.target.value)}
-                              style={{ fontSize: "0.65rem", padding: "0", border: "none", background: "transparent", color: "var(--color-primary-light)", fontWeight: 600, cursor: "pointer" }}
-                            >
-                              {WORKSPACE_ROLES.filter(r => r !== "OWNER").map(r => (
-                                <option key={r} value={r}>{workspaceRoleLabel(r)}</option>
-                              ))}
-                            </select>
-                          ) : (
-                            <span style={{ fontSize: "0.65rem", color: "var(--color-text-muted)", fontWeight: 600 }}>{workspaceRoleLabel(m.role)}</span>
-                          )}
-                          {m.status === "PENDING" && (
-                            <span className="fb-badge" style={{ fontSize: "0.6rem", background: "rgba(245,158,11,0.12)", color: "#f59e0b", border: "1px solid rgba(245,158,11,0.25)" }}>
-                              Pending
-                            </span>
-                          )}
-                        </div>
-                      </div>
+            <Card className="overflow-hidden border-primary/20">
+              <CardHeader className="bg-primary/5 py-4">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <UserPlus className="h-4 w-4 text-primary" />
+                  Invite Member
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-6 space-y-4">
+                <form onSubmit={sendInvite} className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="invite-email" className="text-xs">User Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input 
+                        id="invite-email" 
+                        type="email" 
+                        required 
+                        placeholder="collaborator@email.com" 
+                        className="pl-9 h-9 text-sm"
+                        value={inviteDraft.email}
+                        onChange={(e) => setInviteDraft(d => ({ ...d, email: e.target.value }))}
+                      />
                     </div>
-                    {isAdmin && !isMe && m.role !== "OWNER" && (
-                      <button onClick={() => removeMember(m.userId)} className="fb-btn-ghost" style={{ padding: "0.375rem", color: "var(--color-error)", borderRadius: "var(--radius-md)" }}>
-                        <Trash2 size={14} />
-                      </button>
-                    )}
                   </div>
-                );
-              })}
-              {members.length === 0 && <p style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>No members yet.</p>}
-            </div>
-          </div>
-
-          {/* Edit Workspace Modal */}
-          {showWsEdit && (
-            <div className="fb-modal-backdrop" onClick={(e) => e.target === e.currentTarget && setShowWsEdit(false)}>
-              <div className="fb-modal" style={{ maxWidth: 440, padding: "1.5rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1.25rem" }}>
-                  <h3 style={{ margin: 0 }}>Edit workspace</h3>
-                  <button onClick={() => setShowWsEdit(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)" }}><X size={18} /></button>
-                </div>
-                <form onSubmit={updateWorkspace} style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
-                  <div className="fb-input-group">
-                    <label className="fb-input-label" htmlFor="ws-edit-name">Workspace name *</label>
-                    <input id="ws-edit-name" required value={wsEditDraft.name} onChange={(e) => setWsEditDraft(d => ({ ...d, name: e.target.value }))} />
-                  </div>
-                  <div className="fb-input-group">
-                    <label className="fb-input-label" htmlFor="ws-edit-desc">Description</label>
-                    <textarea id="ws-edit-desc" rows={3} value={wsEditDraft.description} onChange={(e) => setWsEditDraft(d => ({ ...d, description: e.target.value }))} />
-                  </div>
-                  <div className="fb-input-group">
-                    <label className="fb-input-label">Visibility</label>
-                    <select value={wsEditDraft.visibility} onChange={(e) => setWsEditDraft(d => ({ ...d, visibility: e.target.value }))}>
-                      {VISIBILITY_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="invite-role" className="text-xs">Role</Label>
+                    <select 
+                      id="invite-role"
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      value={inviteDraft.role}
+                      onChange={(e) => setInviteDraft(d => ({ ...d, role: e.target.value }))}
+                    >
+                      {WORKSPACE_ROLES.filter(r => r !== "OWNER").map(r => (
+                        <option key={r} value={r}>{workspaceRoleLabel(r)}</option>
+                      ))}
                     </select>
                   </div>
-                  <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end", marginTop: "0.5rem" }}>
-                    <button type="button" onClick={() => setShowWsEdit(false)} className="fb-btn fb-btn-secondary">Cancel</button>
-                    <button type="submit" disabled={wsUpdating} className="fb-btn fb-btn-primary">
-                      {wsUpdating ? "Saving..." : "Save changes"}
-                    </button>
-                  </div>
+                  <Button type="submit" className="w-full h-9 gap-2" disabled={inviteStatus === "sending"}>
+                    {inviteStatus === "sending" ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                    Send Invitation
+                  </Button>
                 </form>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           )}
 
-          {/* Workspace info + danger */}
-          {workspace && (
-            <div className="fb-card" style={{ padding: "1.25rem" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.875rem" }}>
-                <Shield size={15} color={isAdmin ? "var(--color-error)" : "var(--color-text-muted)"} />
-                <p style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>Workspace settings</p>
-              </div>
-              
-              {isAdmin ? (
-                <>
-                  <p style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", marginBottom: "0.75rem" }}>Permanently delete this workspace and all its boards.</p>
-                  <button id="delete-workspace-btn" onClick={deleteWorkspace} className="fb-btn fb-btn-danger" style={{ width: "100%" }}>
-                    <Trash2 size={13} /> Delete workspace
-                  </button>
-                </>
-              ) : (
-                <>
-                  <p style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", marginBottom: "0.75rem" }}>Leave this workspace and remove your access.</p>
-                  <button onClick={leaveWorkspace} className="fb-btn fb-btn-danger" style={{ width: "100%", background: "transparent", borderColor: "rgba(248,81,73,0.3)" }}>
-                    <LogOut size={13} /> Leave workspace
-                  </button>
-                </>
+          {/* Team Members Card */}
+          <Card>
+            <CardHeader className="py-4">
+              <CardTitle className="text-base flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  Team
+                </div>
+                <Badge variant="secondary" className="text-[10px] h-5">{members.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0 space-y-4">
+              {userRole && userRole !== "NONE" && (
+                <div className="p-2 px-3 rounded-lg bg-accent/50 border border-border flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Your Role</span>
+                  <Badge variant="outline" className="text-[10px] border-primary/30 text-primary bg-primary/5 uppercase">
+                    {workspaceRoleLabel(userRole)}
+                  </Badge>
+                </div>
               )}
-            </div>
-          )}
+              
+              <div className="space-y-3">
+                {members.map((m) => {
+                  const profile = memberProfiles[m.userId];
+                  const isMe = Number(m.userId) === Number(user?.userId);
+                  return (
+                    <div key={m.userId} className="flex items-center justify-between group">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <Avatar className="h-9 w-9 border border-border">
+                          <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.fullName || m.userId}`} />
+                          <AvatarFallback>{profile?.fullName?.[0] || "?"}</AvatarFallback>
+                        </Avatar>
+                        <div className="overflow-hidden">
+                          <p className="text-sm font-medium truncate leading-none">
+                            {profile?.fullName || `User #${m.userId}`}
+                            {isMe && <span className="text-[10px] text-muted-foreground ml-1">(You)</span>}
+                          </p>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            {isAdmin && m.role !== "OWNER" ? (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <button className="text-[10px] font-bold text-primary hover:underline uppercase tracking-tighter">
+                                    {workspaceRoleLabel(m.role)}
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start">
+                                  {WORKSPACE_ROLES.filter(r => r !== "OWNER").map(r => (
+                                    <DropdownMenuItem key={r} onClick={() => updateMemberRole(m.userId, r)}>
+                                      {workspaceRoleLabel(r)}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            ) : (
+                              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
+                                {workspaceRoleLabel(m.role)}
+                              </span>
+                            )}
+                            {m.status === "PENDING" && <Badge className="text-[8px] h-3.5 px-1 bg-yellow-500/10 text-yellow-500 border-yellow-500/20">Pending</Badge>}
+                          </div>
+                        </div>
+                      </div>
+                      {isAdmin && !isMe && m.role !== "OWNER" && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => removeMember(m.userId)}>
+                          <Trash2 size={14} />
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Settings Card */}
+          <Card className="border-destructive/10 overflow-hidden">
+             <CardHeader className="bg-destructive/5 py-4">
+                <CardTitle className="text-sm flex items-center gap-2 text-destructive/80">
+                  <Shield className="h-4 w-4" />
+                  Workspace Settings
+                </CardTitle>
+             </CardHeader>
+             <CardContent className="p-4 pt-4">
+                <p className="text-[11px] text-muted-foreground mb-4">
+                  {isAdmin 
+                    ? "Careful: deleting this workspace will permanently remove all associated boards and data." 
+                    : "Leaving this workspace will remove your access to all its content."}
+                </p>
+                {isAdmin ? (
+                  <Button variant="outline" size="sm" className="w-full text-destructive border-destructive/20 hover:bg-destructive hover:text-white" onClick={deleteWorkspace}>
+                    <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Workspace
+                  </Button>
+                ) : (
+                  <Button variant="outline" size="sm" className="w-full text-destructive border-destructive/20" onClick={leaveWorkspace}>
+                    <LogOut className="mr-2 h-3.5 w-3.5" /> Leave Workspace
+                  </Button>
+                )}
+             </CardContent>
+          </Card>
         </div>
       </div>
 
-      <style>{`
-        @media (max-width: 900px) {
-          div[style*="grid-template-columns: 1fr 320px"] { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
+      {/* Dialogs / Modals */}
+      
+      {/* Create Board Dialog */}
+      <Dialog open={showBoardForm} onOpenChange={setShowBoardForm}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>Create Board</DialogTitle>
+            <DialogDescription>Start a new project board. Choose a visual theme to match.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={createBoard} className="space-y-4 pt-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="board-name">Board Name *</Label>
+              <Input id="board-name" required value={boardDraft.name} onChange={(e) => setBoardDraft(d => ({ ...d, name: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="board-desc">Description</Label>
+              <textarea 
+                id="board-desc" 
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={boardDraft.description} 
+                onChange={(e) => setBoardDraft(d => ({ ...d, description: e.target.value }))} 
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Background</Label>
+                <select 
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  value={boardDraft.background} 
+                  onChange={(e) => setBoardDraft(d => ({ ...d, background: e.target.value }))}
+                >
+                  {BACKGROUND_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Visibility</Label>
+                <select 
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  value={boardDraft.visibility} 
+                  onChange={(e) => setBoardDraft(d => ({ ...d, visibility: e.target.value }))}
+                >
+                  {VISIBILITY_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="h-12 rounded-lg" style={{ background: BG_GRADIENTS[boardDraft.background] }} />
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setShowBoardForm(false)}>Cancel</Button>
+              <Button type="submit" disabled={boardSubmitting}>
+                {boardSubmitting ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                Create Board
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Workspace Dialog */}
+      <Dialog open={showWsEdit} onOpenChange={setShowWsEdit}>
+        <DialogContent className="sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>Edit Workspace</DialogTitle>
+            <DialogDescription>Update the name and visibility of this workspace.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={updateWorkspace} className="space-y-4 pt-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="ws-name">Name *</Label>
+              <Input id="ws-name" required value={wsEditDraft.name} onChange={(e) => setWsEditDraft(d => ({ ...d, name: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ws-desc">Description</Label>
+              <textarea 
+                id="ws-desc" 
+                className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={wsEditDraft.description} 
+                onChange={(e) => setWsEditDraft(d => ({ ...d, description: e.target.value }))} 
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Visibility</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {VISIBILITY_OPTIONS.map(v => (
+                  <Button 
+                    key={v}
+                    type="button"
+                    variant={wsEditDraft.visibility === v ? "default" : "outline"}
+                    className="h-9 text-xs"
+                    onClick={() => setWsEditDraft(d => ({ ...d, visibility: v }))}
+                  >
+                    {v === 'PRIVATE' && <Lock className="mr-1.5 h-3 w-3" />}
+                    {v === 'PUBLIC' && <Globe className="mr-1.5 h-3 w-3" />}
+                    {v === 'TEAM' && <Users className="mr-1.5 h-3 w-3" />}
+                    {v}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setShowWsEdit(false)}>Cancel</Button>
+              <Button type="submit" disabled={wsUpdating}>
+                {wsUpdating ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
     </AppShell>
   );
 }

@@ -1,40 +1,62 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell,
   ChevronRight,
-  Kanban,
   Layout,
   LogOut,
-  Menu,
   Settings,
-  Shield,
   User,
-  X,
-  Zap
+  Search,
+  Plus,
+  Home,
+  ChevronDown,
+  Calendar,
+  Users,
+  Grid,
+  CheckSquare,
+  Briefcase,
+  Sun,
+  Moon
 } from "lucide-react";
 import { logout } from "../../store/slices/authSlice";
 import NotificationsDrawer from "./NotificationsDrawer";
-import { notificationApi } from "../../api/services";
-import { isPlatformAdmin, platformRoleLabel, roleBadgeStyle } from "../../utils/roles";
+import { notificationApi, workspaceApi } from "../../api/services";
+import { isPlatformAdmin } from "../../utils/roles";
+import { useTheme } from "../theme-provider";
 
-export default function AppShell({ children, title, subtitle, actions }) {
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+export default function AppShell({ children }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
   const user = useSelector((state) => state.auth.user);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
+  
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [workspaces, setWorkspaces] = useState([]);
+  const [isProjectsOpen, setIsProjectsOpen] = useState(true);
 
   const isAdmin = isPlatformAdmin(user);
 
   useEffect(() => {
     if (!user?.userId) return;
-    notificationApi.unreadCount(user.userId)
-      .then((count) => setUnreadCount(count ?? 0))
-      .catch(() => setUnreadCount(0));
+    notificationApi.unreadCount(user.userId).then(setUnreadCount).catch(() => {});
+    workspaceApi.byMember(user.userId).then(setWorkspaces).catch(() => {});
   }, [user?.userId, location]);
 
   const handleLogout = () => {
@@ -42,495 +64,191 @@ export default function AppShell({ children, title, subtitle, actions }) {
     navigate("/login");
   };
 
-  const initials = user
-    ? (user.fullName || user.email || "U")
-        .split(" ")
-        .map((w) => w[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : "?";
-
-  const navLinks = [
-    { to: "/", label: "Workspaces", icon: Layout },
-    ...(isAdmin ? [{ to: "/admin", label: "Admin Portal", icon: Shield }] : []),
-  ];
+  const breadcrumbs = location.pathname.split('/').filter(Boolean);
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      {/* ===== TOP NAVIGATION BAR ===== */}
-      <header
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 40,
-          background: "rgba(13, 17, 23, 0.9)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-          borderBottom: "1px solid var(--color-border)",
-          padding: "0 1.5rem",
-          height: "60px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: "1rem",
-        }}
-      >
-        {/* Left: Logo + Hamburger */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexShrink: 0 }}>
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="fb-btn-ghost"
-            style={{
-              padding: "0.4rem",
-              borderRadius: "var(--radius-md)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-            aria-label="Open menu"
-          >
-            <Menu size={20} />
-          </button>
-
-          <Link
-            to="/"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              textDecoration: "none",
-            }}
-          >
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: "var(--radius-md)",
-                background: "var(--color-primary)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "var(--shadow-glow-primary)",
-                flexShrink: 0,
-              }}
-            >
-              <Kanban size={18} color="white" />
+    <div className="flex min-h-screen bg-background text-foreground transition-colors duration-300">
+      {/* Sidebar */}
+      <aside className="w-72 bg-card border-r border-border flex flex-col sticky top-0 h-screen z-50">
+        <div className="p-8">
+          <Link to="/" className="flex items-center gap-3 no-underline">
+            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg">
+              <Layout className="text-primary-foreground" size={20} />
             </div>
-            <span
-              style={{
-                fontSize: "1.0625rem",
-                fontWeight: 700,
-                color: "var(--color-text-primary)",
-                letterSpacing: "-0.02em",
-              }}
-            >
-              Flow<span style={{ color: "var(--color-primary-light)" }}>Board</span>
-            </span>
+            <span className="text-xl font-bold tracking-tight text-card-foreground">FlowBoard</span>
           </Link>
         </div>
 
-        {/* Center: Page title (desktop) */}
-        {title && (
-          <div
-            style={{
-              flex: 1,
-              textAlign: "center",
-              display: "none",
-            }}
-            className="desktop-title"
-          >
-            <div
-              style={{
-                fontSize: "0.9375rem",
-                fontWeight: 600,
-                color: "var(--color-text-primary)",
-                margin: 0,
-              }}
+        <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
+          <SidebarItem to="/" icon={Grid} label="Dashboard" active={location.pathname === '/'} />
+          <SidebarItem to="/tasks" icon={CheckSquare} label="My Tasks" active={location.pathname === '/tasks'} />
+          
+          <div className="pt-4">
+            <button 
+              onClick={() => setIsProjectsOpen(!isProjectsOpen)}
+              className="w-full flex items-center justify-between px-3 py-2 text-muted-foreground hover:text-foreground transition-colors"
             >
-              {title}
-            </div>
+              <div className="flex items-center gap-3">
+                <Briefcase size={18} />
+                <span className="text-sm font-semibold">Projects</span>
+              </div>
+              <ChevronDown size={14} className={`transition-transform duration-300 ${isProjectsOpen ? '' : '-rotate-90'}`} />
+            </button>
+            
+            <AnimatePresence>
+              {isProjectsOpen && (
+                <motion.div 
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="mt-1 ml-4 border-l border-border space-y-1 overflow-hidden"
+                >
+                  {workspaces.map(ws => (
+                    <Link
+                      key={ws.workspaceId}
+                      to={`/workspaces/${ws.workspaceId}`}
+                      className={`flex items-center gap-3 px-4 py-2 text-sm rounded-lg transition-all ${location.pathname.includes(`/workspaces/${ws.workspaceId}`) ? 'text-foreground bg-accent font-medium' : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'}`}
+                    >
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      <span className="truncate">{ws.name}</span>
+                    </Link>
+                  ))}
+                  <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-foreground h-9 px-4 mt-1">
+                    <Plus size={14} className="mr-2" />
+                    New Project
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-        )}
 
-        {/* Right: Actions */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
-          {actions}
+          <SidebarItem to="/calendar" icon={Calendar} label="Calendar" active={location.pathname === '/calendar'} />
+          <SidebarItem to="/team" icon={Users} label="Team" active={location.pathname === '/team'} />
+          {isAdmin && <SidebarItem to="/admin" icon={Settings} label="Admin" active={location.pathname === '/admin'} />}
+        </nav>
 
-          {/* Notifications Bell */}
-          <button
-            id="notif-bell-btn"
-            onClick={() => setNotifOpen(true)}
-            style={{
-              position: "relative",
-              padding: "0.4rem",
-              borderRadius: "var(--radius-md)",
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid var(--color-border)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "var(--color-text-secondary)",
-              transition: "all var(--transition-fast)",
-            }}
-            aria-label="Notifications"
-          >
-            <Bell size={18} />
-            {unreadCount > 0 && (
-              <span
-                style={{
-                  position: "absolute",
-                  top: -4,
-                  right: -4,
-                  background: "var(--color-error)",
-                  color: "white",
-                  borderRadius: "var(--radius-full)",
-                  fontSize: "0.65rem",
-                  fontWeight: 700,
-                  minWidth: 18,
-                  height: 18,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: "0 4px",
-                  border: "2px solid var(--color-bg)",
-                }}
-              >
-                {unreadCount > 99 ? "99+" : unreadCount}
-              </span>
+        <div className="p-6 border-t border-border">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="w-full h-14 justify-start px-2 hover:bg-accent">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.fullName}`} />
+                    <AvatarFallback>{user?.fullName?.[0] || 'U'}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col items-start truncate">
+                    <span className="text-sm font-semibold truncate max-w-[120px]">{user?.fullName || 'User'}</span>
+                    <span className="text-xs text-muted-foreground truncate max-w-[120px]">{user?.email || 'user@example.com'}</span>
+                  </div>
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate('/profile')}>
+                <User className="mr-2 h-4 w-4" />
+                <span>Profile</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+                {theme === 'dark' ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
+                <span>Toggle Theme</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive focus:text-destructive-foreground">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0 bg-background">
+        <header className="h-20 bg-background/80 backdrop-blur-xl border-b border-border flex items-center justify-between px-10 sticky top-0 z-40">
+          {/* Breadcrumbs */}
+          <div className="flex items-center gap-3 text-sm text-muted-foreground font-medium">
+            <Home size={16} />
+            {breadcrumbs.map((crumb, i) => (
+              <div key={crumb} className="flex items-center gap-3">
+                <ChevronRight size={14} className="opacity-50" />
+                <span className={`capitalize ${i === breadcrumbs.length - 1 ? 'text-foreground font-bold' : ''}`}>
+                  {crumb.replace(/-/g, ' ')}
+                </span>
+              </div>
+            ))}
+            {breadcrumbs.length === 0 && (
+               <div className="flex items-center gap-3">
+                <ChevronRight size={14} className="opacity-50" />
+                <span className="text-foreground font-bold">Dashboard</span>
+              </div>
             )}
-          </button>
+          </div>
 
-          {/* User Avatar */}
-          <Link
-            to="/profile"
-            id="user-avatar-link"
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: "50%",
-              background: "var(--color-primary-subtle)",
-              border: "2px solid var(--color-primary)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "0.75rem",
-              fontWeight: 700,
-              color: "var(--color-primary-light)",
-              textDecoration: "none",
-              flexShrink: 0,
-              transition: "all var(--transition-fast)",
-            }}
-            title={user?.fullName || user?.email}
-          >
-            {initials}
-          </Link>
-        </div>
-      </header>
-
-      {/* ===== SIDEBAR OVERLAY ===== */}
-      {sidebarOpen && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 50,
-            display: "flex",
-          }}
-        >
-          {/* Backdrop */}
-          <div
-            onClick={() => setSidebarOpen(false)}
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "rgba(0,0,0,0.6)",
-              backdropFilter: "blur(4px)",
-              WebkitBackdropFilter: "blur(4px)",
-            }}
-          />
-
-          {/* Sidebar panel */}
-          <aside
-            style={{
-              position: "relative",
-              zIndex: 51,
-              width: 280,
-              background: "var(--color-bg-secondary)",
-              borderRight: "1px solid var(--color-border)",
-              height: "100vh",
-              display: "flex",
-              flexDirection: "column",
-              animation: "slideInLeft 0.25s ease",
-              overflowY: "auto",
-            }}
-          >
-            {/* Sidebar Header */}
-            <div
-              style={{
-                padding: "1.25rem 1.5rem",
-                borderBottom: "1px solid var(--color-border)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
+          <div className="flex items-center gap-4">
+            <div className="relative hidden lg:block">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+              <Input 
+                placeholder="Search anything..." 
+                className="w-72 h-10 pl-10 rounded-full bg-accent/50 border-transparent focus:bg-background"
+              />
+            </div>
+            
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full relative"
+              onClick={() => setNotifOpen(true)}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
-                <div
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: "var(--radius-md)",
-                    background: "var(--color-primary)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Kanban size={20} color="white" />
-                </div>
-                <div>
-                  <p style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>
-                    FlowBoard
-                  </p>
-                  <span
-                    className="fb-badge"
-                    style={{ fontSize: "0.65rem", display: "inline-flex", marginTop: "2px", ...roleBadgeStyle(user?.role) }}
-                  >
-                    {platformRoleLabel(user?.role)}
-                  </span>
-                </div>
-              </div>
-              <button
-                onClick={() => setSidebarOpen(false)}
-                style={{
-                  padding: "0.375rem",
-                  borderRadius: "var(--radius-md)",
-                  color: "var(--color-text-muted)",
-                  background: "transparent",
-                  display: "flex",
-                }}
-              >
-                <X size={18} />
-              </button>
-            </div>
+              <Bell size={18} className="text-muted-foreground" />
+              {unreadCount > 0 && (
+                <span className="absolute top-0 right-0 w-3 h-3 bg-destructive rounded-full border-2 border-background" />
+              )}
+            </Button>
+          </div>
+        </header>
 
-            {/* User info */}
-            <div
-              style={{
-                padding: "1rem 1.5rem",
-                borderBottom: "1px solid var(--color-border)",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.75rem",
-              }}
+        <main className="flex-1 p-10 overflow-y-auto">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="h-full"
             >
-              <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: "50%",
-                  background: "var(--color-primary-subtle)",
-                  border: "2px solid var(--color-primary)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "0.875rem",
-                  fontWeight: 700,
-                  color: "var(--color-primary-light)",
-                  flexShrink: 0,
-                }}
-              >
-                {initials}
-              </div>
-              <div style={{ minWidth: 0 }}>
-                <p
-                  style={{
-                    fontSize: "0.9375rem",
-                    fontWeight: 600,
-                    color: "var(--color-text-primary)",
-                    margin: 0,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {user?.fullName || user?.userName || "User"}
-                </p>
-                <p
-                  style={{
-                    fontSize: "0.75rem",
-                    color: "var(--color-text-muted)",
-                    margin: 0,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {user?.email}
-                </p>
-              </div>
-            </div>
+              {children}
+            </motion.div>
+          </AnimatePresence>
+        </main>
+      </div>
 
-            {/* Navigation */}
-            <nav style={{ flex: 1, padding: "1rem 0.75rem", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-              {navLinks.map(({ to, label, icon: Icon }) => {
-                const isActive = location.pathname === to || (to !== "/" && location.pathname.startsWith(to));
-                return (
-                  <Link
-                    key={to}
-                    to={to}
-                    onClick={() => setSidebarOpen(false)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "0.625rem 0.875rem",
-                      borderRadius: "var(--radius-md)",
-                      textDecoration: "none",
-                      fontWeight: 500,
-                      fontSize: "0.9rem",
-                      transition: "all var(--transition-fast)",
-                      background: isActive ? "var(--color-primary-subtle)" : "transparent",
-                      color: isActive ? "var(--color-primary-light)" : "var(--color-text-secondary)",
-                    }}
-                  >
-                    <span style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
-                      <Icon size={17} />
-                      {label}
-                    </span>
-                    {isActive && <ChevronRight size={15} />}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            {/* Sidebar Footer */}
-            <div style={{ padding: "0.75rem", borderTop: "1px solid var(--color-border)", display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-              <Link
-                to="/profile"
-                onClick={() => setSidebarOpen(false)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.625rem",
-                  padding: "0.625rem 0.875rem",
-                  borderRadius: "var(--radius-md)",
-                  textDecoration: "none",
-                  fontSize: "0.9rem",
-                  fontWeight: 500,
-                  color: "var(--color-text-secondary)",
-                  transition: "all var(--transition-fast)",
-                }}
-              >
-                <Settings size={17} />
-                Profile & Settings
-              </Link>
-              <button
-                id="sidebar-logout-btn"
-                onClick={handleLogout}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.625rem",
-                  padding: "0.625rem 0.875rem",
-                  borderRadius: "var(--radius-md)",
-                  width: "100%",
-                  fontSize: "0.9rem",
-                  fontWeight: 500,
-                  color: "var(--color-error)",
-                  background: "rgba(248, 81, 73, 0.05)",
-                  border: "none",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  transition: "all var(--transition-fast)",
-                }}
-              >
-                <LogOut size={17} />
-                Sign out
-              </button>
-            </div>
-          </aside>
-        </div>
-      )}
-
-      {/* ===== NOTIFICATIONS DRAWER ===== */}
       {notifOpen && (
         <NotificationsDrawer
           onClose={() => {
             setNotifOpen(false);
-            if (user?.userId) {
-              notificationApi.unreadCount(user.userId)
-                .then((count) => setUnreadCount(count ?? 0))
-                .catch(() => {});
-            }
+            if (user?.userId) notificationApi.unreadCount(user.userId).then(setUnreadCount);
           }}
         />
       )}
-
-      {/* ===== MAIN CONTENT ===== */}
-      <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        {/* Page Header */}
-        {(title || subtitle) && (
-          <div
-            style={{
-              padding: "1.5rem 1.5rem 0",
-              marginBottom: "1.5rem",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "space-between",
-                gap: "1rem",
-                flexWrap: "wrap",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: "var(--radius-lg)",
-                    background: "var(--color-primary-subtle)",
-                    border: "1px solid rgba(0, 121, 191, 0.3)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Zap size={19} color="var(--color-primary-light)" />
-                </div>
-                <div>
-                  {title && (
-                    <h1
-                      style={{
-                        fontSize: "1.375rem",
-                        fontWeight: 700,
-                        color: "var(--color-text-primary)",
-                        margin: 0,
-                        letterSpacing: "-0.02em",
-                      }}
-                    >
-                      {title}
-                    </h1>
-                  )}
-                  {subtitle && (
-                    <p style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", margin: 0, marginTop: 2 }}>
-                      {subtitle}
-                    </p>
-                  )}
-                </div>
-              </div>
-              {actions && <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>{actions}</div>}
-            </div>
-          </div>
-        )}
-
-        <div style={{ flex: 1, padding: "0 1.5rem 2rem" }}>{children}</div>
-      </main>
     </div>
+  );
+}
+
+function SidebarItem({ to, icon: Icon, label, active }) {
+  return (
+    <Link 
+      to={to} 
+      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm font-medium ${
+        active 
+          ? 'bg-primary/10 text-primary' 
+          : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+      }`}
+    >
+      <Icon size={18} />
+      <span>{label}</span>
+    </Link>
   );
 }

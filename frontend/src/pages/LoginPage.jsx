@@ -1,16 +1,23 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Eye, EyeOff, Kanban, LoaderCircle, Lock, Mail, User, UserPlus } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Layout, Eye, EyeOff, LoaderCircle, LogIn, UserPlus, Shield, ChevronRight, ArrowRight } from "lucide-react";
 import { login, fetchProfile } from "../store/slices/authSlice";
 import { authApi } from "../api/services";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 export default function LoginPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { status, error } = useSelector((state) => state.auth);
 
-  const [mode, setMode] = useState("login"); // "login" | "register"
+  const [mode, setMode] = useState("login");
   const [showPw, setShowPw] = useState(false);
   const [localError, setLocalError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -19,7 +26,6 @@ export default function LoginPage() {
   const [registerForm, setRegisterForm] = useState({
     fullName: "",
     email: "",
-    userName: "",
     password: "",
     confirmPassword: "",
   });
@@ -32,7 +38,7 @@ export default function LoginPage() {
       await dispatch(fetchProfile()).unwrap();
       navigate("/");
     } catch (err) {
-      setLocalError(err?.message || err || "Login failed. Please check your credentials.");
+      setLocalError(err?.message || err || "Invalid credentials. Please try again.");
     }
   };
 
@@ -43,472 +49,212 @@ export default function LoginPage() {
       setLocalError("Passwords do not match.");
       return;
     }
-    if (registerForm.password.length < 6) {
-      setLocalError("Password must be at least 6 characters.");
-      return;
-    }
     setSubmitting(true);
     try {
-      await authApi.register({
-        fullName: registerForm.fullName,
-        email: registerForm.email,
-        userName: registerForm.userName || registerForm.email.split("@")[0],
-        password: registerForm.password,
-        role: "MEMBER",
-        isActive: true,
-      });
-      // Auto-login after registration
+      await authApi.register({ ...registerForm, role: "MEMBER", userName: registerForm.email.split('@')[0], isActive: true });
       await dispatch(login({ email: registerForm.email, password: registerForm.password })).unwrap();
       await dispatch(fetchProfile()).unwrap();
       navigate("/");
     } catch (err) {
-      setLocalError(err?.message || err || "Registration failed. Please try again.");
+      setLocalError(err?.message || "Registration failed. Please check your details.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const isLoading = status === "loading" || submitting;
-  const displayError = localError || error;
-
-  const features = [
-    "Visual Kanban boards with drag-and-drop",
-    "Real-time collaboration & comments",
-    "Checklists, labels, and due dates",
-    "Role-based access control",
-    "Activity notifications & mentions",
-  ];
-
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        background: "var(--color-bg)",
-      }}
-    >
-      {/* ===== LEFT BRANDING PANEL ===== */}
-      <div
-        style={{
-          position: "relative",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          padding: "3rem",
-          overflow: "hidden",
-          background: "linear-gradient(135deg, #0d1f33 0%, #0d1117 60%, #001a2e 100%)",
-          borderRight: "1px solid var(--color-border)",
-        }}
-      >
-        {/* Decorative circles */}
-        <div
-          style={{
-            position: "absolute",
-            top: -100,
-            right: -100,
-            width: 400,
-            height: 400,
-            borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(0,121,191,0.12) 0%, transparent 70%)",
-            pointerEvents: "none",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            bottom: -80,
-            left: -60,
-            width: 300,
-            height: 300,
-            borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(33,150,243,0.08) 0%, transparent 70%)",
-            pointerEvents: "none",
-          }}
-        />
+    <div className="min-h-screen flex bg-background">
+      {/* Left Side: Branding/Intro */}
+      <div className="hidden lg:flex lg:w-1/2 bg-stone-950 p-12 flex-col justify-between relative overflow-hidden">
+        <div className="absolute inset-0 opacity-20 pointer-events-none">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/20 blur-[120px]" />
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-primary/10 blur-[120px]" />
+        </div>
 
-        <div style={{ position: "relative", animation: "slideInLeft 0.5s ease" }}>
-          {/* Logo */}
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "3rem" }}>
-            <div
-              style={{
-                width: 52,
-                height: 52,
-                borderRadius: "var(--radius-xl)",
-                background: "var(--color-primary)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "var(--shadow-glow-primary)",
-              }}
-            >
-              <Kanban size={28} color="white" />
+        <div className="relative z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg">
+              <Layout className="text-primary-foreground" size={20} />
             </div>
-            <div>
-              <p style={{ fontSize: "1.5rem", fontWeight: 800, color: "white", margin: 0, letterSpacing: "-0.03em" }}>
-                Flow<span style={{ color: "var(--color-primary-light)" }}>Board</span>
-              </p>
-              <p style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", margin: 0 }}>
-                Organise work. Collaborate seamlessly.
-              </p>
-            </div>
+            <span className="text-2xl font-black tracking-tighter text-white uppercase">FlowBoard</span>
           </div>
+        </div>
 
-          {/* Headline */}
-          <h1
-            style={{
-              fontSize: "2.5rem",
-              fontWeight: 800,
-              color: "white",
-              margin: "0 0 1rem",
-              letterSpacing: "-0.03em",
-              lineHeight: 1.15,
-            }}
-          >
-            Deliver faster,
-            <br />
-            <span
-              style={{
-                background: "linear-gradient(90deg, var(--color-primary-light), #64b5f6)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-              }}
-            >
-              together.
-            </span>
-          </h1>
-
-          <p style={{ fontSize: "1rem", color: "var(--color-text-secondary)", marginBottom: "2rem", lineHeight: 1.6 }}>
-            A Kanban-style task management platform built for modern teams. Visualise your workflow,
-            stay aligned, and ship with confidence.
+        <div className="relative z-10 max-w-lg">
+          <Badge variant="outline" className="mb-6 text-[10px] uppercase font-black tracking-widest text-primary border-primary/30">
+            Platform v2.0
+          </Badge>
+          <h2 className="text-6xl font-black tracking-tight text-white mb-6 leading-[0.9]">
+            Manage projects with <span className="text-primary">velocity.</span>
+          </h2>
+          <p className="text-stone-400 text-lg font-medium leading-relaxed">
+            The next generation of project management. Built for speed, collaboration, and absolute clarity.
           </p>
+        </div>
 
-          {/* Feature list */}
-          <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            {features.map((f, i) => (
-              <li
-                key={i}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.625rem",
-                  fontSize: "0.9rem",
-                  color: "var(--color-text-secondary)",
-                  animation: `slideInLeft ${0.3 + i * 0.08}s ease both`,
-                }}
-              >
-                <span
-                  style={{
-                    width: 20,
-                    height: 20,
-                    borderRadius: "50%",
-                    background: "rgba(0,121,191,0.2)",
-                    border: "1px solid rgba(0,121,191,0.4)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                    fontSize: "0.65rem",
-                    color: "var(--color-primary-light)",
-                    fontWeight: 700,
-                  }}
-                >
-                  ✓
-                </span>
-                {f}
-              </li>
-            ))}
-          </ul>
+        <div className="relative z-10 flex items-center gap-8 border-t border-white/10 pt-8">
+           <div className="flex flex-col">
+             <span className="text-white text-2xl font-bold tracking-tighter">10k+</span>
+             <span className="text-stone-500 text-[10px] font-black uppercase tracking-widest">Active Users</span>
+           </div>
+           <div className="flex flex-col">
+             <span className="text-white text-2xl font-bold tracking-tighter">99.9%</span>
+             <span className="text-stone-500 text-[10px] font-black uppercase tracking-widest">Uptime</span>
+           </div>
         </div>
       </div>
 
-      {/* ===== RIGHT AUTH PANEL ===== */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "2rem",
-          overflowY: "auto",
-        }}
-      >
-        <div
-          style={{
-            width: "100%",
-            maxWidth: 400,
-            animation: "slideInRight 0.4s ease",
-          }}
-        >
-          {/* Tab Switcher */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "0.25rem",
-              marginBottom: "2rem",
-              background: "rgba(255,255,255,0.04)",
-              borderRadius: "var(--radius-lg)",
-              padding: "0.25rem",
-              border: "1px solid var(--color-border)",
-            }}
-          >
-            {["login", "register"].map((m) => (
-              <button
-                key={m}
-                id={`tab-${m}`}
-                onClick={() => { setMode(m); setLocalError(""); }}
-                style={{
-                  padding: "0.625rem",
-                  borderRadius: "calc(var(--radius-lg) - 3px)",
-                  fontSize: "0.9rem",
-                  fontWeight: 600,
-                  transition: "all var(--transition-fast)",
-                  background: mode === m ? "var(--color-primary)" : "transparent",
-                  color: mode === m ? "white" : "var(--color-text-secondary)",
-                  cursor: "pointer",
-                  border: "none",
-                }}
-              >
-                {m === "login" ? "Sign in" : "Create account"}
-              </button>
-            ))}
+      {/* Right Side: Auth Form */}
+      <div className="flex-1 flex items-center justify-center p-8 md:p-16">
+        <div className="w-full max-w-[420px] space-y-8 animate-in fade-in slide-in-from-right-4 duration-700">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight">
+              {mode === "login" ? "Welcome back" : "Create account"}
+            </h1>
+            <p className="text-muted-foreground text-sm font-medium">
+              {mode === "login" ? "Enter your credentials to access your workspace." : "Join thousands of teams managing work on FlowBoard."}
+            </p>
           </div>
 
-          {/* Error Banner */}
-          {displayError && (
-            <div
-              style={{
-                padding: "0.75rem 1rem",
-                borderRadius: "var(--radius-md)",
-                border: "1px solid rgba(248,81,73,0.25)",
-                background: "rgba(248,81,73,0.1)",
-                color: "var(--color-error)",
-                fontSize: "0.875rem",
-                marginBottom: "1.25rem",
-                animation: "fadeIn 0.2s ease",
-              }}
-            >
-              {displayError}
-            </div>
-          )}
-
-          {/* Login Form */}
-          {mode === "login" && (
-            <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <div className="fb-input-group">
-                <label className="fb-input-label" htmlFor="login-email">Email address</label>
-                <div style={{ position: "relative" }}>
-                  <Mail size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)", pointerEvents: "none" }} />
-                  <input
-                    id="login-email"
-                    type="email"
-                    required
-                    autoComplete="email"
-                    placeholder="you@company.com"
-                    value={loginForm.email}
-                    onChange={(e) => setLoginForm((f) => ({ ...f, email: e.target.value }))}
-                    style={{ paddingLeft: "2.25rem" }}
-                  />
-                </div>
-              </div>
-
-              <div className="fb-input-group">
-                <label className="fb-input-label" htmlFor="login-password">Password</label>
-                <div style={{ position: "relative" }}>
-                  <Lock size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)", pointerEvents: "none" }} />
-                  <input
-                    id="login-password"
-                    type={showPw ? "text" : "password"}
-                    required
-                    autoComplete="current-password"
-                    placeholder="••••••••"
-                    value={loginForm.password}
-                    onChange={(e) => setLoginForm((f) => ({ ...f, password: e.target.value }))}
-                    style={{ paddingLeft: "2.25rem", paddingRight: "2.5rem" }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPw(!showPw)}
-                    style={{
-                      position: "absolute",
-                      right: 12,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      color: "var(--color-text-muted)",
-                      background: "transparent",
-                      border: "none",
-                      cursor: "pointer",
-                      display: "flex",
-                    }}
-                  >
-                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              <button
-                id="login-submit-btn"
-                type="submit"
-                disabled={isLoading}
-                className="fb-btn fb-btn-primary"
-                style={{ width: "100%", padding: "0.75rem", marginTop: "0.25rem" }}
+          <AnimatePresence mode="wait">
+            {mode === "login" ? (
+              <motion.div
+                key="login"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
               >
-                {isLoading ? (
-                  <><LoaderCircle size={16} className="animate-spin" /> Signing in...</>
-                ) : (
-                  <><ArrowRight size={16} /> Sign in</>
-                )}
-              </button>
-            </form>
-          )}
+                <form onSubmit={handleLogin} className="space-y-5">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      required 
+                      placeholder="name@company.com" 
+                      className="h-12"
+                      value={loginForm.email}
+                      onChange={e => setLoginForm(f => ({ ...f, email: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="password">Password</Label>
+                      <button type="button" className="text-xs font-bold text-primary hover:underline">Forgot password?</button>
+                    </div>
+                    <div className="relative">
+                      <Input 
+                        id="password" 
+                        type={showPw ? "text" : "password"} 
+                        required 
+                        placeholder="••••••••" 
+                        className="h-12 pr-10"
+                        value={loginForm.password}
+                        onChange={e => setLoginForm(f => ({ ...f, password: e.target.value }))}
+                      />
+                      <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                        {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
 
-          {/* Register Form */}
-          {mode === "register" && (
-            <form onSubmit={handleRegister} style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
-              <div className="fb-input-group">
-                <label className="fb-input-label" htmlFor="reg-name">Full name</label>
-                <div style={{ position: "relative" }}>
-                  <User size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)", pointerEvents: "none" }} />
-                  <input
-                    id="reg-name"
-                    type="text"
-                    required
-                    placeholder="Sneha Sharma"
-                    value={registerForm.fullName}
-                    onChange={(e) => setRegisterForm((f) => ({ ...f, fullName: e.target.value }))}
-                    style={{ paddingLeft: "2.25rem" }}
-                  />
-                </div>
-              </div>
+                  {localError && (
+                    <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs font-bold flex items-center gap-2">
+                      <Shield size={14} /> {localError}
+                    </div>
+                  )}
 
-              <div className="fb-input-group">
-                <label className="fb-input-label" htmlFor="reg-email">Email address</label>
-                <div style={{ position: "relative" }}>
-                  <Mail size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)", pointerEvents: "none" }} />
-                  <input
-                    id="reg-email"
-                    type="email"
-                    required
-                    placeholder="you@company.com"
-                    value={registerForm.email}
-                    onChange={(e) => setRegisterForm((f) => ({ ...f, email: e.target.value }))}
-                    style={{ paddingLeft: "2.25rem" }}
-                  />
-                </div>
-              </div>
-
-              <div className="fb-input-group">
-                <label className="fb-input-label" htmlFor="reg-username">Username <span style={{ color: "var(--color-text-muted)" }}>(optional)</span></label>
-                <div style={{ position: "relative" }}>
-                  <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)", fontSize: "0.875rem" }}>@</span>
-                  <input
-                    id="reg-username"
-                    type="text"
-                    placeholder="sneha"
-                    value={registerForm.userName}
-                    onChange={(e) => setRegisterForm((f) => ({ ...f, userName: e.target.value }))}
-                    style={{ paddingLeft: "2rem" }}
-                  />
-                </div>
-              </div>
-
-              <div className="fb-input-group">
-                <label className="fb-input-label" htmlFor="reg-password">Password</label>
-                <div style={{ position: "relative" }}>
-                  <Lock size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)", pointerEvents: "none" }} />
-                  <input
-                    id="reg-password"
-                    type={showPw ? "text" : "password"}
-                    required
-                    minLength={6}
-                    placeholder="Min. 6 characters"
-                    value={registerForm.password}
-                    onChange={(e) => setRegisterForm((f) => ({ ...f, password: e.target.value }))}
-                    style={{ paddingLeft: "2.25rem", paddingRight: "2.5rem" }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPw(!showPw)}
-                    style={{
-                      position: "absolute",
-                      right: 12,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      color: "var(--color-text-muted)",
-                      background: "transparent",
-                      border: "none",
-                      cursor: "pointer",
-                      display: "flex",
-                    }}
-                  >
-                    {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="fb-input-group">
-                <label className="fb-input-label" htmlFor="reg-confirm">Confirm password</label>
-                <div style={{ position: "relative" }}>
-                  <Lock size={16} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)", pointerEvents: "none" }} />
-                  <input
-                    id="reg-confirm"
-                    type={showPw ? "text" : "password"}
-                    required
-                    placeholder="Repeat password"
-                    value={registerForm.confirmPassword}
-                    onChange={(e) => setRegisterForm((f) => ({ ...f, confirmPassword: e.target.value }))}
-                    style={{ paddingLeft: "2.25rem" }}
-                  />
-                </div>
-              </div>
-
-              <button
-                id="register-submit-btn"
-                type="submit"
-                disabled={isLoading}
-                className="fb-btn fb-btn-primary"
-                style={{ width: "100%", padding: "0.75rem", marginTop: "0.25rem" }}
+                  <Button type="submit" className="w-full h-12 text-sm font-bold gap-2" disabled={status === "loading"}>
+                    {status === "loading" ? <LoaderCircle className="animate-spin" /> : <><LogIn size={18} /> Sign In</>}
+                  </Button>
+                </form>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="register"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
               >
-                {isLoading ? (
-                  <><LoaderCircle size={16} className="animate-spin" /> Creating account...</>
-                ) : (
-                  <><UserPlus size={16} /> Create account</>
-                )}
-              </button>
-            </form>
-          )}
+                <form onSubmit={handleRegister} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-name">Full Name</Label>
+                    <Input 
+                      id="reg-name" 
+                      required 
+                      placeholder="John Doe" 
+                      className="h-11"
+                      value={registerForm.fullName}
+                      onChange={e => setRegisterForm(f => ({ ...f, fullName: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reg-email">Email Address</Label>
+                    <Input 
+                      id="reg-email" 
+                      type="email" 
+                      required 
+                      placeholder="name@company.com" 
+                      className="h-11"
+                      value={registerForm.email}
+                      onChange={e => setRegisterForm(f => ({ ...f, email: e.target.value }))}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reg-pw">Password</Label>
+                      <Input 
+                        id="reg-pw" 
+                        type="password" 
+                        required 
+                        className="h-11"
+                        value={registerForm.password}
+                        onChange={e => setRegisterForm(f => ({ ...f, password: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="reg-conf">Confirm</Label>
+                      <Input 
+                        id="reg-conf" 
+                        type="password" 
+                        required 
+                        className="h-11"
+                        value={registerForm.confirmPassword}
+                        onChange={e => setRegisterForm(f => ({ ...f, confirmPassword: e.target.value }))}
+                      />
+                    </div>
+                  </div>
 
-          <p style={{ textAlign: "center", fontSize: "0.8rem", color: "var(--color-text-muted)", marginTop: "1.5rem" }}>
-            {mode === "login" ? "Don't have an account? " : "Already have an account? "}
-            <button
+                  {localError && (
+                    <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs font-bold">
+                      {localError}
+                    </div>
+                  )}
+
+                  <Button type="submit" className="w-full h-11 text-sm font-bold gap-2 mt-2" disabled={submitting}>
+                    {submitting ? <LoaderCircle className="animate-spin" /> : <><UserPlus size={18} /> Create Account</>}
+                  </Button>
+                </form>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="text-center pt-4">
+            <button 
               onClick={() => { setMode(mode === "login" ? "register" : "login"); setLocalError(""); }}
-              style={{
-                background: "none",
-                border: "none",
-                color: "var(--color-primary-light)",
-                cursor: "pointer",
-                fontWeight: 600,
-                fontSize: "0.8rem",
-              }}
+              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-1 group"
             >
-              {mode === "login" ? "Sign up for free" : "Sign in"}
+              {mode === "login" ? "Don't have an account?" : "Already have an account?"}
+              <span className="text-primary font-bold inline-flex items-center">
+                {mode === "login" ? "Register" : "Sign In"}
+                <ArrowRight size={14} className="ml-1 group-hover:translate-x-1 transition-transform" />
+              </span>
             </button>
-          </p>
+          </div>
         </div>
       </div>
-
-      {/* Responsive — stack on mobile */}
-      <style>{`
-        @media (max-width: 768px) {
-          div[style*="grid-template-columns"] {
-            grid-template-columns: 1fr !important;
-          }
-          div[style*="linear-gradient(135deg, #0d1f33"] {
-            display: none !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

@@ -1,12 +1,31 @@
 import { useState } from "react";
 import { DragDropContext, Droppable } from "react-beautiful-dnd";
-import { Filter, Plus, Search, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  Plus, 
+  LoaderCircle, 
+  ListFilter,
+  ChevronDown,
+  Grid,
+  Search,
+  Layout,
+  X
+} from "lucide-react";
 import ColumnLane from "./ColumnLane";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { 
+  DropdownMenu,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-const PRIORITY_OPTIONS = ["ALL", "LOW", "MEDIUM", "HIGH", "CRITICAL"];
-const STATUS_OPTIONS = ["ALL", "TO_DO", "IN_PROGRESS", "IN_REVIEW", "DONE"];
+import { StrictModeDroppable } from "./StrictModeDroppable";
 
 export default function BoardCanvas({
+  board,
+  members,
   lists,
   cardsByListId,
   cardsById,
@@ -20,22 +39,17 @@ export default function BoardCanvas({
   saving,
   readOnly,
 }) {
-  const [draft, setDraft] = useState({ name: "", color: "#0079BF" });
   const [open, setOpen] = useState(false);
-  const [filterPriority, setFilterPriority] = useState("ALL");
-  const [filterStatus, setFilterStatus] = useState("ALL");
+  const [draft, setDraft] = useState({ name: "", color: "#3b82f6" });
   const [filterSearch, setFilterSearch] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
     if (!draft.name.trim()) return;
     await onCreateList(draft);
-    setDraft({ name: "", color: "#0079BF" });
+    setDraft({ name: "", color: "#3b82f6" });
     setOpen(false);
   };
-
-  const isFiltered = filterPriority !== "ALL" || filterStatus !== "ALL" || filterSearch.trim();
 
   const getFilteredCards = (listId) => {
     const cardIds = cardsByListId[listId] || [];
@@ -43,108 +57,105 @@ export default function BoardCanvas({
       .map((id) => cardsById[id])
       .filter((card) => {
         if (!card) return false;
-        if (filterPriority !== "ALL" && card.priority !== filterPriority) return false;
-        if (filterStatus !== "ALL" && card.status !== filterStatus) return false;
         if (filterSearch.trim() && !card.title?.toLowerCase().includes(filterSearch.toLowerCase())) return false;
         return true;
       });
   };
 
-  const resetFilters = () => {
-    setFilterPriority("ALL");
-    setFilterStatus("ALL");
-    setFilterSearch("");
-  };
-
   return (
-    <div>
-      {/* Filter bar */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "0.625rem",
-          marginBottom: "1.25rem",
-          padding: "0.625rem 0.875rem",
-          background: "var(--color-bg-card)",
-          borderRadius: "var(--radius-lg)",
-          border: "1px solid var(--color-border)",
-          flexWrap: "wrap",
-        }}
-      >
-        {/* Search */}
-        <div style={{ position: "relative", flex: 1, minWidth: 180 }}>
-          <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--color-text-muted)", pointerEvents: "none" }} />
-          <input
-            id="board-search-input"
-            value={filterSearch}
-            onChange={(e) => setFilterSearch(e.target.value)}
-            placeholder="Filter cards..."
-            style={{ paddingLeft: "2rem", paddingRight: filterSearch ? "2rem" : "0.875rem", fontSize: "0.8125rem", height: "34px" }}
-          />
-          {filterSearch && (
-            <button onClick={() => setFilterSearch("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)", display: "flex" }}>
-              <X size={13} />
-            </button>
-          )}
+    <div className="flex flex-col h-full">
+      {/* Board Dynamic Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-10">
+        <div className="flex items-center gap-6">
+          <div className="w-16 h-16 rounded-[24px] bg-primary/10 flex items-center justify-center text-primary shadow-sm border border-primary/20">
+            <Layout size={32} />
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-black tracking-tighter text-foreground uppercase">{board?.name || "Loading..."}</h1>
+              <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-widest bg-muted/50 border-border/50">
+                {board?.visibility}
+              </Badge>
+            </div>
+            <p className="text-sm font-bold text-muted-foreground tracking-tight">
+              {board?.description || "Project collaboration space"}
+            </p>
+          </div>
         </div>
 
-        <button
-          id="toggle-filters-btn"
-          onClick={() => setShowFilters((v) => !v)}
-          className={`fb-btn ${showFilters ? "fb-btn-primary" : "fb-btn-secondary"}`}
-          style={{ padding: "0.3rem 0.75rem", fontSize: "0.8rem", height: "34px", flexShrink: 0 }}
-        >
-          <Filter size={13} /> Filters
-          {isFiltered && (
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "white", marginLeft: "0.25rem" }} />
+        <div className="flex items-center gap-4">
+          <div className="flex -space-x-3 mr-4">
+            {members?.slice(0, 5).map(m => (
+              <Avatar key={m.userId} className="h-10 w-10 border-4 border-background shadow-lg">
+                <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${m.userId}`} />
+                <AvatarFallback>U</AvatarFallback>
+              </Avatar>
+            ))}
+            {members?.length > 5 && (
+              <div className="w-10 h-10 rounded-full border-4 border-background bg-muted flex items-center justify-center text-[10px] font-bold shadow-lg">
+                +{members.length - 5}
+              </div>
+            )}
+          </div>
+          
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search cards..." 
+              className="pl-9 w-[200px] h-10 bg-muted/30 border-none"
+              value={filterSearch}
+              onChange={(e) => setFilterSearch(e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Tool Bar */}
+      <div className="flex items-center justify-between mb-8 pb-8 border-b border-border/50">
+        <div className="flex items-center gap-3">
+          <Button variant="default" size="sm" className="h-10 px-5 rounded-xl text-xs font-black uppercase tracking-widest gap-2">
+            <Grid size={14} /> All Tasks
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-10 px-5 rounded-xl text-xs font-black uppercase tracking-widest gap-2 border-border/50"
+            onClick={() => setOpen(true)}
+          >
+            <Plus size={14} /> New List
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-10 px-5 rounded-xl text-xs font-black uppercase tracking-widest gap-2 border-border/50">
+                <ListFilter size={14} /> Filter <ChevronDown size={14} className="opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+          </DropdownMenu>
+        </div>
+
+        <AnimatePresence>
+          {saving && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex items-center gap-3 text-muted-foreground text-xs font-bold uppercase tracking-widest"
+            >
+              <LoaderCircle size={16} className="animate-spin text-primary" />
+              <span>Syncing...Syncing...</span>
+            </motion.div>
           )}
-        </button>
-
-        {showFilters && (
-          <>
-            <select
-              id="board-filter-priority"
-              value={filterPriority}
-              onChange={(e) => setFilterPriority(e.target.value)}
-              style={{ fontSize: "0.8rem", height: "34px", width: "auto", minWidth: 100 }}
-            >
-              {PRIORITY_OPTIONS.map((p) => <option key={p} value={p}>{p === "ALL" ? "All priorities" : p}</option>)}
-            </select>
-            <select
-              id="board-filter-status"
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              style={{ fontSize: "0.8rem", height: "34px", width: "auto", minWidth: 110 }}
-            >
-              {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s === "ALL" ? "All statuses" : s.replace("_", " ")}</option>)}
-            </select>
-          </>
-        )}
-
-        {isFiltered && (
-          <button onClick={resetFilters} className="fb-btn-ghost" style={{ padding: "0.3rem 0.5rem", fontSize: "0.8rem", height: "34px", display: "flex", alignItems: "center", gap: "0.25rem", color: "var(--color-text-muted)" }}>
-            <X size={13} /> Clear
-          </button>
-        )}
-
-        {saving && (
-          <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)", marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.375rem" }}>
-            <span className="animate-spin" style={{ display: "inline-block", width: 12, height: 12, border: "2px solid var(--color-border)", borderTopColor: "var(--color-primary)", borderRadius: "50%" }} />
-            Saving...
-          </span>
-        )}
+        </AnimatePresence>
       </div>
 
       {/* Kanban Board */}
       <DragDropContext onDragEnd={readOnly ? () => {} : onDragEnd}>
-        <Droppable droppableId="board-columns" direction="horizontal" type="COLUMN">
+        <StrictModeDroppable droppableId="board-columns" direction="horizontal" type="COLUMN">
           {(provided) => (
             <div
               ref={provided.innerRef}
               {...provided.droppableProps}
-              className="fb-scroll-x"
-              style={{ display: "flex", gap: "1rem", minHeight: "70vh", paddingBottom: "1.5rem", alignItems: "flex-start" }}
+              className="flex-1 flex gap-8 items-start overflow-x-auto pb-10 custom-scrollbar"
             >
               {lists.map((list, index) => (
                 <ColumnLane
@@ -163,67 +174,47 @@ export default function BoardCanvas({
               {provided.placeholder}
 
               {!readOnly && (
-                <div style={{ width: 300, flexShrink: 0 }}>
+                <div className="w-80 flex-shrink-0 pt-3">
                   {!open ? (
                     <button
-                      id="add-list-btn"
                       onClick={() => setOpen(true)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "0.5rem",
-                        width: "100%",
-                        minHeight: 160,
-                        borderRadius: "var(--radius-xl)",
-                        border: "2px dashed var(--color-border)",
-                        background: "rgba(255,255,255,0.02)",
-                        color: "var(--color-text-muted)",
-                        fontSize: "0.875rem",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        transition: "all var(--transition-normal)",
-                      }}
+                      className="w-full h-40 rounded-3xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-4 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-all group"
                     >
-                      <Plus size={17} /> Add list
+                      <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Plus size={24} />
+                      </div>
+                      <span className="text-xs font-black uppercase tracking-widest">New Column</span>
                     </button>
                   ) : (
-                    <div className="fb-card animate-fade-in-scale" style={{ padding: "1.25rem", width: 300 }}>
-                      <p style={{ fontSize: "1rem", fontWeight: 700, color: "var(--color-text-primary)", marginBottom: "0.875rem" }}>New list</p>
-                      <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-                        <input
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="bg-card p-8 rounded-[32px] border border-primary/20 shadow-2xl space-y-6"
+                    >
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-black uppercase tracking-widest text-foreground">Add Column</h4>
+                        <Button variant="ghost" size="icon" onClick={() => setOpen(false)}><X size={16} /></Button>
+                      </div>
+                      <form onSubmit={submit} className="space-y-6">
+                        <Input
                           autoFocus
                           required
-                          placeholder="List name (e.g. QA Ready)"
+                          placeholder="Column Name..."
+                          className="h-14 px-6 text-sm font-bold"
                           value={draft.name}
-                          onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-                          id="new-list-name-input"
+                          onChange={e => setDraft(d => ({ ...d, name: e.target.value }))}
                         />
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.625rem" }}>
-                          <input
-                            type="color"
-                            value={draft.color}
-                            onChange={(e) => setDraft((d) => ({ ...d, color: e.target.value }))}
-                            style={{ width: 40, height: 34, padding: "2px", cursor: "pointer" }}
-                          />
-                          <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>Lane accent color</span>
-                        </div>
-                        <div style={{ display: "flex", gap: "0.5rem" }}>
-                          <button type="submit" disabled={saving} className="fb-btn fb-btn-primary" style={{ flex: 1 }}>
-                            {saving ? "Saving..." : "Add list"}
-                          </button>
-                          <button type="button" onClick={() => setOpen(false)} className="fb-btn fb-btn-secondary">
-                            Cancel
-                          </button>
-                        </div>
+                        <Button type="submit" className="w-full h-14 text-xs font-black uppercase tracking-widest shadow-lg">
+                          Establish
+                        </Button>
                       </form>
-                    </div>
+                    </motion.div>
                   )}
                 </div>
               )}
             </div>
           )}
-        </Droppable>
+        </StrictModeDroppable>
       </DragDropContext>
     </div>
   );

@@ -13,26 +13,59 @@ import {
   Edit2,
   FilePlus,
   FileText,
+  Clock,
+  MoreVertical,
+  CheckCircle2,
+  AlertCircle,
+  Hash,
+  Send,
+  LoaderCircle,
+  Layout as LayoutIcon,
+  Palette,
+  Plus
 } from "lucide-react";
 import { attachmentApi, cardApi, checklistApi, commentApi, labelApi, notificationApi } from "../../api/services";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 const PRIORITY_OPTIONS = ["LOW", "MEDIUM", "HIGH", "CRITICAL"];
 const STATUS_OPTIONS = ["TO_DO", "IN_PROGRESS", "IN_REVIEW", "DONE"];
 
-const PRIORITY_COLORS = {
-  LOW: "var(--priority-low)",
-  MEDIUM: "var(--priority-medium)",
-  HIGH: "var(--priority-high)",
-  CRITICAL: "var(--priority-critical)",
+const PRIORITY_CONFIG = {
+  LOW: { label: "Low", variant: "outline", class: "border-stone-500/20 text-stone-500 bg-stone-500/5" },
+  MEDIUM: { label: "Medium", variant: "outline", class: "border-blue-500/20 text-blue-500 bg-blue-500/5" },
+  HIGH: { label: "High", variant: "outline", class: "border-orange-500/20 text-orange-500 bg-orange-500/5" },
+  CRITICAL: { label: "Critical", variant: "destructive", class: "" },
 };
 
 const LABEL_PRESETS = [
-  { name: "Bug", color: "#f85149" },
-  { name: "Feature", color: "#0079BF" },
-  { name: "Improvement", color: "#3fb950" },
-  { name: "Documentation", color: "#d29922" },
-  { name: "Design", color: "#a78bfa" },
-  { name: "Urgent", color: "#ff4d6d" },
+  { name: "Bug", color: "#ef4444" },
+  { name: "Feature", color: "#3b82f6" },
+  { name: "Improvement", color: "#10b981" },
+  { name: "Documentation", color: "#f59e0b" },
+  { name: "Design", color: "#8b5cf6" },
+  { name: "Urgent", color: "#f43f5e" },
 ];
 
 export default function CardDetailsModal({ boardId, card, boardMembers, currentUser, open, onClose, onRefresh, readOnly }) {
@@ -54,7 +87,7 @@ export default function CardDetailsModal({ boardId, card, boardMembers, currentU
   const [cardLabels, setCardLabels] = useState([]);
   const [boardLabels, setBoardLabels] = useState([]);
   const [newLabelName, setNewLabelName] = useState("");
-  const [newLabelColor, setNewLabelColor] = useState("#0079BF");
+  const [newLabelColor, setNewLabelColor] = useState("#3b82f6");
   const [attachments, setAttachments] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
@@ -71,7 +104,7 @@ export default function CardDetailsModal({ boardId, card, boardMembers, currentU
       dueDate: card.dueDate ? card.dueDate.split("T")[0] : "",
       startDate: card.startDate ? card.startDate.split("T")[0] : "",
       assigneeId: card.assigneeId ? String(card.assigneeId) : "",
-      coverColor: card.coverColor || "#0079BF",
+      coverColor: card.coverColor || "#3b82f6",
     });
     setActiveTab("details");
     loadComments();
@@ -80,7 +113,7 @@ export default function CardDetailsModal({ boardId, card, boardMembers, currentU
     loadAttachments();
   }, [card?.cardId]);
 
-  if (!open || !card) return null;
+  if (!card) return null;
 
   const loadComments = async () => {
     const data = await commentApi.byCard(card.cardId).catch(() => []);
@@ -111,19 +144,12 @@ export default function CardDetailsModal({ boardId, card, boardMembers, currentU
     setSaving(true);
     try {
       await cardApi.update(card.cardId, {
-        title: draft.title,
-        description: draft.description,
-        priority: draft.priority,
-        status: draft.status,
-        dueDate: draft.dueDate || null,
-        startDate: draft.startDate || null,
+        ...draft,
         assigneeId: draft.assigneeId ? Number(draft.assigneeId) : null,
-        coverColor: draft.coverColor,
         listId: card.listId,
         boardId: card.boardId,
       });
 
-      // Notify assignee
       if (draft.assigneeId && Number(draft.assigneeId) !== Number(currentUser?.userId)) {
         await notificationApi.send({
           recipientId: Number(draft.assigneeId),
@@ -137,19 +163,17 @@ export default function CardDetailsModal({ boardId, card, boardMembers, currentU
       }
       onRefresh();
     } catch {
-      // silently fail on update
+      // silent
     } finally { setSaving(false); }
   };
 
   const archiveCard = async () => {
-    if (!window.confirm("Archive this card?")) return;
     await cardApi.archive(card.cardId).catch(() => {});
     onRefresh();
     onClose();
   };
 
   const deleteCard = async () => {
-    if (!window.confirm("Permanently delete this card?")) return;
     await cardApi.remove(card.cardId).catch(() => {});
     onRefresh();
     onClose();
@@ -160,8 +184,14 @@ export default function CardDetailsModal({ boardId, card, boardMembers, currentU
     if (!commentText.trim()) return;
     setCommentSubmitting(true);
     try {
-      await commentApi.create({ cardId: card.cardId, authorId: Number(currentUser?.userId), content: commentText });
+      await commentApi.create({ 
+        cardId: card.cardId, 
+        authorId: Number(currentUser?.userId), 
+        content: commentText,
+        parentId: replyingTo?.commentId 
+      });
       setCommentText("");
+      setReplyingTo(null);
       await loadComments();
     } finally { setCommentSubmitting(false); }
   };
@@ -180,29 +210,11 @@ export default function CardDetailsModal({ boardId, card, boardMembers, currentU
     await loadComments();
   };
   
-  const handleReply = async (e) => {
-    e.preventDefault();
-    if (!commentText.trim() || !replyingTo) return;
-    setCommentSubmitting(true);
-    try {
-      await commentApi.create({ 
-        cardId: card.cardId, 
-        authorId: Number(currentUser?.userId), 
-        content: commentText,
-        parentId: replyingTo.commentId 
-      });
-      setCommentText("");
-      setReplyingTo(null);
-      await loadComments();
-    } finally { setCommentSubmitting(false); }
-  };
-  
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     setUploading(true);
     try {
-      // Simulate upload to get a URL
       const mockUrl = URL.createObjectURL(file);
       await attachmentApi.create({
         cardId: card.cardId,
@@ -266,443 +278,522 @@ export default function CardDetailsModal({ boardId, card, boardMembers, currentU
   const totalItems = checklists.flatMap((cl) => cl.items || []).length;
   const doneItems = checklists.flatMap((cl) => cl.items || []).filter((it) => it.completed || it.isCompleted).length;
   const checkProgress = totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
-
   const assignedLabelIds = new Set(cardLabels.map((l) => l.labelId || l.id));
 
+  const isOverdue = draft?.dueDate && draft.status !== "DONE" && new Date(draft.dueDate) < new Date();
+
   return (
-    <div className="fb-modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="fb-modal" style={{ maxWidth: 700, padding: 0 }}>
-        {/* Color header strip */}
-        {draft?.coverColor && (
-          <div style={{ height: 6, background: draft.coverColor }} />
-        )}
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl p-0 overflow-hidden bg-background border-none shadow-2xl">
+        {/* Cover Strip */}
+        <div className="h-4 w-full" style={{ background: draft?.coverColor || "var(--primary)" }} />
 
-        {/* Modal header */}
-        <div style={{ padding: "1.25rem 1.5rem", borderBottom: "1px solid var(--color-border)", display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "1rem" }}>
-          {draft ? (
-            <input
-              value={draft.title}
-              onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-              readOnly={readOnly}
-              style={{ fontSize: "1.125rem", fontWeight: 700, background: "transparent", border: "none", boxShadow: "none", padding: "0", flex: 1 }}
-              id="card-detail-title"
-            />
-          ) : (
-            <h3 style={{ margin: 0, flex: 1 }}>{card.title}</h3>
-          )}
-          <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
-            {!readOnly && (
-              <>
-                <button onClick={archiveCard} className="fb-btn-ghost" style={{ padding: "0.375rem", borderRadius: "var(--radius-md)", color: "#d29922" }} title="Archive card">
-                  <Archive size={16} />
-                </button>
-                <button onClick={deleteCard} className="fb-btn-ghost" style={{ padding: "0.375rem", borderRadius: "var(--radius-md)", color: "var(--color-error)" }} title="Delete card">
-                  <Trash2 size={16} />
-                </button>
-              </>
-            )}
-            <button id="close-card-detail-btn" onClick={onClose} style={{ padding: "0.375rem", borderRadius: "var(--radius-md)", background: "rgba(255,255,255,0.06)", border: "1px solid var(--color-border)", cursor: "pointer", color: "var(--color-text-muted)", display: "flex" }}>
-              <X size={18} />
-            </button>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="fb-tabs" style={{ padding: "0 1.5rem", marginBottom: 0 }}>
-          {[
-            { id: "details", label: "Details", icon: User },
-            { id: "checklist", label: `Checklist${totalItems > 0 ? ` (${doneItems}/${totalItems})` : ""}`, icon: CheckSquare },
-            { id: "comments", label: `Comments${comments.length > 0 ? ` (${comments.length})` : ""}`, icon: MessageCircle },
-            { id: "attachments", label: `Attachments${attachments.length > 0 ? ` (${attachments.length})` : ""}`, icon: Paperclip },
-            { id: "labels", label: `Labels${cardLabels.length > 0 ? ` (${cardLabels.length})` : ""}`, icon: Tag },
-          ].map(({ id, label, icon: Icon }) => (
-            <button key={id} onClick={() => setActiveTab(id)} className={`fb-tab ${activeTab === id ? "active" : ""}`} style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.8rem" }}>
-              <Icon size={13} /> {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Content */}
-        <div style={{ padding: "1.25rem 1.5rem", overflowY: "auto", maxHeight: "60vh" }}>
-          {/* Details tab */}
-          {activeTab === "details" && draft && (
-            <form onSubmit={saveCard} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <div className="fb-input-group">
-                <label className="fb-input-label">Description</label>
-                <textarea
-                  value={draft.description}
-                  onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
-                  rows={4}
-                  readOnly={readOnly}
-                  placeholder="Add a description..."
-                  style={{ resize: "vertical" }}
-                  id="card-detail-description"
-                />
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.875rem" }}>
-                <div className="fb-input-group">
-                  <label className="fb-input-label">Priority</label>
-                  <select value={draft.priority} onChange={(e) => setDraft((d) => ({ ...d, priority: e.target.value }))} disabled={readOnly}>
-                    {PRIORITY_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                </div>
-                <div className="fb-input-group">
-                  <label className="fb-input-label">Status</label>
-                  <select value={draft.status} onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value }))} disabled={readOnly}>
-                    {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
-                  </select>
-                </div>
-                <div className="fb-input-group">
-                  <label className="fb-input-label"><Calendar size={12} style={{ display: "inline", marginRight: 4 }} />Start date</label>
-                  <input type="date" value={draft.startDate} onChange={(e) => setDraft((d) => ({ ...d, startDate: e.target.value }))} readOnly={readOnly} id="card-start-date" />
-                </div>
-                <div className="fb-input-group">
-                  <label className="fb-input-label" style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span><Calendar size={12} style={{ display: "inline", marginRight: 4 }} />Due date</span>
-                    {draft.dueDate && draft.status !== "DONE" && new Date(draft.dueDate) < new Date() && (
-                      <span style={{ color: "var(--color-error)", fontSize: "0.7rem", fontWeight: 700 }}>OVERDUE</span>
-                    )}
-                  </label>
-                  <input 
-                    type="date" 
-                    value={draft.dueDate} 
-                    onChange={(e) => setDraft((d) => ({ ...d, dueDate: e.target.value }))} 
-                    readOnly={readOnly} 
-                    id="card-due-date" 
-                    style={draft.dueDate && draft.status !== "DONE" && new Date(draft.dueDate) < new Date() ? { borderColor: "var(--color-error)", background: "rgba(248,81,73,0.05)" } : {}}
+        <div className="p-8 space-y-8">
+          {/* Header Area */}
+          <div className="flex flex-col gap-6">
+            <div className="flex items-start justify-between">
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                    <Hash size={16} />
+                  </div>
+                  <input
+                    value={draft?.title || ""}
+                    onChange={(e) => setDraft(d => ({ ...d, title: e.target.value }))}
+                    className="text-2xl font-black tracking-tight bg-transparent border-none outline-none focus:ring-0 w-full uppercase"
+                    readOnly={readOnly}
+                    placeholder="Task Title"
                   />
                 </div>
-                <div className="fb-input-group">
-                  <label className="fb-input-label"><User size={12} style={{ display: "inline", marginRight: 4 }} />Assignee</label>
-                  {boardMembers.length > 0 ? (
-                    <select value={draft.assigneeId} onChange={(e) => setDraft((d) => ({ ...d, assigneeId: e.target.value }))} disabled={readOnly} id="card-assignee-select">
-                      <option value="">Unassigned</option>
-                      {boardMembers.map((m) => <option key={m.userId} value={m.userId}>User #{m.userId} ({m.role})</option>)}
-                    </select>
-                  ) : (
-                    <input type="number" value={draft.assigneeId} onChange={(e) => setDraft((d) => ({ ...d, assigneeId: e.target.value }))} placeholder="User ID" readOnly={readOnly} id="card-assignee-id" />
-                  )}
-                </div>
-                <div className="fb-input-group">
-                  <label className="fb-input-label">Cover color</label>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                    <input type="color" value={draft.coverColor} onChange={(e) => setDraft((d) => ({ ...d, coverColor: e.target.value }))} disabled={readOnly} style={{ width: 40, height: 36, padding: "2px", flex: "none" }} />
-                    <input value={draft.coverColor} onChange={(e) => setDraft((d) => ({ ...d, coverColor: e.target.value }))} readOnly={readOnly} style={{ flex: 1 }} />
-                  </div>
-                </div>
+                <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest ml-11">
+                  In list <span className="text-foreground">{card.listName || "Backlog"}</span>
+                </p>
               </div>
-              {!readOnly && (
-                <button id="save-card-btn" type="submit" disabled={saving} className="fb-btn fb-btn-primary" style={{ alignSelf: "flex-start" }}>
-                  {saving ? "Saving..." : "Save changes"}
-                </button>
-              )}
-            </form>
-          )}
 
-          {/* Checklist tab */}
-          {activeTab === "checklist" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              {totalItems > 0 && (
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.375rem" }}>
-                    <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>Progress</span>
-                    <span style={{ fontSize: "0.8rem", fontWeight: 600, color: checkProgress === 100 ? "var(--color-success)" : "var(--color-text-secondary)" }}>{checkProgress}%</span>
-                  </div>
-                  <div className="fb-progress-bar">
-                    <div className="fb-progress-fill" style={{ width: `${checkProgress}%`, background: checkProgress === 100 ? "var(--color-success)" : undefined }} />
-                  </div>
-                </div>
-              )}
+              <div className="flex items-center gap-2 shrink-0">
+                {!readOnly && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="rounded-xl"><MoreVertical size={18} /></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem className="text-amber-500 gap-2" onClick={archiveCard}>
+                        <Archive size={14} /> Archive Card
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive gap-2" onClick={deleteCard}>
+                        <Trash2 size={14} /> Delete Permanently
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                <Button variant="ghost" size="icon" className="rounded-xl" onClick={onClose}><X size={18} /></Button>
+              </div>
+            </div>
 
-              {checklists.map((cl) => {
-                const items = cl.items || [];
-                const done = items.filter((it) => it.completed || it.isCompleted).length;
-                return (
-                  <div key={cl.checklistId} style={{ padding: "1rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", background: "rgba(255,255,255,0.02)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.75rem" }}>
-                      <p style={{ fontSize: "0.9rem", fontWeight: 700, color: "var(--color-text-primary)", margin: 0 }}>{cl.title}</p>
-                      <span style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>{done}/{items.length}</span>
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.375rem" }}>
-                      {items.map((item) => (
-                        <label key={item.checklistItemId || item.id} style={{ display: "flex", alignItems: "center", gap: "0.625rem", cursor: readOnly ? "default" : "pointer", fontSize: "0.875rem", color: "var(--color-text-secondary)" }}>
-                          <input
-                            type="checkbox"
-                            checked={Boolean(item.completed || item.isCompleted)}
-                            onChange={() => !readOnly && toggleItem(item.checklistItemId || item.id)}
-                            readOnly={readOnly}
-                            style={{ width: 16, height: 16, accentColor: "var(--color-primary)" }}
-                          />
-                          <span style={{ textDecoration: (item.completed || item.isCompleted) ? "line-through" : "none", opacity: (item.completed || item.isCompleted) ? 0.6 : 1 }}>
-                            {item.title}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                    {!readOnly && (
-                      <form onSubmit={(e) => addChecklistItem(cl.checklistId, e)} style={{ display: "flex", gap: "0.375rem", marginTop: "0.625rem" }}>
-                        <input
-                          value={newItems[cl.checklistId] || ""}
-                          onChange={(e) => setNewItems((prev) => ({ ...prev, [cl.checklistId]: e.target.value }))}
-                          placeholder="Add item..."
-                          style={{ flex: 1, fontSize: "0.8rem" }}
-                        />
-                        <button type="submit" className="fb-btn fb-btn-secondary" style={{ padding: "0.3rem 0.625rem", fontSize: "0.8rem", flexShrink: 0 }}>Add</button>
-                      </form>
-                    )}
-                  </div>
-                );
-              })}
-
-              {!readOnly && (
-                <form onSubmit={addChecklist} style={{ display: "flex", gap: "0.5rem" }}>
-                  <input value={newChecklistTitle} onChange={(e) => setNewChecklistTitle(e.target.value)} placeholder="New checklist title..." style={{ flex: 1 }} id="new-checklist-title-input" />
-                  <button type="submit" className="fb-btn fb-btn-secondary" style={{ flexShrink: 0 }}>
-                    <CheckSquare size={14} /> Add
-                  </button>
-                </form>
+            {/* Quick Badges */}
+            <div className="flex flex-wrap gap-3 ml-11">
+              <Badge variant={PRIORITY_CONFIG[draft?.priority]?.variant || "outline"} className={`uppercase text-[10px] font-black tracking-widest h-6 px-2 ${PRIORITY_CONFIG[draft?.priority]?.class}`}>
+                {draft?.priority} PRIORITY
+              </Badge>
+              <Badge variant="outline" className="uppercase text-[10px] font-black tracking-widest h-6 px-2 border-border/50 bg-muted/30">
+                {draft?.status?.replace("_", " ")}
+              </Badge>
+              {isOverdue && (
+                <Badge variant="destructive" className="uppercase text-[10px] font-black tracking-widest h-6 px-2 animate-pulse">
+                  OVERDUE
+                </Badge>
               )}
             </div>
-          )}
+          </div>
 
-          {/* Comments tab */}
-          {activeTab === "comments" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              {!readOnly && (
-                <form onSubmit={replyingTo ? handleReply : submitComment} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  {replyingTo && (
-                    <div style={{ fontSize: "0.75rem", color: "var(--color-primary-light)", display: "flex", alignItems: "center", gap: "0.375rem", background: "rgba(0,121,191,0.1)", padding: "0.25rem 0.5rem", borderRadius: "var(--radius-sm)" }}>
-                      <Reply size={12} /> Replying to User #{replyingTo.authorId}
-                      <button type="button" onClick={() => setReplyingTo(null)} style={{ marginLeft: "auto", background: "none", border: "none", color: "inherit", cursor: "pointer" }}><X size={12} /></button>
+          {/* Main Tabs Layout */}
+          <Tabs defaultValue="details" value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="bg-muted/50 h-12 p-1 mb-8 w-full justify-start overflow-x-auto overflow-y-hidden no-scrollbar">
+              <TabsTrigger value="details" className="px-5 h-10 gap-2"><User size={14} /> Details</TabsTrigger>
+              <TabsTrigger value="checklist" className="px-5 h-10 gap-2">
+                <CheckSquare size={14} /> Checklist 
+                {totalItems > 0 && <span className="ml-1 opacity-50">{doneItems}/{totalItems}</span>}
+              </TabsTrigger>
+              <TabsTrigger value="comments" className="px-5 h-10 gap-2">
+                <MessageCircle size={14} /> Comments 
+                {comments.length > 0 && <span className="ml-1 opacity-50">{comments.length}</span>}
+              </TabsTrigger>
+              <TabsTrigger value="attachments" className="px-5 h-10 gap-2">
+                <Paperclip size={14} /> Files
+                {attachments.length > 0 && <span className="ml-1 opacity-50">{attachments.length}</span>}
+              </TabsTrigger>
+              <TabsTrigger value="labels" className="px-5 h-10 gap-2">
+                <Tag size={14} /> Labels
+              </TabsTrigger>
+            </TabsList>
+
+            <div className="min-h-[400px] max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+              <TabsContent value="details" className="outline-none animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <form onSubmit={saveCard} className="space-y-8">
+                  <div className="space-y-3">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Context / Description</Label>
+                    <textarea
+                      value={draft?.description}
+                      onChange={(e) => setDraft(d => ({ ...d, description: e.target.value }))}
+                      className="flex min-h-[160px] w-full rounded-2xl border border-border/50 bg-muted/20 px-6 py-4 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50 resize-none font-medium leading-relaxed"
+                      placeholder="Specify the goals, requirements, and context for this task..."
+                      readOnly={readOnly}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Assignee</Label>
+                      <div className="flex items-center gap-4">
+                        <Avatar className="h-10 w-10 border-2 border-background">
+                          <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${draft?.assigneeId}`} />
+                          <AvatarFallback><User size={18} /></AvatarFallback>
+                        </Avatar>
+                        <select 
+                          value={draft?.assigneeId} 
+                          onChange={(e) => setDraft(d => ({ ...d, assigneeId: e.target.value }))} 
+                          className="flex h-11 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                          disabled={readOnly}
+                        >
+                          <option value="">Unassigned</option>
+                          {boardMembers.map(m => (
+                            <option key={m.userId} value={m.userId}>User #{m.userId} ({m.role})</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Schedule</Label>
+                      <div className="flex gap-4">
+                        <div className="relative flex-1">
+                          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input 
+                            type="date" 
+                            className="pl-9 h-11 rounded-xl pr-9" 
+                            value={draft?.dueDate} 
+                            onChange={e => setDraft(d => ({ ...d, dueDate: e.target.value }))}
+                            readOnly={readOnly}
+                          />
+                          {draft?.dueDate && !readOnly && (
+                            <button 
+                              type="button"
+                              onClick={() => setDraft(d => ({ ...d, dueDate: "" }))}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              <X size={14} strokeWidth={3} />
+                            </button>
+                          )}
+                        </div>
+                        <div className="relative flex-1">
+                          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Badge 
+                            variant="outline" 
+                            className={`h-11 rounded-xl w-full flex items-center justify-center border-dashed transition-all ${draft?.dueDate && !readOnly ? 'cursor-pointer hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30' : ''}`}
+                            onClick={() => !readOnly && draft?.dueDate && setDraft(d => ({ ...d, dueDate: "" }))}
+                          >
+                             {draft?.dueDate ? "Clear Due Date" : "No Due Date"}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Task Priority</Label>
+                      <div className="flex gap-2">
+                        {PRIORITY_OPTIONS.map(p => (
+                          <Button 
+                            key={p}
+                            type="button"
+                            variant={draft?.priority === p ? "default" : "outline"}
+                            className="flex-1 h-11 rounded-xl text-[10px] font-black"
+                            onClick={() => setDraft(d => ({ ...d, priority: p }))}
+                            disabled={readOnly}
+                          >
+                            {p}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Theme Color</Label>
+                      <div className="flex gap-3">
+                        <div className="w-11 h-11 rounded-xl border flex items-center justify-center overflow-hidden shrink-0">
+                          <input 
+                            type="color" 
+                            className="w-16 h-16 cursor-pointer scale-150"
+                            value={draft?.coverColor}
+                            onChange={e => setDraft(d => ({ ...d, coverColor: e.target.value }))}
+                          />
+                        </div>
+                        <Input 
+                          value={draft?.coverColor} 
+                          onChange={e => setDraft(d => ({ ...d, coverColor: e.target.value }))}
+                          className="h-11 rounded-xl uppercase font-mono"
+                          readOnly={readOnly}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {!readOnly && (
+                    <Button type="submit" className="w-full h-12 rounded-xl font-bold gap-2 shadow-xl" disabled={saving}>
+                      {saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CheckCircle2 size={18} />}
+                      Update Registry
+                    </Button>
+                  )}
+                </form>
+              </TabsContent>
+
+              <TabsContent value="checklist" className="outline-none animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="space-y-8">
+                  {totalItems > 0 && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                         <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Master Progress</h4>
+                         <span className="text-sm font-black text-primary">{checkProgress}%</span>
+                      </div>
+                      <Progress value={checkProgress} className="h-2 bg-muted rounded-full overflow-hidden" />
                     </div>
                   )}
-                  <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-end" }}>
-                    <textarea
-                      value={commentText}
-                      onChange={(e) => setCommentText(e.target.value)}
-                      placeholder={replyingTo ? "Write a reply..." : "Write a comment..."}
-                      rows={2}
-                      style={{ flex: 1, resize: "none", fontSize: "0.875rem" }}
-                      id="comment-input"
-                    />
-                    <button type="submit" disabled={commentSubmitting || !commentText.trim()} className="fb-btn fb-btn-primary" style={{ flexShrink: 0 }}>
-                      {commentSubmitting ? "..." : (replyingTo ? <Reply size={15} /> : <MessageCircle size={15} />)}
-                    </button>
+
+                  <div className="space-y-6">
+                    {checklists.map(cl => (
+                      <Card key={cl.checklistId} className="border-none bg-muted/20 rounded-[24px] overflow-hidden">
+                        <CardHeader className="pb-4 pt-6 px-6 bg-muted/40 flex flex-row items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-background flex items-center justify-center text-primary shadow-sm">
+                               <CheckSquare size={16} />
+                            </div>
+                            <CardTitle className="text-sm font-bold">{cl.title}</CardTitle>
+                          </div>
+                          <Badge variant="secondary" className="text-[10px] font-black">{cl.items?.length || 0} ITEMS</Badge>
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-4">
+                          <div className="space-y-3">
+                            {cl.items?.map(item => (
+                              <div key={item.checklistItemId} className="flex items-center gap-4 group">
+                                <button 
+                                  onClick={() => !readOnly && toggleItem(item.checklistItemId)}
+                                  className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${item.completed ? 'bg-primary border-primary text-primary-foreground' : 'border-border/60 hover:border-primary/50'}`}
+                                >
+                                  {item.completed && <X size={14} strokeWidth={4} />}
+                                </button>
+                                <span className={`text-sm font-medium transition-all ${item.completed ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+                                  {item.title}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          {!readOnly && (
+                            <form onSubmit={e => addChecklistItem(cl.checklistId, e)} className="flex gap-2 pt-2">
+                              <Input 
+                                placeholder="Add checkpoint..." 
+                                className="h-10 rounded-xl bg-background border-none shadow-sm"
+                                value={newItems[cl.checklistId] || ""}
+                                onChange={e => setNewItems(prev => ({ ...prev, [cl.checklistId]: e.target.value }))}
+                              />
+                              <Button type="submit" size="sm" className="rounded-xl h-10 px-4">Establish</Button>
+                            </form>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
-                </form>
-              )}
-              
-              {comments.length === 0 && (
-                <div className="fb-empty" style={{ padding: "1.5rem" }}>
-                  <MessageCircle size={24} color="var(--color-text-muted)" />
-                  <p>No comments yet.</p>
+
+                  {!readOnly && (
+                    <form onSubmit={addChecklist} className="flex gap-4 p-6 border-2 border-dashed rounded-[24px] border-border/50 hover:border-primary/30 transition-colors bg-muted/5 group">
+                      <Input 
+                        placeholder="New Checklist Segment..." 
+                        className="h-12 rounded-xl bg-background border-none shadow-sm"
+                        value={newChecklistTitle}
+                        onChange={e => setNewChecklistTitle(e.target.value)}
+                      />
+                      <Button type="submit" className="h-12 rounded-xl gap-2 px-6">
+                        <Plus size={16} /> New List
+                      </Button>
+                    </form>
+                  )}
                 </div>
-              )}
-              
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
-                {comments.filter(c => !c.parentId).map((c) => {
-                  const replies = comments.filter(r => Number(r.parentId) === Number(c.commentId));
-                  return (
-                    <div key={c.commentId} style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                      {/* Main comment */}
-                      <div style={{ padding: "0.875rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", background: "rgba(255,255,255,0.02)" }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-                          <span style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--color-text-muted)" }}>
-                            User #{c.authorId}
-                            {c.createdAt && ` · ${new Date(c.createdAt).toLocaleDateString()}`}
-                          </span>
-                          <div style={{ display: "flex", gap: "0.25rem" }}>
-                            {!readOnly && (
-                              <button onClick={() => setReplyingTo(c)} className="fb-btn-ghost" style={{ padding: "0.2rem", color: "var(--color-primary-light)" }} title="Reply">
-                                <Reply size={13} />
-                              </button>
-                            )}
-                            {(Number(c.authorId) === Number(currentUser?.userId)) && (
-                              <button onClick={() => { setEditingComment(c); setEditCommentText(c.content); }} className="fb-btn-ghost" style={{ padding: "0.2rem", color: "var(--color-text-muted)" }}>
-                                <Edit2 size={13} />
-                              </button>
-                            )}
-                            {(Number(c.authorId) === Number(currentUser?.userId) || !readOnly) && (
-                              <button onClick={() => deleteComment(c.commentId)} className="fb-btn-ghost" style={{ padding: "0.2rem", color: "var(--color-error)" }}>
-                                <Trash2 size={13} />
-                              </button>
-                            )}
+              </TabsContent>
+
+              <TabsContent value="comments" className="outline-none animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="space-y-8">
+                  {!readOnly && (
+                    <Card className="rounded-[24px] border-none shadow-xl bg-muted/20">
+                      <CardContent className="p-6">
+                        <form onSubmit={submitComment} className="space-y-4">
+                          {replyingTo && (
+                            <Badge variant="secondary" className="gap-2 px-3 py-1.5 rounded-lg border border-primary/20 bg-primary/5 text-primary">
+                              <Reply size={12} /> Replying to User #{replyingTo.authorId}
+                              <button type="button" onClick={() => setReplyingTo(null)} className="ml-2 hover:text-foreground"><X size={12} /></button>
+                            </Badge>
+                          )}
+                          <textarea 
+                            className="flex min-h-[100px] w-full rounded-xl border border-transparent bg-background px-4 py-3 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none font-medium"
+                            placeholder="Add your contribution to the discussion..."
+                            value={commentText}
+                            onChange={e => setCommentText(e.target.value)}
+                          />
+                          <div className="flex justify-end">
+                            <Button type="submit" disabled={commentSubmitting || !commentText.trim()} className="rounded-xl gap-2 px-6">
+                              {commentSubmitting ? <LoaderCircle className="animate-spin" /> : <Send size={16} />}
+                              Transmit
+                            </Button>
+                          </div>
+                        </form>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  <div className="space-y-6">
+                    {comments.filter(c => !c.parentId).map(c => (
+                      <div key={c.commentId} className="flex flex-col gap-4">
+                        <div className="flex gap-4 group">
+                          <Avatar className="h-10 w-10 shrink-0 border-2 border-background shadow-md">
+                             <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${c.authorId}`} />
+                             <AvatarFallback>U</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 space-y-2">
+                             <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-black uppercase">User #{c.authorId}</span>
+                                  <span className="text-[10px] font-bold text-muted-foreground">{new Date(c.createdAt).toLocaleString()}</span>
+                                </div>
+                                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setReplyingTo(c)}><Reply size={14} /></Button>
+                                  {Number(c.authorId) === Number(currentUser?.userId) && (
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-destructive" onClick={() => deleteComment(c.commentId)}><Trash2 size={14} /></Button>
+                                  )}
+                                </div>
+                             </div>
+                             <div className="p-4 rounded-[20px] rounded-tl-none bg-muted/30 border border-border/40 text-sm font-medium leading-relaxed">
+                               {c.content}
+                             </div>
                           </div>
                         </div>
                         
-                        {editingComment?.commentId === c.commentId ? (
-                          <form onSubmit={handleEditComment} style={{ display: "flex", gap: "0.5rem" }}>
-                            <input autoFocus value={editCommentText} onChange={(e) => setEditCommentText(e.target.value)} style={{ flex: 1, fontSize: "0.875rem" }} />
-                            <button type="submit" className="fb-btn fb-btn-primary" style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}>Save</button>
-                            <button type="button" onClick={() => setEditingComment(null)} className="fb-btn fb-btn-secondary" style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}>Cancel</button>
-                          </form>
-                        ) : (
-                          <p style={{ margin: 0, fontSize: "0.875rem", color: "var(--color-text-secondary)", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{c.content}</p>
-                        )}
-                      </div>
-                      
-                      {/* Replies */}
-                      {replies.length > 0 && (
-                        <div style={{ marginLeft: "1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem", borderLeft: "2px solid var(--color-border)", paddingLeft: "0.75rem" }}>
-                          {replies.map(r => (
-                            <div key={r.commentId} style={{ padding: "0.625rem 0.75rem", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)", background: "rgba(255,255,255,0.01)" }}>
-                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.25rem" }}>
-                                <span style={{ fontSize: "0.7rem", fontWeight: 600, color: "var(--color-text-muted)" }}>
-                                  User #{r.authorId} · {new Date(r.createdAt).toLocaleDateString()}
-                                </span>
-                                {(Number(r.authorId) === Number(currentUser?.userId) || !readOnly) && (
-                                  <button onClick={() => deleteComment(r.commentId)} className="fb-btn-ghost" style={{ padding: "0.15rem", color: "var(--color-error)" }}>
-                                    <Trash2 size={11} />
-                                  </button>
-                                )}
-                              </div>
-                              <p style={{ margin: 0, fontSize: "0.8125rem", color: "var(--color-text-secondary)" }}>{r.content}</p>
+                        {/* Nested Replies */}
+                        {comments.filter(r => Number(r.parentId) === Number(c.commentId)).map(r => (
+                          <div key={r.commentId} className="ml-14 flex gap-4">
+                            <Avatar className="h-8 w-8 shrink-0 border-2 border-background shadow-sm">
+                               <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${r.authorId}`} />
+                               <AvatarFallback>U</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 space-y-2">
+                               <div className="flex items-center gap-2">
+                                  <span className="text-[11px] font-black uppercase">User #{r.authorId}</span>
+                                  <span className="text-[9px] font-bold text-muted-foreground">{new Date(r.createdAt).toLocaleString()}</span>
+                               </div>
+                               <div className="p-3 rounded-[16px] rounded-tl-none bg-muted/10 border border-border/20 text-xs font-medium">
+                                 {r.content}
+                               </div>
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Attachments tab */}
-          {activeTab === "attachments" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              {!readOnly && (
-                <div style={{ position: "relative" }}>
-                  <input
-                    type="file"
-                    onChange={handleFileUpload}
-                    style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", zIndex: 1 }}
-                    id="attachment-upload-input"
-                  />
-                  <div style={{ padding: "1.5rem", borderRadius: "var(--radius-lg)", border: "2px dashed var(--color-border)", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem", background: "rgba(255,255,255,0.01)", transition: "all var(--transition-fast)" }}>
-                    <FilePlus size={24} color={uploading ? "var(--color-primary)" : "var(--color-text-muted)"} className={uploading ? "animate-pulse" : ""} />
-                    <p style={{ margin: 0, fontSize: "0.875rem", color: "var(--color-text-secondary)", fontWeight: 600 }}>
-                      {uploading ? "Uploading..." : "Click or drag to upload"}
-                    </p>
-                    <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--color-text-muted)" }}>PDF, PNG, JPG, DOCX (Max 10MB)</p>
-                  </div>
-                </div>
-              )}
-
-              {attachments.length === 0 && !uploading && (
-                <div className="fb-empty" style={{ padding: "1.5rem" }}>
-                  <Paperclip size={24} color="var(--color-text-muted)" />
-                  <p>No attachments yet.</p>
-                </div>
-              )}
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-                {attachments.map((at) => (
-                  <div key={at.attachmentId} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem", borderRadius: "var(--radius-lg)", border: "1px solid var(--color-border)", background: "rgba(255,255,255,0.02)", transition: "all var(--transition-fast)", position: "relative", group: "true" }}>
-                    <div style={{ width: 40, height: 40, borderRadius: "var(--radius-md)", background: "var(--color-bg-secondary)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      {at.fileType?.includes("image") ? (
-                        <img src={at.fileUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "var(--radius-md)" }} />
-                      ) : (
-                        <FileText size={20} color="var(--color-primary-light)" />
-                      )}
-                    </div>
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <p style={{ margin: 0, fontSize: "0.8125rem", fontWeight: 600, color: "var(--color-text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{at.fileName}</p>
-                      <p style={{ margin: 0, fontSize: "0.7rem", color: "var(--color-text-muted)" }}>{at.sizeKb} KB · {new Date(at.createdAt || Date.now()).toLocaleDateString()}</p>
-                    </div>
-                    <div style={{ display: "flex", gap: "0.25rem" }}>
-                      <a href={at.fileUrl} target="_blank" rel="noopener noreferrer" className="fb-btn-ghost" style={{ padding: "0.25rem", color: "var(--color-primary-light)" }}>
-                         <Paperclip size={13} />
-                      </a>
-                      {!readOnly && (
-                        <button onClick={() => deleteAttachment(at.attachmentId)} className="fb-btn-ghost" style={{ padding: "0.25rem", color: "var(--color-error)" }}>
-                          <Trash2 size={13} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Labels tab */}
-          {activeTab === "labels" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-              {/* Current labels */}
-              {cardLabels.length > 0 && (
-                <div>
-                  <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--color-text-muted)", marginBottom: "0.625rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Applied</p>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-                    {cardLabels.map((l) => (
-                      <div key={l.labelId || l.id} style={{ display: "flex", alignItems: "center", gap: "0.375rem", padding: "0.25rem 0.5rem 0.25rem 0.625rem", borderRadius: "var(--radius-full)", background: `${l.color}22`, border: `1px solid ${l.color}44` }}>
-                        <div style={{ width: 8, height: 8, borderRadius: "50%", background: l.color, flexShrink: 0 }} />
-                        <span style={{ fontSize: "0.8rem", fontWeight: 600, color: l.color }}>{l.name}</span>
-                        {!readOnly && (
-                          <button onClick={() => removeLabel(l.labelId || l.id)} style={{ background: "none", border: "none", cursor: "pointer", color: l.color, display: "flex", padding: "0 0 0 2px" }}>
-                            <X size={12} />
-                          </button>
-                        )}
+                          </div>
+                        ))}
                       </div>
                     ))}
                   </div>
                 </div>
-              )}
+              </TabsContent>
 
-              {/* Board labels */}
-              {boardLabels.length > 0 && (
-                <div>
-                  <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--color-text-muted)", marginBottom: "0.625rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Board labels</p>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-                    {boardLabels.map((l) => {
-                      const assigned = assignedLabelIds.has(l.labelId || l.id);
-                      return (
-                        <button
-                          key={l.labelId || l.id}
-                          onClick={() => !readOnly && (assigned ? removeLabel(l.labelId || l.id) : assignLabel(l.labelId || l.id))}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.375rem",
-                            padding: "0.25rem 0.75rem",
-                            borderRadius: "var(--radius-full)",
-                            background: assigned ? `${l.color}30` : "rgba(255,255,255,0.04)",
-                            border: `1px solid ${assigned ? l.color + "80" : "var(--color-border)"}`,
-                            cursor: readOnly ? "default" : "pointer",
-                            transition: "all var(--transition-fast)",
-                          }}
-                        >
-                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: l.color }} />
-                          <span style={{ fontSize: "0.8rem", fontWeight: 600, color: assigned ? l.color : "var(--color-text-secondary)" }}>{l.name}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+              <TabsContent value="attachments" className="outline-none animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="space-y-8">
+                  {!readOnly && (
+                    <div className="relative group">
+                       <input 
+                         type="file" 
+                         className="absolute inset-0 opacity-0 cursor-pointer z-10" 
+                         onChange={handleFileUpload}
+                       />
+                       <div className="h-40 rounded-[28px] border-2 border-dashed border-border flex flex-col items-center justify-center gap-4 bg-muted/5 group-hover:bg-muted/10 group-hover:border-primary/30 transition-all">
+                          <div className="w-12 h-12 rounded-2xl bg-background flex items-center justify-center text-muted-foreground group-hover:scale-110 group-hover:text-primary transition-all shadow-sm">
+                             <FilePlus size={24} />
+                          </div>
+                          <div className="text-center">
+                            <p className="text-sm font-bold">{uploading ? 'Processing Signal...' : 'Deposit Assets'}</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">PDF, PNG, JPG, DOCX (Max 10MB)</p>
+                          </div>
+                       </div>
+                    </div>
+                  )}
 
-              {/* Create new label */}
-              {!readOnly && (
-                <div>
-                  <p style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--color-text-muted)", marginBottom: "0.625rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>Create label</p>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem", marginBottom: "0.75rem" }}>
-                    {LABEL_PRESETS.map((preset) => (
-                      <button key={preset.name} type="button" onClick={() => { setNewLabelName(preset.name); setNewLabelColor(preset.color); }} style={{ padding: "0.2rem 0.625rem", borderRadius: "var(--radius-full)", background: `${preset.color}22`, border: `1px solid ${preset.color}44`, color: preset.color, fontSize: "0.75rem", fontWeight: 600, cursor: "pointer" }}>
-                        {preset.name}
-                      </button>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {attachments.map(at => (
+                      <Card key={at.attachmentId} className="p-4 rounded-[20px] border-none bg-muted/20 group hover:bg-muted/30 transition-colors">
+                        <div className="flex items-center gap-4">
+                           <div className="w-12 h-12 rounded-xl bg-background flex items-center justify-center shadow-sm overflow-hidden">
+                              {at.fileType?.includes('image') ? (
+                                <img src={at.fileUrl} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                <FileText size={20} className="text-primary" />
+                              )}
+                           </div>
+                           <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold truncate">{at.fileName}</p>
+                              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">{at.sizeKb} KB · {at.fileType?.split('/')[1]}</p>
+                           </div>
+                           <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" asChild>
+                                <a href={at.fileUrl} target="_blank" rel="noreferrer"><Paperclip size={14} /></a>
+                              </Button>
+                              {!readOnly && (
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-destructive" onClick={() => deleteAttachment(at.attachmentId)}><Trash2 size={14} /></Button>
+                              )}
+                           </div>
+                        </div>
+                      </Card>
                     ))}
                   </div>
-                  <form onSubmit={createAndAssignLabel} style={{ display: "flex", gap: "0.5rem" }}>
-                    <input type="color" value={newLabelColor} onChange={(e) => setNewLabelColor(e.target.value)} style={{ width: 36, height: 36, padding: "2px", flexShrink: 0 }} />
-                    <input value={newLabelName} onChange={(e) => setNewLabelName(e.target.value)} placeholder="Label name..." style={{ flex: 1 }} id="new-label-name-input" />
-                    <button type="submit" className="fb-btn fb-btn-secondary" style={{ flexShrink: 0 }}><Tag size={14} /> Create</button>
-                  </form>
                 </div>
-              )}
+              </TabsContent>
+
+              <TabsContent value="labels" className="outline-none animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="space-y-10">
+                  {/* Active Labels */}
+                  <div className="space-y-4">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Assigned Markers</h4>
+                    <div className="flex flex-wrap gap-2">
+                       {cardLabels.map(l => (
+                         <Badge 
+                           key={l.labelId} 
+                           className="h-8 px-4 rounded-full gap-2 text-[11px] font-black border-none shadow-md"
+                           style={{ backgroundColor: `${l.color}22`, color: l.color, border: `1px solid ${l.color}44` }}
+                         >
+                           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: l.color }} />
+                           {l.name}
+                           {!readOnly && (
+                             <button onClick={() => removeLabel(l.labelId)} className="hover:scale-125 transition-transform">
+                               <X size={12} strokeWidth={4} />
+                             </button>
+                           )}
+                         </Badge>
+                       ))}
+                       {cardLabels.length === 0 && <p className="text-sm text-muted-foreground italic pl-1">No markers assigned.</p>}
+                    </div>
+                  </div>
+
+                  {/* Board Labels */}
+                  <div className="space-y-4">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Board Registry</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                       {boardLabels.map(l => {
+                         const assigned = assignedLabelIds.has(l.labelId);
+                         return (
+                           <Button
+                             key={l.labelId}
+                             variant="outline"
+                             className={`h-10 justify-start px-4 rounded-xl gap-3 transition-all ${assigned ? 'border-primary bg-primary/5' : 'hover:border-primary/30'}`}
+                             onClick={() => !readOnly && (assigned ? removeLabel(l.labelId) : assignLabel(l.labelId))}
+                           >
+                             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: l.color }} />
+                             <span className="text-[11px] font-bold uppercase truncate">{l.name}</span>
+                             {assigned && <CheckCircle2 size={12} className="ml-auto text-primary" />}
+                           </Button>
+                         );
+                       })}
+                    </div>
+                  </div>
+
+                  {/* Create New */}
+                  {!readOnly && (
+                    <Card className="rounded-[24px] border-none bg-muted/20">
+                       <CardHeader className="pb-2 pt-6 px-6">
+                         <CardTitle className="text-xs font-black uppercase tracking-widest text-muted-foreground">Synthesize Marker</CardTitle>
+                       </CardHeader>
+                       <CardContent className="p-6 pt-0 space-y-6">
+                          <div className="flex flex-wrap gap-2">
+                             {LABEL_PRESETS.map(p => (
+                               <button 
+                                 key={p.name} 
+                                 type="button"
+                                 className="h-8 px-3 rounded-lg text-[10px] font-black uppercase transition-all hover:scale-105"
+                                 style={{ backgroundColor: `${p.color}15`, color: p.color, border: `1px solid ${p.color}30` }}
+                                 onClick={() => { setNewLabelName(p.name); setNewLabelColor(p.color); }}
+                                >
+                                 {p.name}
+                               </button>
+                             ))}
+                          </div>
+                          <form onSubmit={createAndAssignLabel} className="flex gap-4 items-end">
+                             <div className="space-y-2 shrink-0">
+                                <Label className="text-[9px] font-black uppercase ml-1">Hue</Label>
+                                <div className="w-11 h-11 rounded-xl border flex items-center justify-center overflow-hidden">
+                                  <input type="color" className="w-16 h-16 cursor-pointer scale-150" value={newLabelColor} onChange={e => setNewLabelColor(e.target.value)} />
+                                </div>
+                             </div>
+                             <div className="space-y-2 flex-1">
+                                <Label className="text-[9px] font-black uppercase ml-1">Designation</Label>
+                                <Input 
+                                  placeholder="New marker name..." 
+                                  className="h-11 rounded-xl bg-background"
+                                  value={newLabelName}
+                                  onChange={e => setNewLabelName(e.target.value)}
+                                />
+                             </div>
+                             <Button type="submit" className="h-11 rounded-xl px-6 gap-2">
+                               <Plus size={16} /> Establish
+                             </Button>
+                          </form>
+                       </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </TabsContent>
             </div>
-          )}
+          </Tabs>
         </div>
-      </div>
-    </div>
+
+        {/* Footer actions */}
+        {!readOnly && activeTab === "details" && (
+           <div className="p-8 pt-0 border-t border-border/30 bg-muted/5 flex justify-end">
+              <Button onClick={saveCard} disabled={saving} className="rounded-xl px-10 h-12 shadow-xl shadow-primary/20">
+                {saving ? "Processing..." : "Commit All Changes"}
+              </Button>
+           </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

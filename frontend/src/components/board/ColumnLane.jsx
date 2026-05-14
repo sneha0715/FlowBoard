@@ -85,7 +85,10 @@ export default function ColumnLane({
                 {list.name}
               </span>
               <div className="flex items-center justify-center bg-background/50 h-6 px-3 rounded-full border border-border/30 ml-2">
-                <span className="text-[11px] font-black text-primary leading-none">
+                <span 
+                  className="text-[11px] font-black leading-none"
+                  style={{ color: color, textShadow: `0 0 10px ${color}40` }}
+                >
                   {cards.length}
                 </span>
               </div>
@@ -173,7 +176,7 @@ export default function ColumnLane({
                         <AnimatePresence mode="wait">
                           {!open ? (
                             <button
-                              className="w-full h-11 flex items-center justify-center gap-3 text-muted-foreground/30 hover:text-primary hover:bg-primary/5 rounded-[20px] transition-all duration-300 border border-dashed border-border/50 hover:border-primary/30 group/add"
+                              className="w-full h-11 flex items-center justify-center gap-3 text-muted-foreground/30 hover:text-muted-foreground hover:bg-white/[0.02] rounded-[20px] transition-all duration-300 border border-dashed border-border/50 hover:border-border group/add"
                               onClick={() => setOpen(true)}
                             >
                               <Plus size={16} className="group-hover/add:rotate-90 transition-transform duration-300" />

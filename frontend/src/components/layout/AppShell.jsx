@@ -160,8 +160,8 @@ export default function AppShell({ children }) {
       <Sidebar variant="floating" collapsible="icon" className="border-none bg-transparent pt-4">
         <SidebarHeader className="px-5 mb-8 flex flex-row items-center justify-between group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:justify-center">
           <Link to="/" className="flex items-center gap-3.5 no-underline group-data-[collapsible=icon]:hidden transition-all">
-            <div className="w-8 h-8 rounded-xl bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/20 transition-transform active:scale-95">
-              <Box className="text-primary-foreground" size={18} strokeWidth={2.5} />
+            <div className="w-8 h-8 rounded-xl bg-[#A29BFE]/20 flex items-center justify-center shrink-0 border border-[#A29BFE]/30 shadow-[0_0_15px_rgba(162,155,254,0.1)] transition-transform active:scale-95">
+              <Box className="text-[#A29BFE]" size={18} strokeWidth={2.5} />
             </div>
             <span className="text-[17px] font-bold tracking-tight text-foreground">FlowBoard</span>
           </Link>
@@ -236,22 +236,26 @@ export default function AppShell({ children }) {
         <SidebarFooter className="p-4 mt-auto">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                className="h-12 w-full rounded-2xl bg-secondary/30 border border-border/50 hover:bg-secondary/50 hover:border-border transition-all group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:mx-auto flex items-center justify-center"
-              >
-                <Link to="/profile" className="flex items-center gap-3 px-3">
-                  <Avatar className="h-7 w-7 border-2 border-background ring-1 ring-border/50">
-                    <AvatarFallback className="text-[10px] font-bold bg-primary/10 text-primary">
+              <div className="flex items-center h-10 w-full px-1 rounded-full bg-secondary/5 border border-white/5 hover:bg-secondary/10 transition-all group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:mx-auto overflow-hidden">
+                <Link to="/profile" className="flex flex-1 items-center gap-2.5 pl-1.5 pr-2 min-w-0">
+                  <Avatar className="h-6 w-6 shrink-0 border-none ring-0">
+                    <AvatarFallback className="text-[10px] font-black bg-[#A29BFE]/10 text-[#A29BFE]">
                       {user?.email?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col items-start truncate group-data-[collapsible=icon]:hidden">
-                    <span className="text-[11px] font-bold text-foreground leading-tight">{user?.fullName || 'User'}</span>
-                    <span className="text-[9px] text-muted-foreground font-medium truncate w-full">{user?.email}</span>
+                    <span className="text-[12px] font-black text-foreground tracking-tight leading-none">{user?.fullName || 'User'}</span>
                   </div>
                 </Link>
-              </SidebarMenuButton>
+                <div className="w-px h-3 bg-white/5 mx-1 group-data-[collapsible=icon]:hidden" />
+                <button 
+                  onClick={handleLogout}
+                  className="h-7 w-7 rounded-full flex items-center justify-center text-rose-500/30 hover:text-rose-400 hover:bg-rose-500/10 transition-all group-data-[collapsible=icon]:hidden"
+                  title="Logout"
+                >
+                  <LogOut size={13} />
+                </button>
+              </div>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
@@ -262,7 +266,7 @@ export default function AppShell({ children }) {
           <div className="flex items-center gap-6">
             <nav className="flex items-center gap-4 text-[12px] font-bold tracking-tight text-violet-400/50">
               <Link to="/" className="flex items-center gap-2 hover:text-primary transition-colors">
-                <Box size={14} strokeWidth={3} className="text-white" />
+                <Box size={14} strokeWidth={3} className="text-[#A29BFE]" />
                 <span>Station</span>
               </Link>
               {crumbs.map((crumb, i) => (
@@ -277,35 +281,33 @@ export default function AppShell({ children }) {
             </nav>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            {/* Theme Capsule Toggle */}
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="group relative h-7 w-12 rounded-full bg-[#A29BFE]/10 border border-[#A29BFE]/20 hover:border-[#A29BFE]/40 transition-all duration-300"
+            >
+              <div className={`absolute top-1 left-1 h-5 w-5 rounded-full shadow-lg transition-all duration-500 flex items-center justify-center ${theme === 'dark' ? 'translate-x-5 bg-[#A29BFE] text-black' : 'translate-x-0 bg-white/10 text-white'}`}>
+                {theme === 'dark' ? <Moon size={11} fill="currentColor" /> : <Sun size={11} />}
+              </div>
+              <div className="absolute inset-0 flex items-center justify-between px-2.5 pointer-events-none opacity-20">
+                <Sun size={10} className={theme === 'light' ? 'invisible' : ''} />
+                <Moon size={10} className={theme === 'dark' ? 'invisible' : ''} />
+              </div>
+            </button>
+
+            <div className="w-px h-3 bg-white/5 mx-1" />
+
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9 rounded-xl hover:bg-secondary/80 transition-all relative"
+              className="group h-8 w-8 rounded-full bg-secondary/30 border border-border/50 transition-all relative text-[#BEF264] hover:bg-secondary/50 hover:text-[#BEF264]"
               onClick={() => setNotifOpen(true)}
             >
-              <Bell size={16} />
+              <Bell size={15} className="transition-transform duration-300 group-hover:scale-125" />
               {unreadCount > 0 && (
-                <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full ring-2 ring-background animate-pulse" />
+                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-[#BEF264] rounded-full ring-2 ring-background animate-pulse shadow-[0_0_8px_#BEF264]" />
               )}
-            </Button>
-            <div className="w-px h-4 bg-border/50 mx-1" />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-xl hover:bg-secondary/80 transition-all"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            >
-              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 px-4 rounded-xl gap-2 font-bold text-[11px] border-border/50 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20 transition-all"
-              onClick={handleLogout}
-            >
-              <LogOut size={14} />
-              <span>Sign Out</span>
             </Button>
           </div>
         </header>

@@ -63,7 +63,7 @@ export default function BoardCanvas({
             <div
               {...provided.droppableProps}
               ref={provided.innerRef}
-              className="flex gap-4 h-full pb-8 overflow-x-auto custom-scrollbar relative z-10"
+              className="flex gap-2 h-full pb-8 overflow-x-auto custom-scrollbar relative z-10"
             >
               {/* Render Existing Lists Only */}
               {sortedLists.map((list) => (
@@ -88,7 +88,7 @@ export default function BoardCanvas({
 
               {/* Add New List Control */}
               {!readOnly && (
-                <div className="w-[270px] flex-shrink-0 flex flex-col h-full">
+                <div className="w-[220px] flex-shrink-0 flex flex-col h-full">
                   {/* Dummy header to match column alignment (Header height 44px + mb-3) */}
                   <div className="h-[44px] mb-3 invisible" />
                   
@@ -96,12 +96,12 @@ export default function BoardCanvas({
                     {!open ? (
                       <button
                         onClick={() => setOpen(true)}
-                        className="w-full h-[150px] flex flex-col items-center justify-center gap-3 border-2 border-dashed border-white/5 rounded-[16px] bg-white/[0.02] hover:bg-white/[0.05] hover:border-primary/30 transition-all duration-500 group/new"
+                        className="w-full h-[150px] flex flex-col items-center justify-center gap-3 border-2 border-dashed border-white/5 rounded-[40px] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 transition-all duration-500 group/new"
                       >
-                        <div className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center group-hover/new:scale-110 group-hover/new:bg-primary/20 transition-all">
-                          <Plus size={18} className="text-white/20 group-hover/new:text-primary" />
+                        <div className="h-10 w-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center group-hover/new:scale-110 group-hover/new:bg-white/10 transition-all">
+                          <Plus size={18} className="text-white/10 group-hover/new:text-muted-foreground" />
                         </div>
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/10 group-hover/new:text-primary/60 transition-colors">Construct Stage</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/5 group-hover/new:text-muted-foreground transition-colors">Construct Stage</span>
                       </button>
                     ) : (
                       <motion.form

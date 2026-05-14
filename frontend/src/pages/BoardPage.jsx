@@ -13,14 +13,13 @@ import {
   moveListOptimistic
 } from "@/store/slices/boardSlice";
 import BoardCanvas from "@/components/board/BoardCanvas";
-import BoardSidebar from "@/components/board/BoardSidebar";
 import AppShell from "@/components/layout/AppShell";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  LoaderCircle, 
-  Eye, 
-  Users, 
-  Mail, 
+import {
+  LoaderCircle,
+  Eye,
+  Users,
+  Mail,
   UserX,
   LayoutGrid,
   ArchiveRestore,
@@ -31,15 +30,17 @@ import {
   Globe,
   Pencil,
   Grid3x3,
-  PanelRight,
-  ArrowLeft
+  ArrowLeft,
+  Plus,
+  Calendar
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { boardApi, authApi, notificationApi, columnApi, cardApi } from "@/api/services";
-
+import { boardApi, authApi, notificationApi, columnApi, cardApi, workspaceApi } from "@/api/services";
 
 export default function BoardPage() {
   const { boardId } = useParams();
@@ -59,7 +60,7 @@ export default function BoardPage() {
   const [boardUpdating, setBoardUpdating] = useState(false);
   const [boardDeleting, setBoardDeleting] = useState(false);
   const [activities, setActivities] = useState([]);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [workspaceMembers, setWorkspaceMembers] = useState([]);
 
   const canEdit = userRole === "ADMIN" || userRole === "MEMBER";
   const isBoardAdmin = userRole === "ADMIN";
@@ -72,9 +73,9 @@ export default function BoardPage() {
 
   useEffect(() => {
     if (activeBoard && !boardEditDraft) {
-      setBoardEditDraft({ 
-        name: activeBoard.name, 
-        description: activeBoard.description || "", 
+      setBoardEditDraft({
+        name: activeBoard.name,
+        description: activeBoard.description || "",
         visibility: activeBoard.visibility,
         workspaceId: activeBoard.workspaceId
       });
@@ -91,6 +92,7 @@ export default function BoardPage() {
   useEffect(() => {
     if (activeBoard?.workspaceId) {
       boardApi.byWorkspace(activeBoard.workspaceId).then(setWorkspaceBoards).catch(() => setWorkspaceBoards([]));
+      workspaceApi.members(activeBoard.workspaceId).then(setWorkspaceMembers).catch(() => setWorkspaceMembers([]));
     }
   }, [activeBoard?.workspaceId]);
 
@@ -170,13 +172,13 @@ export default function BoardPage() {
         toast.warning("Card deleted, but UI sync failed. Reloading...");
         window.location.reload();
       }
-    } catch (err) { 
+    } catch (err) {
       console.error("SYSTEM CRITICAL FAILURE: Card Deletion API Rejected", err);
       if (err.response) {
         console.error("DATA RESPONSE:", err.response.data);
         console.error("STATUS:", err.response.status);
       }
-      toast.error("Deletion Rejected: Mission Record Locked or Access Denied."); 
+      toast.error("Deletion Rejected: Mission Record Locked or Access Denied.");
     }
   };
 
@@ -217,17 +219,44 @@ export default function BoardPage() {
     } catch { dispatch(fetchBoardBundle(Number(boardId))); }
   };
 
+  const [inviting, setInviting] = useState(false);
+
   const inviteBoardMember = async (e) => {
     e.preventDefault();
+    if (!memberDraft.email.trim()) return;
+
+    setInviting(true);
     try {
-      const users = await authApi.searchUsers(memberDraft.email);
+      // 1. Verify User exists in Auth Database
+      const users = await authApi.searchUsers(memberDraft.email.trim());
       const match = users.find((u) => u.email?.toLowerCase() === memberDraft.email.trim().toLowerCase());
-      if (!match) throw new Error("User not found.");
+
+      if (!match) {
+        toast.error("Access Denied: Operative not found in central database.");
+        return;
+      }
+
+      // 2. Check if already on board
+      const isAlreadyMember = boardMembers.some(m => m.userId === match.userId);
+      if (isAlreadyMember) {
+        toast.warning(`${match.fullName || match.email} is already on mission.`);
+        return;
+      }
+
+      // 3. Add to Board
       await boardApi.addMember(Number(boardId), { userId: Number(match.userId), role: memberDraft.role });
       setMemberDraft({ email: "", role: "MEMBER" });
-      toast.success(`${match.fullName || match.email} added.`);
-      setBoardMembers(await boardApi.members(Number(boardId)));
-    } catch (err) { toast.error(err?.message || "Failed to add."); }
+      toast.success(`${match.fullName || match.email} has been deployed.`);
+
+      // 4. Refresh List
+      const updatedMembers = await boardApi.members(Number(boardId));
+      setBoardMembers(updatedMembers);
+    } catch (err) {
+      console.error("Invite Error:", err);
+      toast.error(err?.message || "Protocol Failure: Could not add operative.");
+    } finally {
+      setInviting(false);
+    }
   };
 
   const updateBoardRole = async (member) => {
@@ -246,7 +275,7 @@ export default function BoardPage() {
       <div className="flex h-[calc(100vh-3.5rem)] overflow-hidden">
         <div className="flex-1 overflow-y-auto no-scrollbar">
           <div className="p-3 pt-0 lg:p-5 lg:pt-0 space-y-2">
-            
+
             {isObserver && (
               <div className="flex items-center gap-2 p-3 px-4 rounded-xl bg-white/[0.03] border border-white/5 text-[12px] text-white/50">
                 <Eye size={14} />
@@ -263,7 +292,7 @@ export default function BoardPage() {
               <div className="flex gap-8 h-full">
                 {/* ===== Main Content ===== */}
                 <div className="flex-1 flex flex-col gap-3 min-w-0">
-                  
+
                   {/* Header Row */}
                   <section className="flex flex-col gap-4">
                     <div className="flex items-end justify-between gap-4 pb-1">
@@ -274,236 +303,269 @@ export default function BoardPage() {
                           </h1>
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-1 bg-secondary/20 backdrop-blur-sm p-1 rounded-full border border-border/40 shadow-2xl">
+                      <div className="flex items-center gap-1 bg-secondary/10 backdrop-blur-sm p-0.5 rounded-lg border border-white/5 shadow-2xl">
                         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
-                          <TabsList className="bg-transparent border-none p-0 gap-0.5 h-8">
-                            <TabsTrigger 
-                              value="board" 
-                              className="gap-2.5 px-5 h-8 rounded-full data-[state=active]:bg-[#00d28d] data-[state=active]:text-black data-[state=active]:shadow-[0_0_15px_rgba(0,210,141,0.3)] transition-all duration-500 font-black text-[11px] uppercase tracking-widest"
+                          <TabsList className="bg-transparent border-none p-0 gap-0.5 h-6">
+                            <TabsTrigger
+                              value="board"
+                              className="gap-1.5 px-2 h-6 rounded-md data-[state=active]:bg-white/10 data-[state=active]:text-white transition-all duration-500 font-black text-[9px] uppercase tracking-widest"
                             >
-                              <LayoutGrid size={13} /> Board
+                              <LayoutGrid size={11} /> Board
                             </TabsTrigger>
-                            <TabsTrigger 
-                              value="members" 
-                              className="gap-2.5 px-5 h-8 rounded-full data-[state=active]:bg-[#00d28d] data-[state=active]:text-black data-[state=active]:shadow-[0_0_15px_rgba(0,210,141,0.3)] transition-all duration-500 font-black text-[11px] uppercase tracking-widest text-muted-foreground/40 hover:text-foreground"
+                            <TabsTrigger
+                              value="members"
+                              className="gap-1.5 px-2 h-6 rounded-md data-[state=active]:bg-white/10 data-[state=active]:text-white transition-all duration-500 font-black text-[9px] uppercase tracking-widest text-muted-foreground/40 hover:text-foreground"
                             >
-                              <Users size={13} /> Team
+                              <Users size={11} /> Team
                             </TabsTrigger>
                           </TabsList>
                         </Tabs>
-                        
-                        <div className="w-px h-4 bg-border/40 mx-1.5" />
-                        
-                        <button 
+
+                        <div className="w-px h-2.5 bg-white/5 mx-0.5" />
+
+                        <button
                           onClick={() => setActiveTab("settings")}
-                          className="flex items-center gap-2.5 px-4 h-8 rounded-full hover:bg-secondary/40 text-muted-foreground/40 hover:text-foreground transition-all group/edit"
+                          className="flex items-center gap-1.5 px-2 h-6 rounded-md hover:bg-white/5 text-muted-foreground/40 hover:text-white transition-all group/edit"
                         >
-                          <Pencil size={13} className="group-hover/edit:text-[#00d28d] transition-colors" />
-                          <span className="text-[11px] font-black uppercase tracking-widest">Edit</span>
+                          <Pencil size={11} className="transition-colors" />
+                          <span className="text-[9px] font-black uppercase tracking-widest">Edit</span>
                         </button>
-                        {!isSidebarOpen && (
-                          <>
-                            <div className="w-px h-4 bg-border/40 mx-1.5" />
-                            <button 
-                              onClick={() => setIsSidebarOpen(true)}
-                              className="h-8 w-8 rounded-full bg-secondary/20 text-muted-foreground/30 border border-border/40 hover:bg-secondary hover:text-foreground flex items-center justify-center transition-all animate-in fade-in zoom-in duration-500 ml-0.5"
-                              title="Expand Intelligence"
-                            >
-                              <PanelRight size={14} className="rotate-180" />
-                            </button>
-                          </>
-                        )}
                       </div>
                     </div>
+                  </section>
 
-                    <div className="flex-1 min-h-[600px]">
-                      <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
-                        <TabsContent value="board" className="h-full outline-none mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                          <BoardCanvas
-                            board={activeBoard}
-                            members={boardMembers}
-                            lists={lists}
-                            cardsByListId={cardsByListId}
-                            cardsById={cardsById}
-                            onDragEnd={handleDragEnd}
-                            onCreateList={handleCreateList}
-                            onCreateCard={handleCreateCard}
-                            onRenameList={handleRenameList}
-                            onDeleteList={handleDeleteList}
-                            onDeleteCard={handleDeleteCard}
-                            onMoveList={handleMoveList}
-                            otherBoards={workspaceBoards.filter(b => b.boardId !== Number(boardId))}
-                            saving={status === "saving"}
-                            readOnly={!canEdit}
-                            activeTab={activeTab}
-                            setActiveTab={setActiveTab}
-                            isBoardAdmin={isBoardAdmin}
-                            archivedCount={archivedCards.length}
-                          />
-                        </TabsContent>
+                  <div className="flex-1 min-h-[600px]">
+                    <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
+                      <TabsContent value="board" className="h-full outline-none mt-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <BoardCanvas
+                          board={activeBoard}
+                          members={boardMembers}
+                          lists={lists}
+                          cardsByListId={cardsByListId}
+                          cardsById={cardsById}
+                          onDragEnd={handleDragEnd}
+                          onCreateList={handleCreateList}
+                          onCreateCard={handleCreateCard}
+                          onRenameList={handleRenameList}
+                          onDeleteList={handleDeleteList}
+                          onDeleteCard={handleDeleteCard}
+                          onMoveList={handleMoveList}
+                          otherBoards={workspaceBoards.filter(b => b.boardId !== Number(boardId))}
+                          saving={status === "saving"}
+                          readOnly={!canEdit}
+                          activeTab={activeTab}
+                          setActiveTab={setActiveTab}
+                          isBoardAdmin={isBoardAdmin}
+                          archivedCount={archivedCards.length}
+                        />
+                      </TabsContent>
 
-                        <TabsContent value="members" className="outline-none mt-0 animate-in fade-in duration-500">
-                          <div className="max-w-4xl py-4">
-                            <Card className="bg-card border-border/50 overflow-hidden rounded-3xl shadow-xl shadow-black/10">
-                              <CardHeader className="pb-8 border-b border-border/30">
-                                <div className="flex items-center justify-between">
-                                  <div className="space-y-1">
-                                    <CardTitle className="text-[20px] font-black text-foreground flex items-center gap-3">
-                                      <button 
-                                        onClick={() => setActiveTab("board")}
-                                        className="p-2 rounded-full hover:bg-secondary/50 transition-all text-muted-foreground hover:text-primary mr-2"
-                                      >
-                                        <ArrowLeft size={20} />
-                                      </button>
-                                      <Users className="text-primary" size={24} /> Mission Personnel
-                                    </CardTitle>
-                                    <CardDescription className="text-[12px] text-muted-foreground font-medium uppercase tracking-widest opacity-60 ml-[52px]">Deployment Authorization List</CardDescription>
+                      <TabsContent value="members" className="outline-none mt-0 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <div className="max-w-5xl py-8">
+                          <div className="flex items-center gap-6 mb-10">
+                            <button
+                              onClick={() => setActiveTab("board")}
+                              className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-muted-foreground hover:text-white hover:border-white/20 transition-all group"
+                            >
+                              <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+                            </button>
+                            <div className="space-y-1">
+                              <h2 className="text-2xl font-black tracking-tighter uppercase">Collaboration</h2>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <div className="lg:col-span-2 space-y-4">
+                              <div className="rounded-[2rem] bg-[#0a0c10]/40 border border-white/5 overflow-hidden backdrop-blur-xl shadow-2xl">
+                                <div className="p-6 border-b border-white/5 bg-white/[0.02]">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-primary/60">Active Operatives</span>
+                                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-[9px] font-black px-3 py-0.5 rounded-full">
+                                      {boardMembers.length} Units
+                                    </Badge>
                                   </div>
-                                  {isBoardAdmin && (
-                                    <form onSubmit={inviteBoardMember} className="flex gap-3">
-                                      <div className="relative">
-                                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40" />
-                                        <Input placeholder="Search operative email..." className="pl-11 w-64 h-11 bg-secondary/30 border-border/50 rounded-xl text-[13px] font-bold focus-visible:ring-primary/20" value={memberDraft.email} onChange={e => setMemberDraft(prev => ({ ...prev, email: e.target.value }))} />
-                                      </div>
-                                      <select value={memberDraft.role} onChange={e => setMemberDraft(prev => ({ ...prev, role: e.target.value }))} className="w-32 h-11 bg-secondary/30 border border-border/50 rounded-xl text-[11px] font-black uppercase tracking-wider text-muted-foreground px-4 outline-none appearance-none cursor-pointer hover:border-primary/30 transition-all">
-                                        <option value="ADMIN">Admin</option>
-                                        <option value="MEMBER">Member</option>
-                                        <option value="OBSERVER">Observer</option>
-                                      </select>
-                                      <Button type="submit" className="h-11 px-6 rounded-xl font-black uppercase tracking-widest text-[11px] shadow-lg shadow-primary/20">Add Operative</Button>
-                                    </form>
-                                  )}
                                 </div>
-                              </CardHeader>
-                              <CardContent className="p-0">
-                                <div className="divide-y divide-border/30">
+                                <div className="divide-y divide-white/5">
                                   {boardMembers.map((m) => (
-                                    <div key={m.userId} className="flex items-center justify-between p-6 px-8 hover:bg-secondary/20 transition-all group">
+                                    <div key={m.userId} className="flex items-center justify-between p-6 hover:bg-white/[0.02] transition-all group">
                                       <div className="flex items-center gap-5">
-                                        <div className="h-12 w-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center group-hover:scale-105 transition-transform">
-                                          <span className="text-[16px] font-black text-primary">{(m.fullName || m.email || "U").charAt(0).toUpperCase()}</span>
+                                        <div className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:scale-105 transition-all group-hover:border-primary/30 group-hover:shadow-[0_0_20px_rgba(var(--primary-rgb),0.1)]">
+                                          <Avatar className="h-full w-full rounded-2xl">
+                                            <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${m.fullName || m.email}`} />
+                                            <AvatarFallback className="text-[14px] font-black text-primary">{(m.fullName || m.email || "U").charAt(0).toUpperCase()}</AvatarFallback>
+                                          </Avatar>
                                         </div>
                                         <div>
-                                          <p className="text-[14px] font-black text-foreground">{m.fullName || m.email}</p>
-                                          <div className="flex items-center gap-3 mt-1.5">
-                                            <span className="text-[9px] font-black text-primary uppercase tracking-[0.2em] bg-primary/10 px-2.5 py-1 rounded-md">{m.role}</span>
-                                            {Number(m.userId) === Number(activeBoard?.createdById) && <span className="text-[9px] font-black text-rose-500 uppercase tracking-[0.2em] bg-rose-500/10 px-2.5 py-1 rounded-md">Founder</span>}
+                                          <p className="text-lg font-black text-white tracking-tight leading-none mb-1">{m.fullName || m.email || "Unknown Operative"}</p>
+                                          <div className="flex items-center gap-3">
+                                            <Badge variant="outline" className="bg-[#86efac]/10 text-[#86efac] border-[#86efac]/20 text-[8px] font-black px-2 py-0 h-4 rounded-md uppercase tracking-widest">
+                                              {m.role}
+                                            </Badge>
+                                            {Number(m.userId) === Number(activeBoard?.createdById) && (
+                                              <Badge variant="outline" className="bg-violet-500/10 text-violet-400 border-violet-500/20 text-[8px] font-black px-2 py-0 h-4 rounded-md uppercase tracking-widest">
+                                                FOUNDER
+                                              </Badge>
+                                            )}
                                           </div>
                                         </div>
                                       </div>
                                       {isBoardAdmin && Number(m.userId) !== Number(activeBoard?.createdById) && (
-                                        <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                          <button className="h-9 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted-foreground border border-border/50 hover:bg-secondary transition-all" onClick={() => updateBoardRole(m)}>Update Role</button>
-                                          <button className="h-9 w-9 rounded-xl text-rose-500 border border-rose-500/10 hover:bg-rose-500/10 flex items-center justify-center transition-all" onClick={() => removeBoardMember(m)}>
-                                            <UserX size={16} />
-                                          </button>
+                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 px-4 rounded-lg text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:bg-white/5 hover:text-white"
+                                            onClick={() => updateBoardRole(m)}
+                                          >
+                                            Update Permissions
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 rounded-lg text-rose-500/40 hover:text-rose-500 hover:bg-rose-500/10 transition-all"
+                                            onClick={() => removeBoardMember(m)}
+                                          >
+                                            <UserX size={14} />
+                                          </Button>
                                         </div>
                                       )}
                                     </div>
                                   ))}
                                 </div>
-                              </CardContent>
-                            </Card>
-                          </div>
-                        </TabsContent>
-                        <TabsContent value="settings" className="outline-none mt-0 animate-in fade-in duration-500">
-                          <div className="max-w-2xl py-4">
-                            <Card className="bg-card border-border/50 rounded-3xl shadow-xl">
-                              <CardHeader>
-                                <div className="flex items-center justify-between">
-                                  <CardTitle className="text-[20px] font-black flex items-center gap-3">
-                                    <button 
-                                      onClick={() => setActiveTab("board")}
-                                      className="p-2 rounded-full hover:bg-secondary/50 transition-all text-muted-foreground hover:text-primary mr-2"
-                                    >
-                                      <ArrowLeft size={20} />
-                                    </button>
-                                    <Settings className="text-primary" size={24} /> Mission Configuration
-                                  </CardTitle>
+                              </div>
+                            </div>
+
+                            <div className="space-y-6">
+                              <div className="p-8 rounded-[2rem] bg-white/[0.02] border border-white/5 shadow-inner">
+                                <div className="flex items-center gap-3 mb-6">
+                                  <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                                    <Mail size={16} />
+                                  </div>
+                                  <h3 className="text-xs font-black uppercase tracking-[0.2em]">Collaborate Member</h3>
                                 </div>
-                                <CardDescription className="text-[12px] font-medium uppercase tracking-widest opacity-60 ml-[52px]">Update deployment parameters</CardDescription>
-                              </CardHeader>
-                              <CardContent>
-                                {boardEditDraft && (
-                                  <form onSubmit={handleUpdateBoard} className="space-y-6">
-                                    <div className="space-y-2">
-                                      <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-muted-foreground/60">Objective Designation</Label>
-                                      <Input 
-                                        value={boardEditDraft.name} 
-                                        onChange={e => setBoardEditDraft({...boardEditDraft, name: e.target.value})}
-                                        className="bg-secondary/30 border-border/50 h-12 rounded-xl text-[14px] font-bold"
-                                      />
+                                <form onSubmit={inviteBoardMember} className="space-y-4">
+                                  <div className="space-y-2">
+                                    <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 ml-1">Secure Email</Label>
+                                    <Input
+                                      placeholder=" operative@command.io"
+                                      className="h-11 bg-black/40 border-white/5 rounded-xl text-[13px] font-bold focus:border-primary/30 transition-all shadow-inner"
+                                      value={memberDraft.email}
+                                      onChange={e => setMemberDraft(prev => ({ ...prev, email: e.target.value }))}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 ml-1">Access Level</Label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      {['ADMIN', 'MEMBER'].map(role => (
+                                        <button
+                                          key={role}
+                                          type="button"
+                                          onClick={() => setMemberDraft(prev => ({ ...prev, role }))}
+                                          className={`h-11 rounded-xl border text-[9px] font-black uppercase tracking-widest transition-all ${memberDraft.role === role ? 'bg-primary/10 border-primary text-primary shadow-[0_0_15px_rgba(var(--primary-rgb),0.1)]' : 'bg-black/40 border-white/5 text-muted-foreground/40 hover:border-white/10'}`}
+                                        >
+                                          {role}
+                                        </button>
+                                      ))}
                                     </div>
-                                    <div className="space-y-2">
-                                      <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-muted-foreground/60">Mission Briefing</Label>
-                                      <Input 
-                                        value={boardEditDraft.description} 
-                                        onChange={e => setBoardEditDraft({...boardEditDraft, description: e.target.value})}
-                                        className="bg-secondary/30 border-border/50 h-12 rounded-xl text-[14px] font-bold"
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-muted-foreground/60">Security Clearance</Label>
-                                      <div className="flex gap-3">
-                                        {['PRIVATE', 'PUBLIC'].map(v => (
-                                          <button
-                                            key={v}
-                                            type="button"
-                                            onClick={() => setBoardEditDraft({...boardEditDraft, visibility: v})}
-                                            className={`flex-1 h-12 rounded-xl border flex items-center justify-center gap-3 transition-all ${boardEditDraft.visibility === v ? 'bg-primary/10 border-primary text-primary shadow-[0_0_15px_rgba(0,210,141,0.1)]' : 'bg-secondary/30 border-border/50 text-muted-foreground'}`}
-                                          >
-                                            {v === 'PRIVATE' ? <Lock size={14} /> : <Globe size={14} />}
-                                            <span className="text-[11px] font-black uppercase tracking-widest">{v}</span>
-                                          </button>
-                                        ))}
-                                      </div>
-                                    </div>
-                                    <div className="pt-4 flex items-center justify-between">
-                                      <Button 
-                                        type="button" 
-                                        variant="ghost" 
-                                        onClick={handleDeleteBoard}
-                                        disabled={boardDeleting}
-                                        className="h-12 px-6 rounded-xl text-rose-500 hover:bg-rose-500/10 font-black uppercase tracking-widest text-[11px] gap-3"
-                                      >
-                                        <Trash2 size={16} /> Decommission Board
-                                      </Button>
-                                      <Button 
-                                        type="submit" 
-                                        disabled={boardUpdating}
-                                        className="h-12 px-8 rounded-xl bg-primary text-black font-black uppercase tracking-widest text-[11px] shadow-lg shadow-primary/20"
-                                      >
-                                        {boardUpdating ? "Synchronizing..." : "Apply Changes"}
-                                      </Button>
-                                    </div>
-                                  </form>
-                                )}
-                              </CardContent>
-                            </Card>
+                                  </div>
+                                  <Button type="submit" className="w-full h-11 rounded-xl font-black uppercase tracking-widest text-[10px] mt-4 shadow-xl shadow-primary/20">
+                                    Add Member
+                                  </Button>
+                                </form>
+                              </div>
+                            </div>
                           </div>
-                        </TabsContent>
-                      </Tabs>
-                    </div>
-                  </section>
+                        </div>
+                      </TabsContent>
+
+                      <TabsContent value="settings" className="outline-none mt-0 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <div className="max-w-3xl py-8">
+                          <div className="flex items-center gap-6 mb-10">
+                            <button
+                              onClick={() => setActiveTab("board")}
+                              className="h-10 w-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-muted-foreground hover:text-white hover:border-white/20 transition-all group"
+                            >
+                              <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+                            </button>
+                            <div className="space-y-1">
+                              <h2 className="text-2xl font-black tracking-tighter uppercase">Mission Configuration</h2>
+                              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">Core Protocol & Deployment Parameters</p>
+                            </div>
+                          </div>
+
+                          <div className="rounded-[2.5rem] bg-[#0a0c10]/40 border border-white/5 p-10 backdrop-blur-xl shadow-2xl overflow-hidden relative">
+                            <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none">
+                              <Settings size={180} strokeWidth={1} />
+                            </div>
+
+                            {boardEditDraft && (
+                              <form onSubmit={handleUpdateBoard} className="space-y-8 relative z-10">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                  <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-violet-400/50 ml-1">Objective Designation</Label>
+                                    <Input
+                                      value={boardEditDraft.name}
+                                      onChange={e => setBoardEditDraft({ ...boardEditDraft, name: e.target.value })}
+                                      className="bg-black/40 border-white/5 h-12 rounded-xl text-[15px] font-black tracking-tight focus:border-primary/30 transition-all shadow-inner"
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-violet-400/50 ml-1">Security Clearance</Label>
+                                    <div className="flex gap-3">
+                                      {['PRIVATE', 'PUBLIC'].map(v => (
+                                        <button
+                                          key={v}
+                                          type="button"
+                                          onClick={() => setBoardEditDraft({ ...boardEditDraft, visibility: v })}
+                                          className={`flex-1 h-12 rounded-xl border flex items-center justify-center gap-3 transition-all ${boardEditDraft.visibility === v ? 'bg-primary/10 border-primary text-primary shadow-[0_0_20px_rgba(var(--primary-rgb),0.1)]' : 'bg-black/40 border-white/5 text-muted-foreground/40 hover:border-white/10'}`}
+                                        >
+                                          {v === 'PRIVATE' ? <Lock size={14} /> : <Globe size={14} />}
+                                          <span className="text-[10px] font-black uppercase tracking-widest">{v}</span>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label className="text-[10px] font-black uppercase tracking-widest text-violet-400/50 ml-1">Mission Briefing</Label>
+                                  <textarea
+                                    value={boardEditDraft.description}
+                                    onChange={e => setBoardEditDraft({ ...boardEditDraft, description: e.target.value })}
+                                    className="w-full bg-black/40 border border-white/5 h-32 rounded-2xl text-[14px] font-medium p-4 focus:border-primary/30 outline-none transition-all shadow-inner resize-none"
+                                    placeholder="Establish mission parameters..."
+                                  />
+                                </div>
+
+                                <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-6 border-t border-white/5">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={handleDeleteBoard}
+                                    disabled={boardDeleting}
+                                    className="h-11 px-6 rounded-xl text-rose-500/50 hover:text-rose-500 hover:bg-rose-500/10 font-black uppercase tracking-widest text-[10px] gap-3 transition-all"
+                                  >
+                                    <Trash2 size={16} /> Decommission Board
+                                  </Button>
+                                  <Button
+                                    type="submit"
+                                    disabled={boardUpdating}
+                                    className="h-11 px-10 rounded-xl bg-primary text-black font-black uppercase tracking-widest text-[10px] shadow-2xl shadow-primary/30 transition-all hover:scale-105 active:scale-95"
+                                  >
+                                    {boardUpdating ? "Synchronizing..." : "Apply Protocol Changes"}
+                                  </Button>
+                                </div>
+                              </form>
+                            )}
+                          </div>
+                        </div>
+                      </TabsContent>
+                    </Tabs>
+                  </div>
                 </div>
 
-                {/* ===== Right Sidebar ===== */}
-                <AnimatePresence>
-                  {isSidebarOpen && (
-                    <motion.div
-                      initial={{ width: 0, opacity: 0, x: 20 }}
-                      animate={{ width: "auto", opacity: 1, x: 0 }}
-                      exit={{ width: 0, opacity: 0, x: 20 }}
-                      transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-                      className="overflow-hidden border-l border-border/30"
-                    >
-                      <BoardSidebar activities={activities} onToggle={() => setIsSidebarOpen(false)} />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
+                </div>
+              )}
           </div>
         </div>
       </div>

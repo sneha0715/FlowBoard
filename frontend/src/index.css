@@ -41,22 +41,22 @@
 }
 
 .dark {
-    --background: oklch(0.148 0.004 228.8);
+    --background: oklch(0.12 0.005 230);
     --foreground: oklch(0.987 0.002 197.1);
-    --card: oklch(0.218 0.008 223.9);
+    --card: oklch(0.18 0.008 230);
     --card-foreground: oklch(0.987 0.002 197.1);
-    --popover: oklch(0.218 0.008 223.9);
+    --popover: oklch(0.18 0.008 230);
     --popover-foreground: oklch(0.987 0.002 197.1);
     --primary: oklch(0.437 0.078 188.216);
     --primary-foreground: oklch(0.984 0.014 180.72);
-    --secondary: oklch(0.274 0.006 286.033);
+    --secondary: oklch(0.25 0.01 230);
     --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.275 0.011 216.9);
-    --muted-foreground: oklch(0.723 0.014 214.4);
-    --accent: oklch(0.275 0.011 216.9);
+    --muted: oklch(0.22 0.01 230);
+    --muted-foreground: oklch(0.65 0.01 230);
+    --accent: oklch(0.22 0.01 230);
     --accent-foreground: oklch(0.987 0.002 197.1);
     --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
+    --border: oklch(1 0 0 / 12%);
     --input: oklch(1 0 0 / 15%);
     --ring: oklch(0.56 0.021 213.5);
     --chart-1: oklch(0.785 0.115 274.713);
@@ -64,7 +64,7 @@
     --chart-3: oklch(0.511 0.262 276.966);
     --chart-4: oklch(0.457 0.24 277.023);
     --chart-5: oklch(0.398 0.195 277.366);
-    --sidebar: oklch(0.218 0.008 223.9);
+    --sidebar: oklch(0.15 0.008 230);
     --sidebar-foreground: oklch(0.987 0.002 197.1);
     --sidebar-primary: oklch(0.704 0.14 182.503);
     --sidebar-primary-foreground: oklch(0.277 0.046 192.524);
@@ -120,61 +120,83 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    }
+  }
   body {
     @apply bg-background text-foreground;
-    }
+  }
   button:not(:disabled), [role="button"]:not(:disabled) {
     cursor: pointer;
-    }
+  }
   html {
     @apply font-sans;
-    }
-
-  /* Global Select & Option Fix for Dark Mode */
-  select {
-    @apply bg-background text-foreground border-border rounded-md px-3 py-1 text-sm transition-all focus:ring-2 focus:ring-primary/20 outline-none;
-  }
-  
-  option {
-    @apply bg-popover text-popover-foreground;
-    padding: 8px;
-  }
-
-  .dark select option {
-    background-color: oklch(0.218 0.008 223.9); /* Matches --popover */
-    color: oklch(0.987 0.002 197.1); /* Matches --popover-foreground */
-  }
-
-  /* Specific fix for native dropdown appearance in some browsers */
-  select:focus-visible {
-    @apply ring-2 ring-primary/20;
   }
 }
 
-@layer utilities {
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: 10px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: var(--muted-foreground);
-  }
-  
-  /* Hide scrollbar for Chrome, Safari and Opera */
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  /* Hide scrollbar for IE, Edge and Firefox */
-  .no-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-  }
+/* Global Select & Option Fix for Dark Mode */
+select {
+  @apply bg-background text-foreground border-border rounded-md px-3 py-1 text-sm transition-all focus:ring-2 focus:ring-primary/20 outline-none;
+}
+
+option {
+  @apply bg-popover text-popover-foreground;
+  padding: 8px;
+}
+
+.dark select option {
+  background-color: oklch(0.218 0.008 223.9);
+  color: oklch(0.987 0.002 197.1);
+}
+
+/* Global Scrollbar Reset */
+html, body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar, 
+body::-webkit-scrollbar {
+  display: none;
+}
+
+/* Custom Scrollbar Utility */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e11d48;
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #be123c;
+}
+
+/* No Scrollbar Utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Surface Utils */
+.surface-ground {
+  @apply bg-background text-foreground;
+}
+.surface-section {
+  @apply bg-muted/30 border-y border-border/50;
+}
+.surface-card {
+  @apply bg-card text-card-foreground border border-border/50 shadow-lg rounded-xl;
+}
+.glass-card {
+  @apply bg-card/60 backdrop-blur-xl border border-white/10 shadow-2xl;
+}
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }

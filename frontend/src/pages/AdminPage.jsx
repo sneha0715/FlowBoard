@@ -172,7 +172,7 @@ export default function AdminPage() {
                           <div key={u.userId} className="flex items-center justify-between p-4 rounded-xl border bg-card hover:bg-accent/10 transition-colors">
                             <div className="flex items-center gap-4">
                               <Avatar className="h-10 w-10 border-2 border-background">
-                                <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${u.userId}`} />
+                                <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${u.fullName || u.userId}`} />
                                 <AvatarFallback>{(u.fullName || u.email || "U")[0].toUpperCase()}</AvatarFallback>
                               </Avatar>
                               <div>

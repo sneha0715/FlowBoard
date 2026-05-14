@@ -127,6 +127,7 @@ const boardSlice = createSlice({
     cardsById: {},
     cardsByListId: {},
     userRole: "NONE",
+    activeCard: null,
     status: "idle",
     error: null
   },
@@ -166,8 +167,12 @@ const boardSlice = createSlice({
       state.lists = [];
       state.cardsById = {};
       state.cardsByListId = {};
+      state.activeCard = null;
       state.status = "idle";
       state.error = null;
+    },
+    setActiveCard(state, action) {
+      state.activeCard = action.payload;
     }
   },
   extraReducers: (builder) => {
@@ -222,5 +227,5 @@ const boardSlice = createSlice({
   }
 });
 
-export const { moveCardOptimistic, moveListOptimistic, clearBoard } = boardSlice.actions;
+export const { moveCardOptimistic, moveListOptimistic, clearBoard, setActiveCard } = boardSlice.actions;
 export default boardSlice.reducer;

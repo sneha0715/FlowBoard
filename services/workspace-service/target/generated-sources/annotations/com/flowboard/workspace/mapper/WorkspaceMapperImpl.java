@@ -13,8 +13,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-05-12T02:28:13+0530",
-    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.46.0.v20260407-0427, environment: Java 21.0.10 (Eclipse Adoptium)"
+    date = "2026-05-14T10:40:34+0530",
+    comments = "version: 1.5.5.Final, compiler: javac, environment: Java 20.0.1 (Oracle Corporation)"
 )
 @Component
 public class WorkspaceMapperImpl implements WorkspaceMapper {
@@ -30,20 +30,20 @@ public class WorkspaceMapperImpl implements WorkspaceMapper {
 
         Workspace.WorkspaceBuilder workspace = Workspace.builder();
 
-        if ( request.getDescription() != null ) {
-            workspace.description( request.getDescription() );
-        }
-        if ( request.getLogoUrl() != null ) {
-            workspace.logoUrl( request.getLogoUrl() );
-        }
         if ( request.getName() != null ) {
             workspace.name( request.getName() );
+        }
+        if ( request.getDescription() != null ) {
+            workspace.description( request.getDescription() );
         }
         if ( request.getOwnerId() != null ) {
             workspace.ownerId( request.getOwnerId() );
         }
         if ( request.getVisibility() != null ) {
             workspace.visibility( request.getVisibility() );
+        }
+        if ( request.getLogoUrl() != null ) {
+            workspace.logoUrl( request.getLogoUrl() );
         }
 
         return workspace.build();
@@ -57,33 +57,33 @@ public class WorkspaceMapperImpl implements WorkspaceMapper {
 
         WorkspaceResponse.WorkspaceResponseBuilder workspaceResponse = WorkspaceResponse.builder();
 
-        if ( entity.getCreateAt() != null ) {
-            workspaceResponse.createAt( entity.getCreateAt() );
-        }
-        if ( entity.getDescription() != null ) {
-            workspaceResponse.description( entity.getDescription() );
-        }
-        if ( entity.getLogoUrl() != null ) {
-            workspaceResponse.logoUrl( entity.getLogoUrl() );
-        }
-        List<WorkspaceMemberResponse> list = workspaceMemberListToWorkspaceMemberResponseList( entity.getMembers() );
-        if ( list != null ) {
-            workspaceResponse.members( list );
+        if ( entity.getWorkspaceId() != null ) {
+            workspaceResponse.workspaceId( entity.getWorkspaceId() );
         }
         if ( entity.getName() != null ) {
             workspaceResponse.name( entity.getName() );
         }
+        if ( entity.getDescription() != null ) {
+            workspaceResponse.description( entity.getDescription() );
+        }
         if ( entity.getOwnerId() != null ) {
             workspaceResponse.ownerId( entity.getOwnerId() );
-        }
-        if ( entity.getUpdateAt() != null ) {
-            workspaceResponse.updateAt( entity.getUpdateAt() );
         }
         if ( entity.getVisibility() != null ) {
             workspaceResponse.visibility( entity.getVisibility() );
         }
-        if ( entity.getWorkspaceId() != null ) {
-            workspaceResponse.workspaceId( entity.getWorkspaceId() );
+        if ( entity.getLogoUrl() != null ) {
+            workspaceResponse.logoUrl( entity.getLogoUrl() );
+        }
+        if ( entity.getCreateAt() != null ) {
+            workspaceResponse.createAt( entity.getCreateAt() );
+        }
+        if ( entity.getUpdateAt() != null ) {
+            workspaceResponse.updateAt( entity.getUpdateAt() );
+        }
+        List<WorkspaceMemberResponse> list = workspaceMemberListToWorkspaceMemberResponseList( entity.getMembers() );
+        if ( list != null ) {
+            workspaceResponse.members( list );
         }
 
         return workspaceResponse.build();

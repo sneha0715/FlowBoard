@@ -87,7 +87,7 @@ export default function ProfilePage() {
               <div className="h-24 bg-primary/10" />
               <CardContent className="pt-0 -mt-12 flex flex-col items-center text-center">
                 <Avatar className="h-24 w-24 border-4 border-background shadow-xl">
-                  <AvatarImage src={profileDraft.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} />
+                  <AvatarImage src={profileDraft.avatarUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${user?.email}`} />
                   <AvatarFallback className="text-2xl font-bold">{initials}</AvatarFallback>
                 </Avatar>
                 <div className="mt-4 space-y-1">

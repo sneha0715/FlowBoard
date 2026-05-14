@@ -1,125 +1,147 @@
 import { useEffect, useState } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { Link, useParams } from "react-router-dom";
-import { 
-  ArrowLeft, 
-  ArchiveRestore, 
-  CheckSquare, 
-  Edit2, 
-  Eye, 
-  Grid3x3, 
-  LoaderCircle, 
-  MoreHorizontal, 
-  Send, 
-  Trash2, 
-  UserPlus, 
-  UserX, 
-  Users, 
-  X,
-  Plus,
-  Clock,
-  Activity,
-  Settings2
-} from "lucide-react";
-
-import { authApi, boardApi, cardApi, columnApi, notificationApi } from "../api/services";
-import BoardCanvas from "../components/board/BoardCanvas";
-import CardDetailsModal from "../components/board/CardDetailsModal";
-import AppShell from "../components/layout/AppShell";
+import { toast } from "sonner";
 import {
-  createCard,
-  createList,
   fetchBoardBundle,
-  moveCardOptimistic,
-  moveListOptimistic,
+  createList,
+  createCard,
   persistCardMove,
   persistListMove,
-} from "../store/slices/boardSlice";
-import { isBoardAdmin as checkBoardAdmin, canEditBoard, workspaceRoleLabel, BOARD_ROLES } from "../utils/roles";
-
+  moveCardOptimistic,
+  moveListOptimistic
+} from "@/store/slices/boardSlice";
+import BoardCanvas from "@/components/board/BoardCanvas";
+import AppShell from "@/components/layout/AppShell";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { 
+  LoaderCircle, 
+  Eye, 
+  Users, 
+  Mail, 
+  Search,
+  UserX,
+  ArrowLeft,
+  Grid3x3,
+  ArchiveRestore,
+  Settings,
+  Trash2,
+  Check,
+  X,
+  Lock,
+  Globe
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
+import { boardApi, authApi, notificationApi, columnApi, cardApi } from "@/api/services";
+
 
 export default function BoardPage() {
   const { boardId } = useParams();
+  const navigate = useNavigate();
+  const location = useLocation();
   const dispatch = useDispatch();
-  const user = useSelector((s) => s.auth.user);
-  const { activeBoard, lists, cardsById, cardsByListId, userRole, status, error } = useSelector((s) => s.board);
+  const { activeBoard, lists, cardsById, cardsByListId, status, userRole } = useSelector((state) => state.board);
+  const { user } = useSelector((state) => state.auth);
+  const { workspaces } = useSelector((state) => state.workspace);
 
-  const [boardMembers, setBoardMembers] = useState([]);
-  const [selectedCard, setSelectedCard] = useState(null);
-  const [memberDraft, setMemberDraft] = useState({ email: "", role: "MEMBER" });
-  const [toast, setToast] = useState(null);
-  const [archivedCards, setArchivedCards] = useState([]);
   const [activeTab, setActiveTab] = useState("board");
-  const [showBoardEdit, setShowBoardEdit] = useState(false);
-  const [boardEditDraft, setBoardEditDraft] = useState({ name: "", description: "", background: "Ocean", visibility: "PRIVATE" });
-  const [boardUpdating, setBoardUpdating] = useState(false);
+  const [archivedCards, setArchivedCards] = useState([]);
+  const [boardMembers, setBoardMembers] = useState([]);
   const [workspaceBoards, setWorkspaceBoards] = useState([]);
+  const [memberDraft, setMemberDraft] = useState({ email: "", role: "MEMBER" });
 
-  const isBoardAdmin = checkBoardAdmin(user, userRole);
-  const canEdit = canEditBoard(user, userRole);
-  const isObserver = userRole === "OBSERVER" && user?.role !== "PLATFORM_ADMIN";
+  const [boardEditDraft, setBoardEditDraft] = useState(null);
+  const [boardUpdating, setBoardUpdating] = useState(false);
+  const [boardDeleting, setBoardDeleting] = useState(false);
 
-  const totalCards = Object.keys(cardsById).length;
-  const completedCards = Object.values(cardsById).filter((c) => c.status === "DONE").length;
-  const overdueCards = Object.values(cardsById).filter((c) => c.dueDate && c.status !== "DONE" && new Date(c.dueDate) < new Date()).length;
+  const canEdit = userRole === "ADMIN" || userRole === "MEMBER";
+  const isBoardAdmin = userRole === "ADMIN";
+  const isObserver = userRole === "OBSERVER";
 
-  const showToast = (type, msg) => {
-    setToast({ type, msg });
-    setTimeout(() => setToast(null), 4000);
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("edit") === "true" && isBoardAdmin) {
+      setActiveTab("settings");
+    }
+  }, [location.search, isBoardAdmin]);
+
+  useEffect(() => {
+    if (activeBoard && !boardEditDraft) {
+      setBoardEditDraft({
+        name: activeBoard.name,
+        description: activeBoard.description || "",
+        visibility: activeBoard.visibility
+      });
+    }
+  }, [activeBoard]);
+
+  const handleUpdateBoard = async (e) => {
+    e.preventDefault();
+    setBoardUpdating(true);
+    try {
+      await boardApi.update(Number(boardId), boardEditDraft);
+      toast.success("Board configuration updated.");
+      dispatch(fetchBoardBundle(Number(boardId)));
+    } catch (err) {
+      toast.error("Failed to update board.");
+    } finally {
+      setBoardUpdating(false);
+    }
   };
 
-  useEffect(() => {
-    dispatch(fetchBoardBundle(Number(boardId)));
-  }, [boardId, user?.userId, dispatch]);
-
-  useEffect(() => {
-    if (error) showToast("error", error);
-  }, [error]);
-
-  useEffect(() => {
-    if (!boardId) return;
-    boardApi.members(Number(boardId)).then(setBoardMembers).catch(() => setBoardMembers([]));
-    if (activeBoard?.workspaceId) {
-      boardApi.byWorkspace(activeBoard.workspaceId).then(data => setWorkspaceBoards(data)).catch(() => []);
+  const handleDeleteBoard = async () => {
+    if (!window.confirm("FATAL ACTION: Terminate this board permanently? All stage data will be lost.")) return;
+    setBoardDeleting(true);
+    try {
+      await boardApi.remove(Number(boardId));
+      toast.success("Board terminated.");
+      navigate(`/workspaces/${activeBoard.workspaceId}`);
+    } catch (err) {
+      toast.error("Failed to terminate board.");
+      setBoardDeleting(false);
     }
-  }, [boardId, status, activeBoard?.workspaceId]);
+  };
+
+  const handleRestoreCard = async (cardId) => {
+    try {
+      await cardApi.unarchive(cardId);
+      toast.success("Card restored to board.");
+      dispatch(fetchBoardBundle(Number(boardId)));
+      const updatedArchived = await cardApi.archivedByBoard(Number(boardId));
+      setArchivedCards(updatedArchived);
+    } catch (err) {
+      toast.error("Failed to restore card.");
+    }
+  };
+
+
+  useEffect(() => {
+    if (boardId) {
+      dispatch(fetchBoardBundle(Number(boardId)));
+      boardApi.members(Number(boardId)).then(setBoardMembers).catch(() => setBoardMembers([]));
+    }
+  }, [boardId, dispatch]);
+
+  useEffect(() => {
+    if (activeBoard?.workspaceId) {
+      boardApi.byWorkspace(activeBoard.workspaceId).then(setWorkspaceBoards).catch(() => setWorkspaceBoards([]));
+    }
+  }, [activeBoard?.workspaceId]);
 
   useEffect(() => {
     if (!boardId) return;
     cardApi.archivedByBoard(Number(boardId)).then(setArchivedCards).catch(() => setArchivedCards([]));
-    if (activeBoard) {
-      setBoardEditDraft({
-        name: activeBoard.name,
-        description: activeBoard.description || "",
-        background: activeBoard.background || "Ocean",
-        visibility: activeBoard.visibility || "PRIVATE"
-      });
-    }
-  }, [boardId, status, activeBoard?.name]);
+  }, [boardId, status]);
 
   const handleCreateList = async ({ name, color }) => {
     await dispatch(createList({ boardId: Number(boardId), name, color })).unwrap();
@@ -135,30 +157,13 @@ export default function BoardPage() {
     await dispatch(fetchBoardBundle(Number(boardId))).unwrap();
   };
 
-  const handleUpdateBoard = async (e) => {
-    e.preventDefault();
-    setBoardUpdating(true);
+  const handleDeleteList = async (listId) => {
     try {
-      await boardApi.update(Number(boardId), boardEditDraft);
-      setShowBoardEdit(false);
-      dispatch(fetchBoardBundle(Number(boardId)));
-      showToast("success", "Board updated.");
+      await columnApi.remove(listId);
+      await dispatch(fetchBoardBundle(Number(boardId))).unwrap();
+      showToast("success", "List deleted.");
     } catch (err) {
-      showToast("error", "Update failed.");
-    } finally { setBoardUpdating(false); }
-  };
-
-  const handleCloseBoard = async () => {
-    await boardApi.close(Number(boardId));
-    dispatch(fetchBoardBundle(Number(boardId)));
-  };
-
-  const handleDeleteBoard = async () => {
-    try {
-      await boardApi.remove(Number(boardId));
-      window.location.href = "/workspaces/" + activeBoard?.workspaceId;
-    } catch (err) {
-      showToast("error", "Failed to delete.");
+      showToast("error", "Failed to delete list.");
     }
   };
 
@@ -168,7 +173,6 @@ export default function BoardPage() {
 
   const handleDragEnd = async (result) => {
     const { destination, source, type, draggableId } = result;
-    console.log("Drag result:", result);
     if (!destination) return;
     if (destination.droppableId === source.droppableId && destination.index === source.index) return;
 
@@ -217,15 +221,6 @@ export default function BoardPage() {
       const match = users.find((u) => u.email?.toLowerCase() === memberDraft.email.trim().toLowerCase());
       if (!match) throw new Error("User not found.");
       await boardApi.addMember(Number(boardId), { userId: Number(match.userId), role: memberDraft.role });
-      await notificationApi.send({
-        recipientId: Number(match.userId),
-        actorId: Number(user.userId),
-        type: "ASSIGNMENT",
-        title: `Board access: ${activeBoard?.name || "Board"}`,
-        message: `${user.fullName || user.email} added you as ${memberDraft.role}.`,
-        relatedId: Number(boardId),
-        relatedType: "BOARD",
-      });
       setMemberDraft({ email: "", role: "MEMBER" });
       showToast("success", `${match.fullName || match.email} added.`);
       setBoardMembers(await boardApi.members(Number(boardId)));
@@ -238,7 +233,6 @@ export default function BoardPage() {
     const next = member.role === "MEMBER" ? "OBSERVER" : member.role === "OBSERVER" ? "ADMIN" : "MEMBER";
     await boardApi.updateMemberRole(Number(boardId), member.userId, next);
     setBoardMembers(await boardApi.members(Number(boardId)));
-    dispatch(fetchBoardBundle(Number(boardId)));
   };
 
   const removeBoardMember = async (member) => {
@@ -246,361 +240,264 @@ export default function BoardPage() {
     setBoardMembers(await boardApi.members(Number(boardId)));
   };
 
-  const restoreCard = async (cardId) => {
-    await cardApi.unarchive(cardId);
-    await dispatch(fetchBoardBundle(Number(boardId))).unwrap();
-    setArchivedCards(await cardApi.archivedByBoard(Number(boardId)));
-  };
-
-  const progressPercent = totalCards > 0 ? Math.round((completedCards / totalCards) * 100) : 0;
-
   return (
     <AppShell>
-      {/* Toast Notification */}
-      {toast && (
-        <div className="fixed top-24 right-10 z-[100] animate-in fade-in slide-in-from-right-4 duration-300">
-          <Badge variant={toast.type === "error" ? "destructive" : "default"} className="px-4 py-2 text-sm shadow-lg gap-2">
-            {toast.type === "success" && <CheckSquare size={14} />}
-            {toast.type === "error" && <X size={14} />}
-            {toast.msg}
-          </Badge>
-        </div>
-      )}
+      <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden">
 
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-3">
-             <h1 className="text-3xl font-bold tracking-tight text-foreground">{activeBoard?.name || "Board"}</h1>
-             {isBoardAdmin && (
-               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => setShowBoardEdit(true)}>
-                 <Edit2 size={16} />
-               </Button>
-             )}
-          </div>
-          <p className="text-sm text-muted-foreground">{activeBoard?.description || "Visual workflow management."}</p>
-        </div>
-        <div className="flex items-center gap-2">
-           <Button variant="outline" size="sm" asChild>
-             <Link to={`/workspaces/${activeBoard?.workspaceId}`}><ArrowLeft className="mr-2 h-4 w-4" /> Workspace</Link>
-           </Button>
-           {isBoardAdmin && (
-             <Button size="sm" variant="outline" onClick={() => setShowBoardEdit(true)} className="border-primary/20 hover:bg-primary/5 text-primary">
-               <Settings2 size={16} className="mr-2 h-4 w-4" /> Settings
-             </Button>
-           )}
-        </div>
-      </div>
-
-      {/* Stats Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <Card className="bg-card/50 backdrop-blur-sm border-primary/10">
-          <CardHeader className="py-4 pb-2">
-            <CardTitle className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold flex items-center justify-between">
-              Progress
-              <Activity className="h-3.5 w-3.5 text-primary" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-end justify-between mb-2">
-              <span className="text-2xl font-bold">{progressPercent}%</span>
-              <span className="text-xs text-muted-foreground">{completedCards}/{totalCards} tasks</span>
+        <div className="flex-1 p-4 lg:p-6 lg:pt-0 overflow-hidden flex flex-col">
+          {isObserver && (
+            <div className="flex items-center gap-2 p-2 px-4 rounded-xl bg-muted/30 border border-border/50 text-[10px] text-muted-foreground mb-4 backdrop-blur-md">
+              <Eye size={12} />
+              <span>Read-only access enabled.</span>
             </div>
-            <Progress value={progressPercent} className="h-1.5" />
-          </CardContent>
-        </Card>
+          )}
 
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-          <CardHeader className="py-4 pb-2">
-            <CardTitle className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold flex items-center justify-between">
-              Visibility
-              <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold uppercase tracking-tighter">{activeBoard?.visibility || "PRIVATE"}</div>
-            <p className="text-xs text-muted-foreground mt-1">Visible to {activeBoard?.visibility === 'PUBLIC' ? 'Everyone' : 'Team Members'}</p>
-          </CardContent>
-        </Card>
-
-        <Card className={`bg-card/50 backdrop-blur-sm ${overdueCards > 0 ? 'border-destructive/30 ring-1 ring-destructive/10' : 'border-border/50'}`}>
-          <CardHeader className="py-4 pb-2">
-            <CardTitle className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold flex items-center justify-between">
-              Overdue
-              <Clock className={`h-3.5 w-3.5 ${overdueCards > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${overdueCards > 0 ? 'text-destructive' : ''}`}>{overdueCards}</div>
-            <p className="text-xs text-muted-foreground mt-1">Critical tasks past due date</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-          <CardHeader className="py-4 pb-2">
-            <CardTitle className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold flex items-center justify-between">
-              Team
-              <Users className="h-3.5 w-3.5 text-muted-foreground" />
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-2">
-              <div className="flex -space-x-2">
-                {boardMembers.slice(0, 3).map((m, i) => (
-                  <Avatar key={i} className="h-7 w-7 border-2 border-background">
-                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${m.userId}`} />
-                    <AvatarFallback>U</AvatarFallback>
-                  </Avatar>
-                ))}
-                {boardMembers.length > 3 && (
-                  <div className="h-7 w-7 rounded-full bg-muted border-2 border-background flex items-center justify-center text-[10px] font-bold">
-                    +{boardMembers.length - 3}
-                  </div>
-                )}
-              </div>
-              <span className="text-sm font-medium ml-1">{boardMembers.length} Members</span>
+          {status === "loading" && !activeBoard ? (
+            <div className="flex flex-col items-center justify-center flex-1 gap-4 text-muted-foreground">
+              <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-xs font-black uppercase tracking-widest animate-pulse">Synchronizing Stage...</p>
             </div>
-            <p className="text-xs text-muted-foreground mt-2 font-medium underline cursor-pointer" onClick={() => setActiveTab("members")}>Manage Access</p>
-          </CardContent>
-        </Card>
-      </div>
+          ) : (
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col overflow-hidden">
+              <TabsContent value="board" className="flex-1 outline-none mt-0 overflow-hidden">
+                <BoardCanvas
+                  board={activeBoard}
+                  members={boardMembers}
+                  lists={lists}
+                  cardsByListId={cardsByListId}
+                  cardsById={cardsById}
+                  onDragEnd={handleDragEnd}
+                  onCreateList={handleCreateList}
+                  onCreateCard={handleCreateCard}
+                  onRenameList={handleRenameList}
+                  onDeleteList={handleDeleteList}
+                  onMoveList={handleMoveList}
+                  otherBoards={workspaceBoards.filter(b => b.boardId !== Number(boardId))}
+                  saving={status === "saving"}
+                  readOnly={!canEdit}
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  isBoardAdmin={isBoardAdmin}
+                  archivedCount={archivedCards.length}
+                />
+              </TabsContent>
 
-      {isObserver && (
-        <div className="flex items-center gap-2 p-3 px-4 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground mb-6">
-          <Eye size={14} />
-          <span>You have <strong>read-only</strong> access as an observer. You can view tasks but cannot modify the board.</span>
-        </div>
-      )}
+              <TabsContent value="members" className="outline-none mt-0 overflow-y-auto custom-scrollbar">
+                <div className="max-w-5xl mx-auto py-8">
+                  <Card className="bg-card/30 backdrop-blur-md border-border/30 overflow-hidden rounded-[2rem] shadow-2xl">
+                    <CardHeader className="pb-8 border-b border-border/20">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1.5">
+                          <CardTitle className="text-2xl font-black uppercase tracking-widest flex items-center gap-3">
+                            <Users className="text-primary" size={24} />
+                            Stage Collaborators
+                          </CardTitle>
+                          <CardDescription className="text-xs font-medium tracking-wide">Manage access and roles for this board</CardDescription>
+                        </div>
+                        {isBoardAdmin && (
+                          <form onSubmit={inviteBoardMember} className="flex gap-3">
+                            <div className="relative">
+                              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                              <Input
+                                placeholder="Invite by email..."
+                                className="pl-10 w-64 h-11 bg-background/50 border-border/30 rounded-xl text-xs"
+                                value={memberDraft.email}
+                                onChange={e => setMemberDraft(prev => ({ ...prev, email: e.target.value }))}
+                              />
+                            </div>
+                            
+                            <select 
+                              value={memberDraft.role} 
+                              onChange={e => setMemberDraft(prev => ({ ...prev, role: e.target.value }))}
+                              className="w-32 h-11 bg-background/50 border border-border/30 rounded-xl text-[10px] font-black uppercase tracking-widest px-3 outline-none focus:ring-2 ring-primary/20 appearance-none cursor-pointer"
+                            >
+                              <option value="ADMIN">Admin</option>
+                              <option value="MEMBER">Member</option>
+                              <option value="OBSERVER">Observer</option>
+                            </select>
 
-      {status === "loading" ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
-          <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm font-medium animate-pulse">Initializing Board Workspace...</p>
-        </div>
-      ) : (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="bg-muted/50 p-1 h-12 mb-8">
-            <TabsTrigger value="board" className="gap-2 px-6"><Grid3x3 size={14} /> Board</TabsTrigger>
-            <TabsTrigger value="members" className="gap-2 px-6"><Users size={14} /> Members</TabsTrigger>
-            {isBoardAdmin && archivedCards.length > 0 && (
-              <TabsTrigger value="archived" className="gap-2 px-6"><ArchiveRestore size={14} /> Archived</TabsTrigger>
-            )}
-          </TabsList>
-
-          <TabsContent value="board" className="outline-none">
-            <BoardCanvas
-              board={activeBoard}
-              members={boardMembers}
-              lists={lists}
-              cardsByListId={cardsByListId}
-              cardsById={cardsById}
-              onDragEnd={handleDragEnd}
-              onCreateList={handleCreateList}
-              onCreateCard={handleCreateCard}
-              onRenameList={handleRenameList}
-              onMoveList={handleMoveList}
-              otherBoards={workspaceBoards.filter(b => b.boardId !== Number(boardId))}
-              onOpenCard={setSelectedCard}
-              saving={status === "saving"}
-              readOnly={!canEdit}
-            />
-          </TabsContent>
-
-          <TabsContent value="members" className="outline-none">
-            <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-8 items-start">
-              {isBoardAdmin && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <UserPlus className="h-4 w-4 text-primary" />
-                      Add Board Member
-                    </CardTitle>
-                    <CardDescription>Grant specific access to this project board.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <form onSubmit={inviteBoardMember} className="space-y-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Email Address</Label>
-                        <Input 
-                          type="email" 
-                          required 
-                          placeholder="collaborator@email.com" 
-                          value={memberDraft.email} 
-                          onChange={(e) => setMemberDraft(d => ({ ...d, email: e.target.value }))}
-                        />
+                            <Button type="submit" className="h-11 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20">
+                              Invite
+                            </Button>
+                          </form>
+                        )}
                       </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Role</Label>
-                        <select 
-                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                          value={memberDraft.role} 
-                          onChange={(e) => setMemberDraft(d => ({ ...d, role: e.target.value }))}
-                        >
-                          <option value="MEMBER">Member (Edit)</option>
-                          <option value="ADMIN">Admin (Full Control)</option>
-                          <option value="OBSERVER">Observer (View Only)</option>
-                        </select>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="divide-y divide-border/10">
+                        {boardMembers.map((m) => (
+                          <div key={m.userId} className="flex items-center justify-between p-6 px-8 hover:bg-muted/10 transition-colors">
+                            <div className="flex items-center gap-5">
+                              <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20 shadow-inner">
+                                <span className="text-lg font-black text-primary">{(m.fullName || m.email || "U").charAt(0).toUpperCase()}</span>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-sm font-black text-foreground">{m.fullName || m.email}</p>
+                                <div className="flex items-center gap-3">
+                                  <Badge variant="secondary" className="text-[9px] h-4 px-2 bg-muted/40 text-muted-foreground border-border/40 font-black uppercase tracking-widest">
+                                    {m.role}
+                                  </Badge>
+                                  {Number(m.userId) === Number(activeBoard?.createdById) && <Badge className="text-[9px] h-4 px-2 bg-primary/10 text-primary border-primary/20 font-black uppercase tracking-widest">Creator</Badge>}
+                                </div>
+                              </div>
+                            </div>
+                            {isBoardAdmin && Number(m.userId) !== Number(activeBoard?.createdById) && (
+                              <div className="flex gap-3">
+                                <Button variant="ghost" className="h-10 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest border border-border/20 hover:bg-background" onClick={() => updateBoardRole(m)}>Change Role</Button>
+                                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive border border-destructive/10" onClick={() => removeBoardMember(m)}>
+                                  <UserX size={16} />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                      <Button type="submit" className="w-full gap-2">
-                        <Send size={14} /> Add to Board
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Board Personnel</CardTitle>
-                  <CardDescription>Users with access to this board.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {boardMembers.map((m) => (
-                      <div key={m.userId} className="flex items-center justify-between p-3 rounded-xl border border-border/50 bg-accent/10">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${m.userId}`} />
-                            <AvatarFallback>U</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm font-semibold">User #{m.userId}</p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <Badge variant="outline" className="text-[10px] font-bold py-0 h-4 uppercase tracking-wider">
-                                {m.role}
-                              </Badge>
-                              {Number(m.userId) === Number(activeBoard?.createdById) && <Badge className="text-[8px] h-3.5 px-1 bg-primary/10 text-primary border-primary/20">Creator</Badge>}
+              <TabsContent value="archived" className="outline-none mt-0 overflow-y-auto custom-scrollbar">
+                <div className="max-w-5xl mx-auto py-8">
+                  <Card className="bg-card/30 backdrop-blur-md border-border/30 overflow-hidden rounded-[2rem] shadow-2xl">
+                    <CardHeader className="pb-8 border-b border-border/20">
+                      <div className="space-y-1.5">
+                        <CardTitle className="text-2xl font-black uppercase tracking-widest flex items-center gap-3">
+                          <ArchiveRestore className="text-primary" size={24} />
+                          Archived Repository
+                        </CardTitle>
+                        <CardDescription className="text-xs font-medium tracking-wide">View and restore operationally suspended cards</CardDescription>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      {archivedCards.length === 0 ? (
+                        <div className="p-20 text-center space-y-4">
+                          <div className="w-16 h-16 rounded-2xl bg-muted/20 flex items-center justify-center mx-auto border border-border/10">
+                             <ArchiveRestore size={32} className="text-muted-foreground/30" />
+                          </div>
+                          <p className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground/40">Repository Empty</p>
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-border/10">
+                          {archivedCards.map((card) => (
+                            <div key={card.cardId} className="flex items-center justify-between p-6 px-8 hover:bg-muted/10 transition-colors group">
+                              <div className="flex items-center gap-6">
+                                <div className="h-12 w-12 rounded-2xl bg-primary/5 flex items-center justify-center border border-primary/10">
+                                  <Grid3x3 size={20} className="text-primary/40" />
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-sm font-black text-foreground group-hover:text-primary transition-colors">{card.title}</p>
+                                  <p className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-widest">
+                                    Archived on {new Date(card.updatedAt).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              </div>
+                              <Button 
+                                onClick={() => handleRestoreCard(card.cardId)}
+                                className="h-10 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20"
+                              >
+                                Restore Card
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="settings" className="outline-none mt-0 overflow-y-auto custom-scrollbar">
+                <div className="max-w-4xl mx-auto py-8 space-y-8">
+                  <Card className="bg-card/30 backdrop-blur-md border-border/30 overflow-hidden rounded-[2rem] shadow-2xl">
+                    <CardHeader className="pb-8 border-b border-border/20">
+                      <div className="space-y-1.5">
+                        <CardTitle className="text-2xl font-black uppercase tracking-widest flex items-center gap-3">
+                          <Settings className="text-primary" size={24} />
+                          Stage Configuration
+                        </CardTitle>
+                        <CardDescription className="text-xs font-medium tracking-wide">Adjust the core operational parameters of this initiative</CardDescription>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-8">
+                      <form onSubmit={handleUpdateBoard} className="space-y-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          <div className="space-y-6">
+                            <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-70">Designation</Label>
+                              <Input 
+                                value={boardEditDraft?.name || ""} 
+                                onChange={e => setBoardEditDraft(d => ({ ...d, name: e.target.value }))}
+                                className="h-12 bg-background/50 border-border/30 rounded-xl text-sm font-bold"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-70">Mission Statement</Label>
+                              <textarea 
+                                value={boardEditDraft?.description || ""} 
+                                onChange={e => setBoardEditDraft(d => ({ ...d, description: e.target.value }))}
+                                className="w-full min-h-[120px] bg-background/50 border border-border/30 rounded-xl p-4 text-sm font-medium resize-none outline-none focus:ring-2 ring-primary/20 transition-all"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-6">
+                            <div className="space-y-2">
+                              <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-70">Visibility Level</Label>
+                              <div className="flex gap-4">
+                                {["PRIVATE", "PUBLIC"].map(v => (
+                                  <button
+                                    key={v}
+                                    type="button"
+                                    onClick={() => setBoardEditDraft(d => ({ ...d, visibility: v }))}
+                                    className={`flex-1 h-12 rounded-xl border flex items-center justify-center gap-3 transition-all ${boardEditDraft?.visibility === v ? 'border-primary bg-primary/10 text-primary shadow-lg shadow-primary/10' : 'border-border/30 bg-background/30 hover:border-border'}`}
+                                  >
+                                    {v === "PRIVATE" ? <Lock size={14} /> : <Globe size={14} />}
+                                    <span className="text-[10px] font-black uppercase tracking-widest">{v}</span>
+                                  </button>
+                                ))}
+                              </div>
                             </div>
                           </div>
                         </div>
-                        {isBoardAdmin && Number(m.userId) !== Number(activeBoard?.createdById) && (
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => updateBoardRole(m)}>Change Role</Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => removeBoardMember(m)}>
-                              <UserX size={14} />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
 
-          <TabsContent value="archived" className="outline-none">
-            <Card>
-               <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ArchiveRestore className="h-5 w-5 text-amber-500" />
-                    Archived Records
-                  </CardTitle>
-                  <CardDescription>Recently removed items that can be restored to the active board.</CardDescription>
-               </CardHeader>
-               <CardContent>
-                 <div className="space-y-3">
-                   {archivedCards.map((c) => (
-                     <div key={c.cardId} className="flex items-center justify-between p-4 rounded-xl border bg-accent/5">
-                        <div className="space-y-1">
-                          <p className="text-sm font-bold">{c.title}</p>
-                          <div className="flex gap-2 items-center">
-                            <Badge variant="outline" className="text-[10px]">{c.priority}</Badge>
-                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">{c.status}</span>
-                          </div>
+                        <div className="pt-6 border-t border-border/20 flex justify-end">
+                          <Button type="submit" disabled={boardUpdating} className="h-12 px-10 rounded-xl font-black uppercase tracking-widest text-[11px] shadow-xl shadow-primary/20">
+                            {boardUpdating ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                            Authorize Changes
+                          </Button>
                         </div>
-                        <Button variant="outline" size="sm" className="gap-2" onClick={() => restoreCard(c.cardId)}>
-                           <ArchiveRestore size={14} /> Restore Item
-                        </Button>
-                     </div>
-                   ))}
-                   {archivedCards.length === 0 && (
-                     <div className="text-center py-10 text-muted-foreground italic text-sm">
-                       No archived items found.
-                     </div>
-                   )}
-                 </div>
-               </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      )}
+                      </form>
+                    </CardContent>
+                  </Card>
 
-      {/* Edit Board Dialog */}
-      <Dialog open={showBoardEdit} onOpenChange={setShowBoardEdit}>
-        <DialogContent className="sm:max-w-[480px]">
-          <DialogHeader>
-            <DialogTitle>Board Configurations</DialogTitle>
-            <DialogDescription>Modify global settings and visual identity for this board.</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleUpdateBoard} className="space-y-5 pt-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-board-name">Board Name *</Label>
-              <Input id="edit-board-name" required value={boardEditDraft.name} onChange={(e) => setBoardEditDraft(d => ({ ...d, name: e.target.value }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-board-desc">Description</Label>
-              <textarea 
-                id="edit-board-desc" 
-                className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                value={boardEditDraft.description} 
-                onChange={(e) => setBoardEditDraft(d => ({ ...d, description: e.target.value }))} 
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-               <div className="space-y-1.5">
-                 <Label>Visual Theme</Label>
-                 <select 
-                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-                   value={boardEditDraft.background} 
-                   onChange={(e) => setBoardEditDraft(d => ({ ...d, background: e.target.value }))}
-                 >
-                   {["Ocean", "Sunset", "Midnight", "Forest", "Aurora"].map(b => <option key={b} value={b}>{b}</option>)}
-                 </select>
-               </div>
-               <div className="space-y-1.5">
-                 <Label>Visibility</Label>
-                 <select 
-                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
-                   value={boardEditDraft.visibility} 
-                   onChange={(e) => setBoardEditDraft(d => ({ ...d, visibility: e.target.value }))}
-                 >
-                   {["PRIVATE", "TEAM", "PUBLIC"].map(v => <option key={v} value={v}>{v}</option>)}
-                 </select>
-               </div>
-            </div>
+                  <Card className="border-destructive/20 bg-destructive/5 overflow-hidden rounded-[2rem]">
+                    <div className="p-8 flex items-center justify-between gap-8">
+                      <div className="space-y-1.5">
+                        <h4 className="text-lg font-black uppercase tracking-widest text-destructive flex items-center gap-2">
+                          <Trash2 size={20} />
+                          Fatal Action
+                        </h4>
+                        <p className="text-xs font-medium text-destructive/70">Permanently terminate this board and all its operational data. This cannot be reversed.</p>
+                      </div>
+                      <Button 
+                        variant="destructive" 
+                        onClick={handleDeleteBoard}
+                        disabled={boardDeleting}
+                        className="h-12 px-8 rounded-xl font-black uppercase tracking-widest text-[11px] shadow-xl shadow-destructive/20"
+                      >
+                        {boardDeleting ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                        Terminate Board
+                      </Button>
+                    </div>
+                  </Card>
+                </div>
+              </TabsContent>
+            </Tabs>
+          )}
+        </div>
+      </div>
 
-            <div className="p-4 rounded-xl border border-destructive/20 bg-destructive/5 space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-destructive/80 flex items-center gap-2">
-                <Trash2 size={12} /> Danger Zone
-              </h4>
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" size="sm" className="flex-1 text-xs border-destructive/20 hover:bg-destructive/10 text-destructive" onClick={handleCloseBoard}>Archive Board</Button>
-                <Button type="button" variant="outline" size="sm" className="flex-1 text-xs bg-destructive text-white hover:bg-destructive/90 border-transparent" onClick={handleDeleteBoard}>Delete Forever</Button>
-              </div>
-            </div>
-
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button type="button" variant="ghost" onClick={() => setShowBoardEdit(false)}>Cancel</Button>
-              <Button type="submit" disabled={boardUpdating}>
-                {boardUpdating ? <LoaderCircle size={14} className="mr-2 animate-spin" /> : <CheckSquare size={14} className="mr-2" />}
-                Save Configuration
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <CardDetailsModal
-        boardId={Number(boardId)}
-        card={selectedCard}
-        boardMembers={boardMembers}
-        currentUser={user}
-        open={Boolean(selectedCard)}
-        onClose={() => setSelectedCard(null)}
-        onRefresh={() => dispatch(fetchBoardBundle(Number(boardId))).unwrap()}
-        readOnly={!canEdit}
-      />
     </AppShell>
   );
 }

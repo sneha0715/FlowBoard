@@ -59,7 +59,8 @@ export const columnApi = {
   archive: (listId) => unwrap(http.post(`/columns/${listId}/archive`)),
   unarchive: (listId) => unwrap(http.post(`/columns/${listId}/unarchive`)),
   move: (listId, newBoardId) => unwrap(http.put(`/columns/${listId}/move/${newBoardId}`)),
-  archivedByBoard: (boardId) => unwrap(http.get(`/columns/board/${boardId}/archived`))
+  archivedByBoard: (boardId) => unwrap(http.get(`/columns/board/${boardId}/archived`)),
+  remove: (listId) => unwrap(http.delete(`/columns/${listId}`))
 };
 
 export const cardApi = {

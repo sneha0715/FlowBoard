@@ -14,4 +14,21 @@ http.interceptors.request.use((config) => {
   return config;
 });
 
+http.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Clear session on 401
+      localStorage.removeItem("flowboard.token");
+      localStorage.removeItem("flowboard.user");
+      
+      // Optional: Force reload to trigger ProtectedRoute logic
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default http;

@@ -5,6 +5,7 @@ import WorkspaceDetailsPage from "./pages/WorkspaceDetailsPage";
 import BoardPage from "./pages/BoardPage";
 import AdminPage from "./pages/AdminPage";
 import ProfilePage from "./pages/ProfilePage";
+import RegistryDetailsPage from "./pages/RegistryDetailsPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 export default function App() {
@@ -32,6 +33,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <BoardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/boards/:boardId/registry/:cardId"
+        element={
+          <ProtectedRoute>
+            <RegistryDetailsPage />
           </ProtectedRoute>
         }
       />

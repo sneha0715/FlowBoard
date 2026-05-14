@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -20,7 +21,16 @@ import {
   X,
   MoreVertical,
   Lock,
-  Globe
+  Globe,
+  Settings,
+  Grid,
+  ChevronDown,
+  Layers,
+  LayoutGrid,
+  List as ListIcon,
+  Calendar,
+  Search as SearchIcon,
+  Pencil
 } from "lucide-react";
 
 import AppShell from "../components/layout/AppShell";
@@ -46,20 +56,19 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const VISIBILITY_OPTIONS = ["PRIVATE", "TEAM", "PUBLIC"];
-const BACKGROUND_OPTIONS = ["Ocean", "Sunset", "Midnight", "Forest", "Aurora"];
-const BG_GRADIENTS = {
-  Ocean: "linear-gradient(135deg, #0d3b66, #1565c0)",
-  Sunset: "linear-gradient(135deg, #c62828, #e65100)",
-  Midnight: "linear-gradient(135deg, #1a237e, #0d1117)",
-  Forest: "linear-gradient(135deg, #1b5e20, #2e7d32)",
-  Aurora: "linear-gradient(135deg, #4a148c, #006064)",
-};
 const DEFAULT_LISTS = [
   { name: "To Do", color: "#0079BF" },
   { name: "In Progress", color: "#f59e0b" },
@@ -71,20 +80,26 @@ export default function WorkspaceDetailsPage() {
   const { workspaceId } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const [searchParams] = useSearchParams();
   const user = useSelector((s) => s.auth.user);
-  const { activeWorkspace: workspace, members, boards, userRole, status, error } = useSelector((s) => s.workspace);
+  const { activeWorkspace: workspace, members, boards, userRole, status } = useSelector((s) => s.workspace);
 
-  const [toast, setToast] = useState(null);
+  const activeTab = searchParams.get("tab") || "boards";
+
   const [inviteDraft, setInviteDraft] = useState({ email: "", role: "MEMBER" });
   const [inviteStatus, setInviteStatus] = useState("idle");
   const [showBoardForm, setShowBoardForm] = useState(false);
-  const [boardDraft, setBoardDraft] = useState({ name: "", description: "", background: "Ocean", visibility: "PRIVATE" });
+  const [boardDraft, setBoardDraft] = useState({ name: "", description: "", visibility: "PRIVATE" });
   const [boardSubmitting, setBoardSubmitting] = useState(false);
   const [showWsEdit, setShowWsEdit] = useState(false);
   const [wsEditDraft, setWsEditDraft] = useState({ name: "", description: "", visibility: "PRIVATE" });
   const [wsUpdating, setWsUpdating] = useState(false);
   const [memberProfiles, setMemberProfiles] = useState({});
-  const [loadingProfiles, setLoadingProfiles] = useState(false);
+  const [boardViewMode, setBoardViewMode] = useState("list");
+  const [boardSearchTerm, setBoardSearchTerm] = useState("");
+  const [showBoardEdit, setShowBoardEdit] = useState(false);
+  const [boardEditDraft, setBoardEditDraft] = useState(null);
+  const [boardUpdating, setBoardUpdating] = useState(false);
 
   const load = () => dispatch(fetchWorkspaceBundle(workspaceId));
 
@@ -105,14 +120,12 @@ export default function WorkspaceDetailsPage() {
   useEffect(() => {
     const fetchProfiles = async () => {
       if (members.length === 0) return;
-      setLoadingProfiles(true);
       const profiles = { ...memberProfiles };
       try {
         const results = await authApi.searchUsers(""); 
         results.forEach(u => { profiles[u.userId] = u; });
         setMemberProfiles(profiles);
       } catch (err) { console.error("Failed to fetch member profiles", err); }
-      finally { setLoadingProfiles(false); }
     };
     fetchProfiles();
   }, [members]);
@@ -123,55 +136,31 @@ export default function WorkspaceDetailsPage() {
   const isObserver = userRole === "OBSERVER" && user?.role !== "PLATFORM_ADMIN";
   const isPending = members.find(m => Number(m.userId) === Number(user?.userId))?.status === "PENDING";
 
-  const showToast = (type, msg) => {
-    setToast({ type, msg });
-    setTimeout(() => setToast(null), 4000);
-  };
+  // Auto-open edit modal if query param is present
+  useEffect(() => {
+    if (searchParams.get("edit") === "true" && isAdmin) {
+      setShowWsEdit(true);
+    }
+  }, [searchParams, isAdmin]);
 
   const sendInvite = async (e) => {
     e.preventDefault();
-    setInviteStatus("sending");
+    if (!inviteDraft.email) return;
+    setInviteStatus("loading");
     try {
-      const users = await authApi.searchUsers(inviteDraft.email);
-      let match = users.find((u) => u.email?.toLowerCase() === inviteDraft.email.trim().toLowerCase());
-      
-      if (!match) {
-        showToast("error", "User not found. They must register first.");
-        setInviteStatus("idle");
-        return;
-      }
-      
-      if (memberIds.has(Number(match.userId))) {
-        showToast("info", "User is already a member.");
-        setInviteStatus("idle");
-        return;
-      }
-
-      await workspaceApi.addMember(workspaceId, { userId: Number(match.userId), role: inviteDraft.role });
-      await notificationApi.send({
-        recipientId: Number(match.userId),
-        actorId: Number(user.userId),
-        type: "ASSIGNMENT",
-        title: `Workspace invite: ${workspace?.name || "Workspace"}`,
-        message: `${user.fullName || user.email} invited you to join ${workspace?.name}.`,
-        relatedId: Number(workspaceId),
-        relatedType: "WORKSPACE",
-      });
-
+      await workspaceApi.invite(workspaceId, inviteDraft);
+      toast.success("Invitation dispatched successfully.");
       setInviteDraft({ email: "", role: "MEMBER" });
-      setInviteStatus("idle");
-      showToast("success", `${match.fullName || match.email} invited!`);
       load();
     } catch (err) {
-      setInviteStatus("failed");
-      showToast("error", err?.message || "Failed to invite.");
-    }
+      toast.error("Failed to send invitation.");
+    } finally { setInviteStatus("idle"); }
   };
 
   const removeMember = async (memberId) => {
     try {
       await workspaceApi.removeMember(workspaceId, memberId);
-      showToast("success", "Member removed.");
+      toast.success(`Invite accepted for ${workspace?.name}`);
       load();
     } catch (err) {
       showToast("error", "Failed to remove member.");
@@ -193,7 +182,7 @@ export default function WorkspaceDetailsPage() {
       showToast("success", "Welcome!");
       load();
     } catch (err) {
-      showToast("error", "Failed to accept.");
+      toast.error("Deployment failed.");
     }
   };
 
@@ -212,20 +201,20 @@ export default function WorkspaceDetailsPage() {
     try {
       await workspaceApi.update(workspaceId, wsEditDraft);
       setShowWsEdit(false);
-      showToast("success", "Updated!");
+      toast.success("Updated!");
       load();
     } catch (err) {
-      showToast("error", "Failed to update.");
+      toast.error("Failed to update.");
     } finally { setWsUpdating(false); }
   };
 
   const updateMemberRole = async (userId, nextRole) => {
     try {
       await workspaceApi.updateRole(workspaceId, userId, nextRole);
-      showToast("success", "Role updated.");
+      toast.success("Role updated.");
       load();
     } catch (err) {
-      showToast("error", "Failed to update role.");
+      toast.error("Failed to update role.");
     }
   };
 
@@ -239,7 +228,7 @@ export default function WorkspaceDetailsPage() {
       ));
       setBoardDraft({ name: "", description: "", background: "Ocean", visibility: "PRIVATE" });
       setShowBoardForm(false);
-      showToast("success", "Board created!");
+      toast.success("Board created!");
       load();
     } catch (err) {
       showToast("error", "Failed to create board.");
@@ -248,162 +237,279 @@ export default function WorkspaceDetailsPage() {
     }
   };
 
+  const handleBoardEdit = (board) => {
+    setBoardEditDraft({
+      boardId: board.boardId,
+      name: board.name,
+      description: board.description || "",
+      background: board.background || "Ocean",
+      visibility: board.visibility || "PRIVATE"
+    });
+    setShowBoardEdit(true);
+  };
+
+  const updateBoard = async (e) => {
+    e.preventDefault();
+    setBoardUpdating(true);
+    try {
+      await boardApi.update(boardEditDraft.boardId, boardEditDraft);
+      setShowBoardEdit(false);
+      toast.success("Board updated!");
+      load();
+    } catch (err) {
+      toast.error("Failed to update board.");
+    } finally {
+      setBoardUpdating(false);
+    }
+  };
+
+  const deleteBoard = async () => {
+    if (!window.confirm("Permanently delete this board? This action cannot be undone.")) return;
+    try {
+      await boardApi.remove(boardEditDraft.boardId);
+      setShowBoardEdit(false);
+      toast.success("Board deleted.");
+      load();
+    } catch (err) {
+      toast.error("Failed to delete board.");
+    }
+  };
+
+  if (status === "loading" && !workspace) {
+    return (
+      <AppShell>
+        <div className="flex flex-col items-center justify-center py-40 gap-4">
+          <LoaderCircle size={40} className="animate-spin text-primary opacity-20" />
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground animate-pulse">Initializing Sector...</p>
+        </div>
+      </AppShell>
+    );
+  }
   return (
     <AppShell>
-      {/* Toast Notification */}
-      {toast && (
-        <div className="fixed top-24 right-10 z-[100] animate-in fade-in slide-in-from-right-4 duration-300">
-          <Badge variant={toast.type === "error" ? "destructive" : "default"} className="px-4 py-2 text-sm shadow-lg gap-2">
-            {toast.type === "success" && <Check size={14} />}
-            {toast.type === "error" && <X size={14} />}
-            {toast.msg}
-          </Badge>
-        </div>
-      )}
+      <div className="max-w-[1400px] mx-auto">
 
-      {/* Header with Title and Breadcrumbs */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-3">
-             <h1 className="text-3xl font-bold tracking-tight text-foreground">{workspace?.name || "Workspace"}</h1>
-             {isAdmin && (
-               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => setShowWsEdit(true)}>
-                 <Edit2 size={16} />
-               </Button>
-             )}
-          </div>
-          <p className="text-sm text-muted-foreground">{workspace?.description || "Collaborative environment for your team."}</p>
-        </div>
-        <div className="flex items-center gap-2">
-           <Button variant="outline" size="sm" asChild>
-             <Link to="/"><ArrowLeft className="mr-2 h-4 w-4" /> All Workspaces</Link>
-           </Button>
-           {canEdit && (
-             <Button size="sm" onClick={() => setShowBoardForm(true)}>
-               <Plus className="mr-2 h-4 w-4" /> New Board
-             </Button>
-           )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8">
-        {/* Left Column: Boards */}
-        <div className="space-y-6">
-          {/* Status Banners */}
-          {isPending && (
-            <Card className="border-primary/50 bg-primary/5">
-              <CardContent className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-3">
-                  <Users className="text-primary h-5 w-5" />
-                  <div>
-                    <p className="text-sm font-semibold">You've been invited to join this team!</p>
-                    <p className="text-xs text-muted-foreground">Accept to start collaborating on boards.</p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={leaveWorkspace}>Decline</Button>
-                  <Button size="sm" onClick={acceptInvitation}>Accept & Join</Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {isObserver && !isPending && (
-            <div className="flex items-center gap-2 p-3 px-4 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground">
-              <Eye size={14} />
-              <span>You have <strong>read-only</strong> access as an observer.</span>
+        {isPending && (
+          <div className="mb-12 p-8 rounded-3xl bg-amber-500/10 border border-amber-500/20 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-amber-500/5">
+            <div className="flex items-center gap-5">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-500 border border-amber-500/20">
+                <Mail size={24} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black">Invitation Pending</h3>
+                <p className="text-sm font-medium text-amber-500/80">Authorize your access to start orchestrating workflows.</p>
+              </div>
             </div>
-          )}
-
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              <FolderKanban className="h-5 w-5 text-primary" />
-              Boards
-            </h2>
+            <div className="flex gap-3">
+              <Button variant="ghost" className="rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-amber-500/10 hover:text-amber-600" onClick={leaveWorkspace}>Decline</Button>
+              <Button className="rounded-xl px-8 font-black uppercase tracking-widest text-[10px] bg-amber-500 hover:bg-amber-600 text-white border-none" onClick={acceptInvitation}>Accept Access</Button>
+            </div>
           </div>
+        )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-            {boards.map((board) => (
-              <Link key={board.boardId} to={`/boards/${board.boardId}`}>
-                <Card className="h-40 relative overflow-hidden group hover:border-primary/50 transition-all cursor-pointer">
-                  <div 
-                    className="absolute inset-0 opacity-80 group-hover:opacity-100 transition-opacity" 
-                    style={{ background: BG_GRADIENTS[board.background] || BG_GRADIENTS.Ocean }} 
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                  <CardHeader className="relative p-4 pb-0">
-                    <div className="flex justify-between items-start">
-                      <Badge variant="outline" className="bg-black/20 text-white border-white/20 backdrop-blur-sm text-[10px]">
-                        {board.visibility}
-                      </Badge>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-white/70 hover:text-white hover:bg-white/10 rounded-full">
-                        <MoreVertical size={14} />
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="relative p-4 pt-8">
-                    <CardTitle className="text-lg text-white group-hover:translate-x-1 transition-transform">{board.name}</CardTitle>
-                    <p className="text-xs text-white/70 line-clamp-1 mt-1">{board.description}</p>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-            
-            {canEdit && (
-              <button 
-                onClick={() => setShowBoardForm(true)}
-                className="h-40 flex flex-col items-center justify-center border-2 border-dashed border-border rounded-xl bg-card/50 hover:bg-card hover:border-primary/50 group transition-all"
-              >
-                <div className="h-10 w-10 rounded-full border border-dashed border-muted-foreground flex items-center justify-center text-muted-foreground group-hover:border-primary group-hover:text-primary transition-all">
-                  <Plus size={20} />
+        {/* Tab Content Rendering */}
+        {activeTab === "boards" && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 gap-6">
+              <div>
+                <h2 className="text-3xl font-black tracking-tighter flex items-center gap-4">
+                   <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20 text-primary shadow-[0_0_15px_rgba(20,184,166,0.1)]">
+                     <FolderKanban className="h-6 w-6" />
+                   </div>
+                   Active Boards
+                </h2>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 p-1.5 rounded-[1.25rem] bg-card/30 backdrop-blur-xl border border-border/40 shadow-2xl ring-1 ring-white/5">
+                  <div className="relative group">
+                    <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary transition-all group-focus-within:scale-110" />
+                    <Input 
+                      placeholder="Search boards..." 
+                      className="pl-9 w-[220px] h-9 bg-background/40 border-none rounded-xl focus:ring-2 focus:ring-primary/20 transition-all text-xs font-bold placeholder:text-muted-foreground/40"
+                      value={boardSearchTerm}
+                      onChange={(e) => setBoardSearchTerm(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="w-px h-5 bg-border/50" />
+
+                  <Tabs value={boardViewMode} onValueChange={setBoardViewMode} className="bg-background/20 p-0.5 rounded-xl">
+                    <TabsList className="bg-transparent h-9 gap-1">
+                      <TabsTrigger value="list" className="rounded-lg px-4 text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"><ListIcon size={14} className="mr-2" /> List</TabsTrigger>
+                      <TabsTrigger value="grid" className="rounded-lg px-4 text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"><LayoutGrid size={14} className="mr-2" /> Grid</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
                 </div>
-                <span className="text-sm font-medium mt-3 text-muted-foreground group-hover:text-foreground">New Board</span>
-              </button>
+
+                {canEdit && (
+                  <Button onClick={() => setShowBoardForm(true)} className="h-12 px-6 rounded-2xl gap-3 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90 text-primary-foreground transition-all hover:scale-[1.05] active:scale-95">
+                    <Plus size={18} strokeWidth={3} /> New Board
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {boardViewMode === "list" ? (
+              <div className="rounded-[2rem] border border-border/50 bg-card/30 backdrop-blur-sm overflow-hidden shadow-2xl">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow className="hover:bg-transparent border-border/50">
+                      <TableHead className="w-[400px] font-black uppercase tracking-widest text-[10px] h-12 px-8">Board Name</TableHead>
+                      <TableHead className="font-black uppercase tracking-widest text-[10px] h-12">Visibility</TableHead>
+                      <TableHead className="font-black uppercase tracking-widest text-[10px] h-12">Last Active</TableHead>
+                      <TableHead className="text-right font-black uppercase tracking-widest text-[10px] h-12 px-6">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {boards.filter(b => b.name.toLowerCase().includes(boardSearchTerm.toLowerCase())).map((board) => (
+                      <TableRow key={board.boardId} className="group hover:bg-primary/5 transition-colors border-border/50 h-16">
+                        <TableCell className="px-6 py-3">
+                          <div 
+                            onClick={() => navigate(`/boards/${board.boardId}`)}
+                            className="flex items-center gap-3 cursor-pointer"
+                          >
+                            <div className="w-10 h-10 rounded-xl shadow-lg border border-white/10 group-hover:scale-110 transition-transform bg-primary/10 flex items-center justify-center text-primary/40">
+                              <Layers size={18} />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <div className="font-black text-md group-hover:text-primary transition-colors">{board.name}</div>
+                                {isAdmin && (
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleBoardEdit(board);
+                                    }}
+                                    className="p-1 rounded-md hover:bg-primary/10 hover:text-primary transition-all opacity-0 group-hover:opacity-100"
+                                  >
+                                    <Pencil size={12} className="text-muted-foreground/30" />
+                                  </button>
+                                )}
+                              </div>
+                              <div className="text-xs font-medium text-muted-foreground line-clamp-1">{board.description || "No description provided."}</div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {board.visibility === 'PRIVATE' ? <Lock size={14} className="text-muted-foreground" /> : <Globe size={14} className="text-primary" />}
+                            <span className="text-xs font-black uppercase tracking-tighter">{board.visibility}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Calendar size={14} />
+                            <span className="text-xs font-medium">Oct 21, 2026</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right px-8">
+                          <Button asChild variant="outline" size="sm" className="rounded-xl font-black uppercase tracking-widest text-[10px] group-hover:border-primary group-hover:text-primary transition-all">
+                            <Link to={`/boards/${board.boardId}`}>Open Board</Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {boards.filter(b => b.name.toLowerCase().includes(boardSearchTerm.toLowerCase())).map((board) => (
+                  <div 
+                    key={board.boardId} 
+                    onClick={() => navigate(`/boards/${board.boardId}`)}
+                    className="cursor-pointer"
+                  >
+                    <Card className="h-56 relative overflow-hidden group hover:border-primary/50 transition-all rounded-3xl border-border/50 shadow-xl shadow-black/5 hover:shadow-primary/5">
+                      <div className="absolute inset-0 opacity-90 group-hover:opacity-100 transition-opacity bg-muted/20 flex items-center justify-center">
+                        <Layers size={64} className="text-primary/5 group-hover:text-primary/10 transition-all duration-700" />
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                      <CardHeader className="relative p-6 pb-0">
+                        <div className="flex justify-between items-start">
+                          <Badge variant="outline" className="bg-black/30 text-white border-white/20 backdrop-blur-md text-[9px] font-black tracking-widest uppercase py-1 px-3">
+                            {board.visibility}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="relative p-6 pt-12">
+                        <div className="flex items-center gap-3">
+                          <CardTitle className="text-2xl text-white font-black group-hover:translate-x-2 transition-transform">{board.name}</CardTitle>
+                          {isAdmin && (
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleBoardEdit(board);
+                              }}
+                              className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all opacity-0 group-hover:opacity-100 backdrop-blur-md"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-sm text-white/70 line-clamp-2 mt-2 font-medium leading-relaxed">{board.description || "Visual workflow management board."}</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                ))}
+                
+                {canEdit && (
+                  <button 
+                    onClick={() => setShowBoardForm(true)}
+                    className="h-full min-h-[280px] flex flex-col items-center justify-center border-2 border-dashed border-border/20 rounded-[2.5rem] bg-transparent hover:bg-primary/5 hover:border-primary/30 group transition-all duration-500"
+                  >
+                    <div className="h-16 w-16 rounded-[1.25rem] bg-primary/5 border border-primary/10 flex items-center justify-center text-primary/40 group-hover:text-primary group-hover:bg-primary/10 group-hover:scale-110 group-hover:rotate-90 transition-all duration-500">
+                      <Plus size={32} strokeWidth={3} />
+                    </div>
+                    <div className="mt-6 text-center">
+                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 group-hover:text-primary transition-colors">Initialize Stage</h4>
+                      <p className="text-[9px] font-bold text-muted-foreground/30 mt-1 uppercase tracking-wider italic">Deploy new board</p>
+                    </div>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {boards.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-32 rounded-3xl bg-muted/5 border-2 border-dashed border-border/50">
+                <div className="w-20 h-20 rounded-3xl bg-muted/20 flex items-center justify-center text-muted-foreground mb-6">
+                  <FolderKanban size={40} />
+                </div>
+                <p className="text-lg font-black text-foreground/60">No boards discovered in this sector.</p>
+                <p className="text-sm font-medium text-muted-foreground mt-1">Start by creating your first collaborative workspace.</p>
+                {canEdit && <Button variant="link" className="mt-4 font-black uppercase tracking-widest text-xs text-primary" onClick={() => setShowBoardForm(true)}>Deploy First Board</Button>}
+              </div>
             )}
           </div>
+        )}
 
-          {boards.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-border rounded-xl">
-              <FolderKanban className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-sm text-muted-foreground">No boards found in this workspace.</p>
-              {canEdit && <Button variant="link" onClick={() => setShowBoardForm(true)}>Create your first board</Button>}
-            </div>
-          )}
-        </div>
-
-        {/* Right Column: Sidebar */}
-        <div className="space-y-6">
-          {/* Invite Member Card */}
-          {isAdmin && (
-            <Card className="overflow-hidden border-primary/20">
-              <CardHeader className="bg-primary/5 py-4">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <UserPlus className="h-4 w-4 text-primary" />
-                  Invite Member
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-6 space-y-4">
-                <form onSubmit={sendInvite} className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="invite-email" className="text-xs">User Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+        {activeTab === "members" && (
+          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-border/50 pb-8 gap-6">
+              <div>
+                <h2 className="text-3xl font-black tracking-tighter flex items-center gap-4">
+                   <Users className="h-8 w-8 text-primary" />
+                   Personnel Management
+                </h2>
+                <p className="text-sm font-medium text-muted-foreground mt-1">Manage collaborators and authorization levels for this workspace.</p>
+              </div>
+              
+              {isAdmin && (
+                <div className="bg-card p-6 rounded-3xl border border-border/50 shadow-2xl flex-1 max-w-xl">
+                  <form onSubmit={sendInvite} className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex-1 relative group">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                       <Input 
-                        id="invite-email" 
-                        type="email" 
                         required 
                         placeholder="collaborator@email.com" 
-                        className="pl-9 h-9 text-sm"
+                        className="pl-10 h-11 bg-muted/20 border-border/50 rounded-xl focus:ring-primary/20"
                         value={inviteDraft.email}
                         onChange={(e) => setInviteDraft(d => ({ ...d, email: e.target.value }))}
                       />
                     </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="invite-role" className="text-xs">Role</Label>
                     <select 
-                      id="invite-role"
-                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      className="h-11 bg-muted/30 border border-border/50 rounded-xl px-4 text-xs font-black uppercase tracking-widest outline-none focus:ring-2 ring-primary/20 appearance-none cursor-pointer"
                       value={inviteDraft.role}
                       onChange={(e) => setInviteDraft(d => ({ ...d, role: e.target.value }))}
                     >
@@ -411,169 +517,231 @@ export default function WorkspaceDetailsPage() {
                         <option key={r} value={r}>{workspaceRoleLabel(r)}</option>
                       ))}
                     </select>
-                  </div>
-                  <Button type="submit" className="w-full h-9 gap-2" disabled={inviteStatus === "sending"}>
-                    {inviteStatus === "sending" ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                    Send Invitation
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Team Members Card */}
-          <Card>
-            <CardHeader className="py-4">
-              <CardTitle className="text-base flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  Team
-                </div>
-                <Badge variant="secondary" className="text-[10px] h-5">{members.length}</Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-0 space-y-4">
-              {userRole && userRole !== "NONE" && (
-                <div className="p-2 px-3 rounded-lg bg-accent/50 border border-border flex items-center justify-between">
-                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Your Role</span>
-                  <Badge variant="outline" className="text-[10px] border-primary/30 text-primary bg-primary/5 uppercase">
-                    {workspaceRoleLabel(userRole)}
-                  </Badge>
+                    <Button type="submit" className="h-11 px-6 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20" disabled={inviteStatus === "sending"}>
+                      {inviteStatus === "sending" ? <LoaderCircle className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                      Invite
+                    </Button>
+                  </form>
                 </div>
               )}
-              
-              <div className="space-y-3">
-                {members.map((m) => {
-                  const profile = memberProfiles[m.userId];
-                  const isMe = Number(m.userId) === Number(user?.userId);
-                  return (
-                    <div key={m.userId} className="flex items-center justify-between group">
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <Avatar className="h-9 w-9 border border-border">
-                          <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.fullName || m.userId}`} />
-                          <AvatarFallback>{profile?.fullName?.[0] || "?"}</AvatarFallback>
-                        </Avatar>
-                        <div className="overflow-hidden">
-                          <p className="text-sm font-medium truncate leading-none">
-                            {profile?.fullName || `User #${m.userId}`}
-                            {isMe && <span className="text-[10px] text-muted-foreground ml-1">(You)</span>}
-                          </p>
-                          <div className="flex items-center gap-1.5 mt-1">
-                            {isAdmin && m.role !== "OWNER" ? (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <button className="text-[10px] font-bold text-primary hover:underline uppercase tracking-tighter">
-                                    {workspaceRoleLabel(m.role)}
-                                  </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start">
-                                  {WORKSPACE_ROLES.filter(r => r !== "OWNER").map(r => (
-                                    <DropdownMenuItem key={r} onClick={() => updateMemberRole(m.userId, r)}>
-                                      {workspaceRoleLabel(r)}
-                                    </DropdownMenuItem>
-                                  ))}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            ) : (
-                              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
-                                {workspaceRoleLabel(m.role)}
-                              </span>
-                            )}
-                            {m.status === "PENDING" && <Badge className="text-[8px] h-3.5 px-1 bg-yellow-500/10 text-yellow-500 border-yellow-500/20">Pending</Badge>}
-                          </div>
-                        </div>
-                      </div>
-                      {isAdmin && !isMe && m.role !== "OWNER" && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => removeMember(m.userId)}>
-                          <Trash2 size={14} />
-                        </Button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Settings Card */}
-          <Card className="border-destructive/10 overflow-hidden">
-             <CardHeader className="bg-destructive/5 py-4">
-                <CardTitle className="text-sm flex items-center gap-2 text-destructive/80">
-                  <Shield className="h-4 w-4" />
-                  Workspace Settings
-                </CardTitle>
-             </CardHeader>
-             <CardContent className="p-4 pt-4">
-                <p className="text-[11px] text-muted-foreground mb-4">
-                  {isAdmin 
-                    ? "Careful: deleting this workspace will permanently remove all associated boards and data." 
-                    : "Leaving this workspace will remove your access to all its content."}
-                </p>
-                {isAdmin ? (
-                  <Button variant="outline" size="sm" className="w-full text-destructive border-destructive/20 hover:bg-destructive hover:text-white" onClick={deleteWorkspace}>
-                    <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete Workspace
-                  </Button>
-                ) : (
-                  <Button variant="outline" size="sm" className="w-full text-destructive border-destructive/20" onClick={leaveWorkspace}>
-                    <LogOut className="mr-2 h-3.5 w-3.5" /> Leave Workspace
-                  </Button>
-                )}
-             </CardContent>
-          </Card>
-        </div>
+            <div className="rounded-[2rem] border border-border/50 bg-card/30 backdrop-blur-sm overflow-hidden shadow-2xl">
+              <Table>
+                <TableHeader className="bg-muted/30">
+                  <TableRow className="hover:bg-transparent border-border/50">
+                    <TableHead className="w-[400px] font-black uppercase tracking-widest text-[10px] h-14 px-8">Member Name</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[10px] h-14">Role</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[10px] h-14">Status</TableHead>
+                    <TableHead className="text-right font-black uppercase tracking-widest text-[10px] h-14 px-8">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {members.map((m) => {
+                    const profile = memberProfiles[m.userId];
+                    const isMe = Number(m.userId) === Number(user?.userId);
+                    return (
+                      <TableRow key={m.userId} className="group hover:bg-primary/5 transition-colors border-border/50">
+                        <TableCell className="px-8 py-6">
+                          <div className="flex items-center gap-4">
+                            <Avatar className="h-12 w-12 border-2 border-primary/20 ring-4 ring-primary/5">
+                              <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${profile?.fullName || m.userId}`} />
+                              <AvatarFallback>{profile?.fullName?.[0] || "?"}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-black text-lg">
+                                {profile?.fullName || `User #${m.userId}`}
+                                {isMe && <Badge variant="secondary" className="ml-2 bg-primary text-white border-none text-[8px] font-black uppercase">You</Badge>}
+                              </div>
+                              <div className="text-xs font-medium text-muted-foreground">{profile?.email || "No contact info"}</div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {isAdmin && m.role !== "OWNER" ? (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" className="h-8 rounded-lg text-[10px] font-black uppercase tracking-widest border-primary/20 bg-primary/5 text-primary hover:bg-primary hover:text-white transition-all">
+                                  {workspaceRoleLabel(m.role)} <ChevronDown size={12} className="ml-2" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="start" className="rounded-xl border-border/50 shadow-2xl">
+                                {WORKSPACE_ROLES.filter(r => r !== "OWNER").map(r => (
+                                  <DropdownMenuItem key={r} onClick={() => updateMemberRole(m.userId, r)} className="text-[10px] font-black uppercase tracking-widest px-4 py-2">
+                                    {workspaceRoleLabel(r)}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest py-1 px-3 border-border/50 bg-background/50">
+                               {workspaceRoleLabel(m.role)}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                           <Badge className={`text-[10px] font-black uppercase tracking-widest py-1 px-3 ${m.status === 'PENDING' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-primary/10 text-primary border-primary/20'}`}>
+                             {m.status}
+                           </Badge>
+                        </TableCell>
+                        <TableCell className="text-right px-8">
+                          {isAdmin && !isMe && m.role !== "OWNER" && (
+                            <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-xl opacity-0 group-hover:opacity-100 transition-all" onClick={() => removeMember(m.userId)}>
+                              <Trash2 size={18} />
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "settings" && (
+          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl">
+            <div className="border-b border-border/50 pb-6">
+              <h2 className="text-3xl font-black tracking-tighter flex items-center gap-4">
+                 <Shield className="h-8 w-8 text-destructive" />
+                 Sector Configuration
+              </h2>
+              <p className="text-sm font-medium text-muted-foreground mt-1">Management and security policies for this workspace.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <Card className="rounded-[2.5rem] border-border/50 shadow-2xl bg-card/50 overflow-hidden">
+                <CardHeader className="p-8 pb-4">
+                  <CardTitle className="text-xl font-black">Workspace Policies</CardTitle>
+                  <CardDescription className="font-medium text-sm leading-relaxed">Adjust visibility and access rules for all personnel in this sector.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-8 pt-4 space-y-6">
+                  <div className="p-6 rounded-3xl bg-muted/20 border border-border/50 space-y-4">
+                     <div className="flex items-center justify-between">
+                        <div className="font-black text-sm uppercase tracking-widest">Visibility Mode</div>
+                        <Badge className="bg-primary text-white border-none px-3 font-black">{workspace?.visibility}</Badge>
+                     </div>
+                     <p className="text-xs font-medium text-muted-foreground leading-relaxed">This workspace is currently visible to {workspace?.visibility === 'PUBLIC' ? 'Everyone' : 'Team Members only'}. Only owners can change this setting.</p>
+                  </div>
+                  {isAdmin && (
+                    <Button variant="outline" className="w-full h-12 rounded-2xl font-black uppercase tracking-widest text-[11px]" onClick={() => setShowWsEdit(true)}>
+                       Edit Configuration
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-[2.5rem] border-destructive/20 shadow-2xl bg-destructive/5 overflow-hidden ring-1 ring-destructive/10">
+                <CardHeader className="p-8 pb-4">
+                  <CardTitle className="text-xl font-black text-destructive">Termination Zone</CardTitle>
+                  <CardDescription className="font-medium text-sm leading-relaxed text-destructive/70">Highly sensitive actions that cannot be undone. Exercise extreme caution.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-8 pt-4 space-y-6">
+                   <div className="p-6 rounded-3xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium leading-relaxed">
+                      {isAdmin 
+                        ? "Careful: deleting this workspace will permanently remove all associated boards, cards, and member data. This action is irreversible." 
+                        : "Leaving this workspace will immediately revoke your access to all boards and collaboration history."}
+                   </div>
+                   {isAdmin ? (
+                     <Button variant="destructive" className="w-full h-14 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-xl shadow-destructive/20" onClick={deleteWorkspace}>
+                        <Trash2 className="mr-2 h-4 w-4" /> Permanently Delete
+                     </Button>
+                   ) : (
+                     <Button variant="outline" className="w-full h-14 rounded-2xl border-destructive/50 text-destructive hover:bg-destructive hover:text-white font-black uppercase tracking-widest text-[11px]" onClick={leaveWorkspace}>
+                        <LogOut className="mr-2 h-4 w-4" /> Leave Workspace
+                     </Button>
+                   )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Dialogs / Modals */}
       
       {/* Create Board Dialog */}
       <Dialog open={showBoardForm} onOpenChange={setShowBoardForm}>
-        <DialogContent className="sm:max-w-[480px]">
+        <DialogContent className="sm:max-w-[460px] rounded-[2rem] border-border/50 shadow-2xl p-6">
           <DialogHeader>
-            <DialogTitle>Create Board</DialogTitle>
-            <DialogDescription>Start a new project board. Choose a visual theme to match.</DialogDescription>
+            <DialogTitle className="text-2xl font-black tracking-tighter">Initialize Board</DialogTitle>
+            <DialogDescription className="text-[13px] font-medium leading-tight">Start a new project board. Choose a visual theme to match your workflow.</DialogDescription>
           </DialogHeader>
           <form onSubmit={createBoard} className="space-y-4 pt-4">
             <div className="space-y-1.5">
-              <Label htmlFor="board-name">Board Name *</Label>
-              <Input id="board-name" required value={boardDraft.name} onChange={(e) => setBoardDraft(d => ({ ...d, name: e.target.value }))} />
+              <Label htmlFor="board-name" className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-70">Board Name *</Label>
+              <Input id="board-name" required placeholder="e.g. Q2 Roadmap" className="h-11 bg-muted/20 rounded-xl border-border/50 focus:ring-primary/20 text-sm font-medium" value={boardDraft.name} onChange={(e) => setBoardDraft(d => ({ ...d, name: e.target.value }))} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="board-desc">Description</Label>
+              <Label htmlFor="board-desc" className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-70">Strategy Description</Label>
               <textarea 
                 id="board-desc" 
-                className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                placeholder="What are we achieving with this board?"
+                className="flex min-h-[80px] w-full rounded-xl border border-border/50 bg-muted/20 px-4 py-3 text-sm shadow-sm transition-all focus:ring-2 ring-primary/20 outline-none resize-none placeholder:text-muted-foreground/30 font-medium"
                 value={boardDraft.description} 
                 onChange={(e) => setBoardDraft(d => ({ ...d, description: e.target.value }))} 
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Background</Label>
-                <select 
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  value={boardDraft.background} 
-                  onChange={(e) => setBoardDraft(d => ({ ...d, background: e.target.value }))}
-                >
-                  {BACKGROUND_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Visibility</Label>
-                <select 
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  value={boardDraft.visibility} 
-                  onChange={(e) => setBoardDraft(d => ({ ...d, visibility: e.target.value }))}
-                >
-                  {VISIBILITY_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-              </div>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-70">Access Level</Label>
+              <select 
+                className="flex h-11 w-full rounded-xl border border-border/50 bg-muted/20 px-4 py-1 text-[11px] font-black uppercase tracking-widest transition-colors focus:ring-2 ring-primary/20 outline-none appearance-none cursor-pointer"
+                value={boardDraft.visibility} 
+                onChange={(e) => setBoardDraft(d => ({ ...d, visibility: e.target.value }))}
+              >
+                {["PRIVATE", "PUBLIC"].map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
             </div>
-            <div className="h-12 rounded-lg" style={{ background: BG_GRADIENTS[boardDraft.background] }} />
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setShowBoardForm(false)}>Cancel</Button>
-              <Button type="submit" disabled={boardSubmitting}>
-                {boardSubmitting ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                Create Board
+            <DialogFooter className="pt-2 gap-2 flex-row justify-end items-center">
+              <Button type="button" variant="ghost" className="rounded-xl font-bold h-11 px-6 text-[11px] uppercase tracking-widest" onClick={() => setShowBoardForm(false)}>Cancel</Button>
+              <Button type="submit" className="rounded-xl px-8 h-11 font-black uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20" disabled={boardSubmitting}>
+                {boardSubmitting ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-3.5 w-3.5" />}
+                Deploy Board
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Board Dialog */}
+      <Dialog open={showBoardEdit} onOpenChange={setShowBoardEdit}>
+        <DialogContent className="sm:max-w-[460px] rounded-[2rem] border-border/50 shadow-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black tracking-tighter">Edit Board</DialogTitle>
+            <DialogDescription className="text-[13px] font-medium leading-tight">Update board configuration or terminate this workflow stage.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={updateBoard} className="space-y-4 pt-4">
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-70">Board Name *</Label>
+              <Input required className="h-11 bg-muted/20 rounded-xl border-border/50 text-sm font-medium" value={boardEditDraft?.name || ""} onChange={(e) => setBoardEditDraft(d => ({ ...d, name: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-70">Strategy Description</Label>
+              <textarea 
+                className="flex min-h-[80px] w-full rounded-xl border border-border/50 bg-muted/20 px-4 py-3 text-sm shadow-sm transition-all focus:ring-2 ring-primary/20 outline-none resize-none placeholder:text-muted-foreground/30 font-medium"
+                value={boardEditDraft?.description || ""} 
+                onChange={(e) => setBoardEditDraft(d => ({ ...d, description: e.target.value }))} 
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-70">Access Level</Label>
+              <select 
+                className="flex h-11 w-full rounded-xl border border-border/50 bg-muted/20 px-4 py-1 text-[11px] font-black uppercase tracking-widest transition-colors focus:ring-2 ring-primary/20 outline-none appearance-none cursor-pointer"
+                value={boardEditDraft?.visibility || "PRIVATE"} 
+                onChange={(e) => setBoardEditDraft(d => ({ ...d, visibility: e.target.value }))}
+              >
+                {["PRIVATE", "PUBLIC"].map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </div>
+            <DialogFooter className="pt-4 flex flex-row justify-end items-center border-t border-border/10 gap-3">
+              <Button type="button" variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive font-black uppercase tracking-widest text-[9px] h-10 px-4 rounded-xl mr-auto" onClick={deleteBoard}>
+                <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+              </Button>
+              <Button type="button" variant="ghost" className="rounded-xl h-10 font-black uppercase tracking-widest text-[9px] px-6" onClick={() => setShowBoardEdit(false)}>Cancel</Button>
+              <Button type="submit" className="rounded-xl px-8 h-10 font-black uppercase tracking-widest text-[9px] shadow-lg shadow-primary/20 bg-primary text-primary-foreground" disabled={boardUpdating}>
+                {boardUpdating ? <LoaderCircle className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Check className="mr-2 h-3.5 w-3.5" />}
+                Save Changes
               </Button>
             </DialogFooter>
           </form>
@@ -582,55 +750,61 @@ export default function WorkspaceDetailsPage() {
 
       {/* Edit Workspace Dialog */}
       <Dialog open={showWsEdit} onOpenChange={setShowWsEdit}>
-        <DialogContent className="sm:max-w-[440px]">
-          <DialogHeader>
-            <DialogTitle>Edit Workspace</DialogTitle>
-            <DialogDescription>Update the name and visibility of this workspace.</DialogDescription>
+        <DialogContent className="sm:max-w-[480px] rounded-[2.5rem] border-border/50 shadow-2xl">
+          <DialogHeader className="px-2">
+            <DialogTitle className="text-3xl font-black tracking-tighter">Sector Management</DialogTitle>
+            <DialogDescription className="text-sm font-medium leading-relaxed">Update the core configuration and descriptive metadata for this sector.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={updateWorkspace} className="space-y-4 pt-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="ws-name">Name *</Label>
-              <Input id="ws-name" required value={wsEditDraft.name} onChange={(e) => setWsEditDraft(d => ({ ...d, name: e.target.value }))} />
+          <form onSubmit={updateWorkspace} className="space-y-6 pt-6 px-2">
+            <div className="space-y-2">
+              <Label htmlFor="ws-name" className="text-xs font-black uppercase tracking-widest ml-1">Sector Name *</Label>
+              <Input id="ws-name" required className="h-12 bg-muted/20 rounded-2xl border-border/50 focus:ring-primary/20" value={wsEditDraft.name} onChange={(e) => setWsEditDraft(d => ({ ...d, name: e.target.value }))} />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="ws-desc">Description</Label>
+            <div className="space-y-2">
+              <Label htmlFor="ws-desc" className="text-xs font-black uppercase tracking-widest ml-1">Sector Mission</Label>
               <textarea 
                 id="ws-desc" 
-                className="flex min-h-[100px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="flex min-h-[120px] w-full rounded-2xl border border-border/50 bg-muted/20 px-4 py-3 text-sm shadow-sm transition-all focus:ring-2 ring-primary/20 outline-none resize-none"
                 value={wsEditDraft.description} 
                 onChange={(e) => setWsEditDraft(d => ({ ...d, description: e.target.value }))} 
               />
             </div>
-            <div className="space-y-1.5">
-              <Label>Visibility</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {VISIBILITY_OPTIONS.map(v => (
-                  <Button 
-                    key={v}
-                    type="button"
-                    variant={wsEditDraft.visibility === v ? "default" : "outline"}
-                    className="h-9 text-xs"
-                    onClick={() => setWsEditDraft(d => ({ ...d, visibility: v }))}
-                  >
-                    {v === 'PRIVATE' && <Lock className="mr-1.5 h-3 w-3" />}
-                    {v === 'PUBLIC' && <Globe className="mr-1.5 h-3 w-3" />}
-                    {v === 'TEAM' && <Users className="mr-1.5 h-3 w-3" />}
-                    {v}
-                  </Button>
-                ))}
-              </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-black uppercase tracking-widest ml-1">Global Visibility</Label>
+              <select 
+                className="flex h-12 w-full rounded-2xl border border-border/50 bg-muted/20 px-4 py-1 text-xs font-black uppercase tracking-widest transition-colors focus:ring-2 ring-primary/20 outline-none appearance-none cursor-pointer"
+                value={wsEditDraft.visibility} 
+                onChange={(e) => setWsEditDraft(d => ({ ...d, visibility: e.target.value }))}
+              >
+                {VISIBILITY_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setShowWsEdit(false)}>Cancel</Button>
-              <Button type="submit" disabled={wsUpdating}>
-                {wsUpdating ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
-                Save Changes
-              </Button>
+            <DialogFooter className="pt-6 flex flex-row justify-between items-center border-t border-border/20">
+              {isAdmin && (
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive font-black uppercase tracking-widest text-[9px] h-10 px-4 rounded-xl group transition-all"
+                  onClick={() => {
+                    if (window.confirm("Are you sure you want to delete this sector? This cannot be undone.")) {
+                      deleteWorkspace();
+                    }
+                  }}
+                >
+                  <Trash2 className="mr-2 h-3.5 w-3.5 group-hover:rotate-12 transition-transform" /> Delete
+                </Button>
+              )}
+              <div className="flex gap-2">
+                <Button type="button" variant="ghost" className="rounded-xl h-10 font-black uppercase tracking-widest text-[9px] px-6" onClick={() => setShowWsEdit(false)}>Cancel</Button>
+                <Button type="submit" className="rounded-xl px-8 h-10 font-black uppercase tracking-widest text-[9px] shadow-lg shadow-primary/20 bg-primary text-primary-foreground hover:bg-primary/90 transition-all active:scale-95" disabled={wsUpdating}>
+                  {wsUpdating ? <LoaderCircle className="mr-3 h-3.5 w-3.5 animate-spin" /> : <Check className="mr-3 h-3.5 w-3.5" />}
+                  Authorize Changes
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
-
     </AppShell>
   );
 }

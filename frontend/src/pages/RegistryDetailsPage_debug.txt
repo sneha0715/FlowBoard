@@ -1,0 +1,60 @@
+﻿import { useEffect, useState } from "react";
+
+import { useParams, useNavigate } from "react-router-dom";
+
+import { motion, AnimatePresence } from "framer-motion";
+
+import {
+
+  Calendar,
+
+  Trash2,
+
+  Reply,
+
+  Edit2,
+
+  FilePlus,
+
+  FileText,
+
+  Clock,
+
+  CheckCircle2,
+
+  Send,
+
+  LoaderCircle,
+
+  Layout as LayoutIcon,
+
+  Check,
+
+  ArrowLeft,
+
+  Info,
+
+  Target,
+
+  Zap,
+
+  X,
+
+  Box,
+
+  ShieldCheck,
+
+  Layers
+
+} from "lucide-react";
+
+import { attachmentApi, cardApi, checklistApi, commentApi, labelApi, notificationApi, boardApi, authApi, workspaceApi } from "../api/services";
+
+import { useSelector, useDispatch } from "react-redux";
+
+import { setActiveCard } from "../store/slices/boardSlice";
+
+import AppShell from "../components/layout/AppShell";
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+

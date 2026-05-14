@@ -243,7 +243,8 @@ export default function WorkspaceDetailsPage() {
       name: board.name,
       description: board.description || "",
       background: board.background || "Ocean",
-      visibility: board.visibility || "PRIVATE"
+      visibility: board.visibility || "PRIVATE",
+      workspaceId: Number(workspaceId)
     });
     setShowBoardEdit(true);
   };

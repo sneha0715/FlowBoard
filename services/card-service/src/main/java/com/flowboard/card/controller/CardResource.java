@@ -9,12 +9,14 @@ import com.flowboard.card.service.CardService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/cards")
 @RequiredArgsConstructor
@@ -129,6 +131,7 @@ public class CardResource {
             @PathVariable Long cardId,
             @RequestAttribute(value = "userId", required = false) Long requesterId,
             HttpServletRequest httpRequest) {
+        log.info("REST: Delete Card Request - id={}, requesterId={}", cardId, requesterId);
         cardService.deleteCard(cardId);
         return ResponseEntity.ok(ApiResponse.success(null, "Card deleted successfully", httpRequest.getRequestURI()));
     }

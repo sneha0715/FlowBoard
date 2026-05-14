@@ -25,7 +25,7 @@ import {
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
-const SIDEBAR_WIDTH = "13rem"
+const SIDEBAR_WIDTH = "13.5rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "4rem"
 const SIDEBAR_KEYBOARD_SHORTCUT = "b"
@@ -197,25 +197,25 @@ const Sidebar = React.forwardRef((
         className={cn(
           "relative bg-transparent transition-[width] duration-200 ease-linear",
           variant === "floating" || variant === "inset"
-            ? "w-[calc(var(--sidebar-width)_+_theme(spacing.8))] group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.8))]"
+            ? "w-[calc(var(--sidebar-width)_+_theme(spacing.6))] group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.6))]"
             : "w-[--sidebar-width] group-data-[collapsible=icon]:w-[--sidebar-width-icon]",
           "group-data-[collapsible=offcanvas]:w-0"
         )} />
       <div
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width] duration-200 ease-linear md:flex",
+          "fixed inset-y-0 z-10 hidden h-svh transition-[left,right,width] duration-200 ease-linear md:flex",
           side === "left"
             ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
             : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
           variant === "floating" || variant === "inset"
-            ? "p-4 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.8))]"
-            : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
+            ? "p-3 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.6))] w-[calc(var(--sidebar-width)_+_theme(spacing.6))]"
+            : "w-[--sidebar-width] group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
           className
         )}
         {...props}>
         <div
           data-sidebar="sidebar"
-          className="flex h-full w-full flex-col bg-background/60 backdrop-blur-2xl group-data-[variant=floating]:rounded-[2rem] group-data-[variant=floating]:shadow-2xl overflow-hidden scrollbar-none border-none">
+          className="flex h-full w-full flex-col bg-[#181920] group-data-[variant=floating]:rounded-[0.6rem] group-data-[variant=floating]:shadow-[0_8px_40px_rgb(0,0,0,0.6)] overflow-hidden scrollbar-none border border-white/[0.03] group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-white/[0.01]">
           {children}
         </div>
       </div>

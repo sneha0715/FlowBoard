@@ -23,21 +23,31 @@ public class CardSecurity {
     private String gatewaySecret;
 
     public boolean hasBoardRole(Long boardId, Long userId, String... allowedRoles) {
-        if (userId == null) return false;
+        if (userId == null) {
+            log.warn("SECURITY DENIED: userId is null");
+            return false;
+        }
 
         // Platform Admin bypass
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_PLATFORM_ADMIN"))) {
+            log.info("SECURITY BYPASS: Platform Admin detected");
             return true;
         }
 
         try {
-            java.util.Map<String, String> result = boardClient.getRole(boardId, userId, gatewaySecret).getBody();
+            log.info("SECURITY: Fetching role from BoardService for boardId={}, userId={}", boardId, userId);
+            var response = boardClient.getRole(boardId, userId, gatewaySecret);
+            log.info("SECURITY: BoardService Response Status: {}", response.getStatusCode());
+            java.util.Map<String, String> result = response.getBody();
             String role = result != null ? result.get("role") : null;
-            return role != null && Arrays.asList(allowedRoles).contains(role);
+            log.info("SECURITY: Detected Board Role: {}", role);
+            boolean allowed = role != null && Arrays.asList(allowedRoles).contains(role);
+            if (!allowed) log.warn("SECURITY DENIED: Role '{}' not in allowed list {}", role, allowedRoles);
+            return allowed;
         } catch (Exception e) {
-            log.error("Error checking board role: boardId={}, userId={}", boardId, userId, e);
+            log.error("SECURITY CRITICAL: BoardService communication failed for boardId={}, userId={}", boardId, userId, e);
             return false;
         }
     }
@@ -72,10 +82,14 @@ public class CardSecurity {
     }
 
     public boolean canModifyCard(Long cardId, Long userId) {
+        log.info("SECURITY: Checking modify permission for cardId={}, userId={}", cardId, userId);
         try {
             Long boardId = cardService.getBoardIdByCardId(cardId);
-            return hasBoardRole(boardId, userId, "ADMIN", "MEMBER");
+            boolean allowed = hasBoardRole(boardId, userId, "ADMIN", "MEMBER");
+            log.info("SECURITY: Access for cardId={} is {}", cardId, allowed ? "GRANTED" : "DENIED");
+            return allowed;
         } catch (Exception e) {
+            log.error("SECURITY FAILURE: Error checking card permissions for cardId={}", cardId, e);
             return false;
         }
     }

@@ -19,9 +19,9 @@ const columnColors = {
   'backlog': '#FF9F43',
   'to do': '#FF9F43',
   'todo': '#FF9F43',
-  'in progress': '#A29BFE',
-  'doing': '#A29BFE',
-  'active': '#A29BFE',
+  'in progress': '#787596',
+  'doing': '#787596',
+  'active': '#787596',
   'in review': '#74b9ff',
   'review': '#74b9ff',
   'done': '#55efc4',
@@ -37,22 +37,25 @@ function getColumnColor(name) {
   return '#A29BFE'; // default purple
 }
 
-export default function ColumnLane({ 
-  list, 
-  cards, 
-  onCreateCard, 
-  onRenameList, 
-  onDeleteList, 
+export default function ColumnLane({
+  list,
+  cards,
+  onCreateCard,
+  onRenameList,
+  onDeleteList,
   onDeleteCard,
   onMoveList,
   otherBoards,
   saving,
   readOnly,
-  boardId 
+  boardId
 }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState({ title: "", description: "", priority: "MEDIUM" });
-  const color = getColumnColor(list.name);
+  const lowerName = list.name?.toLowerCase() || '';
+  const isCoreState = ['to do', 'todo', 'review', 'done', 'completed', 'in progress', 'doing', 'active'].some(key => lowerName.includes(key));
+  const color = isCoreState ? getColumnColor(list.name) : (list.color || getColumnColor(list.name));
+  console.log("ColumnLane color debug:", list.name, "list.color:", list.color, "resolved color:", color);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -72,28 +75,28 @@ export default function ColumnLane({
           style={columnProvided.draggableProps.style}
         >
           {/* Column Header */}
-          <div 
+          <div
             {...columnProvided.dragHandleProps}
             className="flex items-center justify-between mb-3 px-1"
           >
             <div className="flex items-center gap-2 bg-secondary/30 backdrop-blur-md px-3 py-1.5 rounded-full border border-border/50 shadow-sm">
-              <div 
+              <div
                 className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.1)]"
-                style={{ backgroundColor: color, boxShadow: `0 0 12px ${color}80` }}
+                style={{ backgroundColor: color }}
               />
               <span className="text-[12px] font-black uppercase tracking-wider text-foreground leading-none">
                 {list.name}
               </span>
               <div className="flex items-center justify-center bg-background/50 h-6 px-3 rounded-full border border-border/30 ml-2">
-                <span 
+                <span
                   className="text-[11px] font-black leading-none"
-                  style={{ color: color, textShadow: `0 0 10px ${color}40` }}
+                  style={{ color: color }}
                 >
                   {cards.length}
                 </span>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-1 opacity-0 group-hover/column:opacity-100 transition-all duration-300">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -102,8 +105,8 @@ export default function ColumnLane({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-popover border-border rounded-2xl min-w-[180px] p-1.5 shadow-2xl">
-                  <DropdownMenuItem 
-                    className="text-[11px] font-bold uppercase tracking-wider gap-3 p-2.5 rounded-xl cursor-pointer" 
+                  <DropdownMenuItem
+                    className="text-[11px] font-bold uppercase tracking-wider gap-3 p-2.5 rounded-xl cursor-pointer"
                     onClick={() => {
                       const next = prompt("Rename Stage:", list.name);
                       if (next) onRenameList(list.listId, { name: next });
@@ -153,7 +156,7 @@ export default function ColumnLane({
                     {droppableProvided.placeholder}
 
                     {cards.length === 0 && !snapshot.isDraggingOver && (
-                      <div 
+                      <div
                         onClick={() => !readOnly && setOpen(true)}
                         className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-white/[0.05] rounded-[32px] gap-6 group/placeholder cursor-pointer hover:bg-white/[0.02] hover:border-primary/20 transition-all duration-500 min-h-[350px]"
                       >
@@ -176,11 +179,11 @@ export default function ColumnLane({
                         <AnimatePresence mode="wait">
                           {!open ? (
                             <button
-                              className="w-full h-11 flex items-center justify-center gap-3 text-muted-foreground/30 hover:text-muted-foreground hover:bg-white/[0.02] rounded-[20px] transition-all duration-300 border border-dashed border-border/50 hover:border-border group/add"
+                              className="w-full h-7 flex items-center justify-center gap-2 text-muted-foreground/30 hover:text-muted-foreground hover:bg-white/[0.02] rounded-full transition-all duration-300 border border-dashed border-border/50 hover:border-border group/add"
                               onClick={() => setOpen(true)}
                             >
-                              <Plus size={16} className="group-hover/add:rotate-90 transition-transform duration-300" />
-                              <span className="text-[11px] font-black uppercase tracking-widest">Add Objective</span>
+                              <Plus size={14} className="group-hover/add:rotate-90 transition-transform duration-300" />
+                              <span className="text-[10px] font-black uppercase tracking-widest">Add Objective</span>
                             </button>
                           ) : (
                             <motion.form
@@ -188,43 +191,44 @@ export default function ColumnLane({
                               animate={{ opacity: 1, scale: 1, y: 0 }}
                               exit={{ opacity: 0, scale: 0.95, y: 10 }}
                               onSubmit={handleSubmit}
-                              className="bg-card border border-primary/20 p-4 rounded-[24px] shadow-2xl space-y-4"
+                              className="bg-[#0e0e10] border border-white/5 p-4 rounded-[24px] shadow-2xl space-y-4"
                             >
                               <Input
                                 autoFocus
                                 placeholder="Objective Name..."
                                 value={draft.title}
                                 onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-                                className="h-10 bg-secondary/30 border-none text-[13px] font-bold text-foreground focus-visible:ring-0 placeholder:text-muted-foreground/20 px-4 rounded-xl"
+                                className="h-10 bg-white/[0.03] border border-white/5 text-[13px] font-bold text-white focus-visible:ring-1 focus-visible:ring-white/10 placeholder:text-white/10 px-4 rounded-xl"
                               />
-                              <div className="flex justify-between items-center">
-                                 <div className="flex gap-2">
-                                    {['LOW', 'MEDIUM', 'HIGH'].map(p => (
-                                      <button
-                                        key={p}
-                                        type="button"
-                                        onClick={() => setDraft({ ...draft, priority: p })}
-                                        className={`text-[10px] font-black px-3 py-1.5 rounded-xl transition-all ${draft.priority === p ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'bg-secondary text-muted-foreground/30 hover:text-foreground'}`}
-                                      >
-                                        {p}
-                                      </button>
-                                    ))}
-                                 </div>
-                                 <div className="flex items-center gap-2">
-                                    <button 
-                                      type="button" 
-                                      className="h-9 w-9 rounded-full flex items-center justify-center text-muted-foreground/30 hover:bg-secondary transition-all" 
-                                      onClick={() => setOpen(false)}
+                              <div className="space-y-3">
+                                <div className="flex gap-1.5">
+                                  {['LOW', 'MEDIUM', 'HIGH'].map(p => (
+                                    <button
+                                      key={p}
+                                      type="button"
+                                      onClick={() => setDraft({ ...draft, priority: p })}
+                                      className={`text-[9px] font-black px-2.5 py-1.5 rounded-xl transition-all ${draft.priority === p ? 'bg-[#6C75BD] text-white' : 'bg-white/[0.03] text-white/30 hover:text-white hover:bg-white/[0.08]'}`}
                                     >
-                                      <X size={16} />
+                                      {p}
                                     </button>
-                                    <button 
-                                      type="submit" 
-                                      className="h-9 px-6 rounded-full text-[11px] font-black uppercase tracking-widest bg-primary text-black hover:shadow-[0_0_15px_rgba(0,210,141,0.4)] transition-all"
-                                    >
-                                      Deploy
-                                    </button>
-                                 </div>
+                                  ))}
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    onClick={() => setOpen(false)}
+                                    className="flex-1 h-8 rounded-full text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white hover:bg-white/[0.03]"
+                                  >
+                                    Abort
+                                  </Button>
+                                  <Button
+                                    type="submit"
+                                    className="flex-1 h-8 rounded-full text-[10px] font-black uppercase tracking-widest bg-[#6C75BD] text-white hover:bg-[#6C75BD]/90 transition-all"
+                                  >
+                                    Deploy
+                                  </Button>
+                                </div>
                               </div>
                             </motion.form>
                           )}

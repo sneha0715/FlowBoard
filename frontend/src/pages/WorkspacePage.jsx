@@ -12,12 +12,15 @@ import {
   Globe,
   Lock,
   Mail,
+  TableProperties,
   LayoutGrid,
   List as ListIcon,
   Search as SearchIcon,
   Calendar,
   LoaderCircle,
-  Pencil
+  Pencil,
+  Trash2,
+  ChevronUp
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import AppShell from "../components/layout/AppShell";
@@ -44,6 +47,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { GridIcon, Table01Icon, Building01Icon, PencilEdit01Icon, Delete02Icon } from "hugeicons-react";
 
 export default function WorkspacePage() {
   const user = useSelector((s) => s.auth.user);
@@ -104,38 +108,48 @@ export default function WorkspacePage() {
   return (
     <AppShell>
       {/* Action Header */}
-      <div className="flex flex-col space-y-8 mb-10">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-col gap-10 mb-8">
+        <div className="flex items-center justify-between w-full">
           <div className="relative">
-            <h2 className="text-5xl font-black tracking-tighter text-foreground drop-shadow-sm">Workspaces</h2>
-            <div className="absolute -bottom-2 left-0 w-12 h-1 bg-primary rounded-full shadow-[0_0_15px_rgba(20,184,166,0.5)]" />
+            <h2 className="text-6xl font-black tracking-tighter text-foreground drop-shadow-sm">Workspaces<span className="text-[#6C75BD] ml-1 opacity-70">.</span></h2>
           </div>
-          
-          <Button onClick={() => setShowWsForm(true)} className="h-12 px-8 rounded-2xl gap-3 font-black uppercase tracking-[0.15em] text-[11px] shadow-xl shadow-primary/20 transition-all hover:scale-[1.02] bg-primary hover:bg-primary/90 text-primary-foreground border-none ring-1 ring-primary/50">
-            <Plus size={20} strokeWidth={3} />
-            Initialize Sector
-          </Button>
+
+          <div className="flex items-center p-2.5 h-16 rounded-full bg-card/30 backdrop-blur-2xl border border-white/5 shadow-2xl ring-1 ring-white/5">
+            <Button
+              onClick={() => setShowWsForm(true)}
+              className="h-11 px-8 rounded-full gap-3 bg-[#40456B] hover:bg-[#40456B]/90 text-white font-black uppercase tracking-widest text-[10px] transition-all hover:scale-[1.02] active:scale-95 border-none shadow-[0_0_20px_rgba(64,69,107,0.2)]"
+            >
+              <Building01Icon size={18} />
+              Create
+            </Button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-4 p-2 rounded-[1.5rem] bg-card/30 backdrop-blur-xl border border-border/40 shadow-2xl shadow-black/20 ring-1 ring-white/5 max-w-fit">
-          <div className="relative group">
-            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary transition-all group-focus-within:scale-110" />
-            <Input 
-              placeholder="Search workspaces..." 
-              className="pl-11 w-[280px] h-10 bg-background/40 border-none rounded-xl focus:ring-2 focus:ring-primary/20 transition-all text-sm font-bold placeholder:text-muted-foreground/50"
+        <div className="flex items-center justify-center gap-4 w-full">
+          {/* Search Pill */}
+          <div className="flex items-center px-8 h-14 rounded-full bg-card/30 backdrop-blur-2xl border border-white/5 shadow-2xl ring-1 ring-white/5 flex-1 max-w-md group transition-all focus-within:border-primary/40 focus-within:ring-primary/10">
+            <SearchIcon className="h-5 w-5 text-muted-foreground/30 group-focus-within:text-primary transition-colors" />
+            <Input
+              placeholder="Search by workspace name, reference, or description..."
+              className="bg-transparent border-none focus-visible:ring-0 text-sm font-medium placeholder:text-muted-foreground/20 w-full ml-2"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          <div className="w-px h-6 bg-border/50 mx-2" />
-
-          <Tabs value={viewMode} onValueChange={setViewMode} className="bg-background/20 p-1 rounded-xl">
-            <TabsList className="bg-transparent h-10 gap-1">
-              <TabsTrigger value="list" className="rounded-lg px-5 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"><ListIcon size={16} className="mr-2" /> List</TabsTrigger>
-              <TabsTrigger value="grid" className="rounded-lg px-5 font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"><LayoutGrid size={16} className="mr-2" /> Grid</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          {/* View Toggle Pill */}
+          <div className="flex items-center p-1 h-14 rounded-full bg-card/30 backdrop-blur-2xl border border-white/5 shadow-2xl ring-1 ring-white/5">
+            <Tabs value={viewMode} onValueChange={setViewMode} className="bg-transparent">
+              <TabsList className="bg-transparent h-12 gap-2 px-1">
+                <TabsTrigger value="grid" className="rounded-full w-10 h-10 p-0 text-muted-foreground/40 data-[state=active]:bg-primary data-[state=active]:text-white hover:text-white transition-all duration-500 border border-transparent">
+                  <GridIcon size={20} />
+                </TabsTrigger>
+                <TabsTrigger value="list" className="rounded-full w-10 h-10 p-0 text-muted-foreground/40 data-[state=active]:bg-primary data-[state=active]:text-white hover:text-white transition-all duration-500 border border-transparent">
+                  <Table01Icon size={20} />
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
       </div>
 
@@ -179,66 +193,72 @@ export default function WorkspacePage() {
           <p className="text-xs font-black uppercase tracking-[0.3em] text-muted-foreground animate-pulse">Synchronizing Data...</p>
         </div>
       ) : viewMode === "list" ? (
-        <div className="rounded-3xl border border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden shadow-2xl">
+        <div className="rounded-[2.5rem] border border-white/15 bg-[#0e0e10] overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] ring-1 ring-white/5">
           <Table>
-            <TableHeader className="bg-muted/30">
-              <TableRow className="hover:bg-transparent border-border/50">
-                <TableHead className="w-[400px] font-black uppercase tracking-widest text-[10px] h-14 px-8">Workspace Name</TableHead>
-                <TableHead className="font-black uppercase tracking-widest text-[10px] h-14">Boards</TableHead>
-                <TableHead className="font-black uppercase tracking-widest text-[10px] h-14">Visibility</TableHead>
-                <TableHead className="font-black uppercase tracking-widest text-[10px] h-14">Last Active</TableHead>
-                <TableHead className="text-right font-black uppercase tracking-widest text-[10px] h-14 px-8">Actions</TableHead>
+            <TableHeader className="bg-white/[0.03]">
+              <TableRow className="hover:bg-transparent border-white/10 h-16">
+                <TableHead className="w-[40%] font-black text-[13px] text-muted-foreground/40 px-10">Workspace Identity</TableHead>
+                <TableHead className="w-[18%] font-black text-[13px] text-muted-foreground/40">Protocol Mode</TableHead>
+                <TableHead className="w-[20%] font-black text-[13px] text-muted-foreground/40">Last Synchronized</TableHead>
+                <TableHead className="w-[12%] font-black text-[13px] text-muted-foreground/40">Boards</TableHead>
+                <TableHead className="w-[10%] text-right font-black text-[13px] text-muted-foreground/40 px-10">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {workspaces.filter(ws => ws.name.toLowerCase().includes(searchTerm.toLowerCase())).map((ws) => (
-                <TableRow key={ws.workspaceId} className="group hover:bg-primary/5 transition-colors border-border/50">
-                   <TableCell className="px-8 py-6">
-                    <div 
+                <TableRow key={ws.workspaceId} className="group hover:bg-white/[0.02] transition-colors border-white/10 h-20">
+                  <TableCell className="px-10">
+                    <div
                       onClick={() => navigate(`/workspaces/${ws.workspaceId}`)}
-                      className="flex items-center gap-4 cursor-pointer"
+                      className="flex items-center gap-5 cursor-pointer"
                     >
-                      <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 group-hover:scale-110 transition-transform">
-                        <Layers size={22} />
+                      <div className="w-10 h-10 rounded-xl bg-foreground/5 flex items-center justify-center text-foreground/20 border border-white/5 group-hover:text-white group-hover:border-white/20 transition-all duration-500 shadow-inner">
+                        <Layers size={16} />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <div className="font-black text-lg capitalize group-hover:text-primary transition-colors">{ws.name}</div>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/workspaces/${ws.workspaceId}?edit=true`);
-                            }}
-                            className="p-1 rounded-md hover:bg-primary/10 hover:text-primary transition-all opacity-0 group-hover:opacity-100"
-                          >
-                            <Pencil size={12} className="text-muted-foreground/30" />
-                          </button>
+                          <div className="font-black text-xl tracking-tight group-hover:text-white transition-colors">{ws.name}</div>
                         </div>
-                        <div className="text-xs font-medium text-muted-foreground line-clamp-1">{ws.description || "No description provided."}</div>
+                        <div className="text-xs font-medium text-muted-foreground/30 line-clamp-1 mt-1 lowercase">{ws.description || "Sector awaiting mission parameters."}</div>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="bg-background/50 font-bold border-border/50">{boardsByWorkspace[ws.workspaceId]?.length || 0} active</Badge>
+                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${ws.visibility === 'PRIVATE'
+                        ? 'bg-[#6C75BD] border-none text-black'
+                        : 'bg-[#CDD9B2] border-none text-[#606653]'
+                      }`}>
+                      <div className={`w-1.5 h-1.5 rounded-full ${ws.visibility === 'PRIVATE' ? 'bg-black' : 'bg-[#606653]'
+                        }`} />
+                      <span className="text-[9px] font-black uppercase tracking-tight">{ws.visibility}</span>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      {ws.visibility === 'PRIVATE' ? <Lock size={14} className="text-muted-foreground" /> : <Globe size={14} className="text-primary" />}
-                      <span className="text-xs font-black uppercase tracking-tighter">{ws.visibility}</span>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded-md bg-white/[0.03] border border-white/5 flex items-center justify-center text-muted-foreground/30">
+                        <Calendar size={10} />
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[13px] font-black">15 May 2026</span>
+                        <span className="text-[10px] font-bold text-muted-foreground/20 uppercase tracking-widest">09:15 PM</span>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Calendar size={14} />
-                      <span className="text-xs font-medium">May 12, 2026</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-base font-black text-primary tracking-tighter">+{boardsByWorkspace[ws.workspaceId]?.length || 0}</span>
+                      <ChevronUp size={12} className="text-primary" strokeWidth={3} />
                     </div>
                   </TableCell>
-                  <TableCell className="text-right px-8">
-                    <Button asChild variant="outline" size="sm" className="rounded-xl font-bold group-hover:border-primary group-hover:text-primary">
-                      <Link to={`/workspaces/${ws.workspaceId}`}>View Details</Link>
-                    </Button>
+                  <TableCell className="text-right px-10">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="icon" className="w-9 h-9 rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-all">
+                        <PencilEdit01Icon size={16} />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="w-9 h-9 rounded-full bg-white/5 text-red-400/30 hover:text-red-400/70 hover:bg-red-500/10 transition-all">
+                        <Delete02Icon size={16} />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -246,88 +266,43 @@ export default function WorkspacePage() {
           </Table>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {workspaces.filter(ws => ws.name.toLowerCase().includes(searchTerm.toLowerCase())).map((ws) => (
-            <motion.div
-              key={ws.workspaceId}
-              layout
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-            >
-              <Card className="flex flex-col h-full hover:border-primary/50 transition-all group rounded-[2rem] overflow-hidden shadow-xl hover:shadow-primary/5 border-border/50 bg-card/50 backdrop-blur-sm">
-                <CardHeader className="pb-2 pt-6 px-6">
+            <div key={ws.workspaceId} className="group relative">
+              <Card
+                onClick={() => navigate(`/workspaces/${ws.workspaceId}`)}
+                className="flex flex-col h-60 cursor-pointer transition-all duration-500 rounded-[2rem] overflow-hidden border border-white/5 bg-[#0e0e10] hover:border-white/20 hover:shadow-2xl shadow-inner"
+              >
+                <CardHeader className="pb-2 pt-7 px-7">
                   <div className="flex justify-between items-start">
-                    <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all shadow-inner border border-primary/20">
-                      <Layers size={22} />
+                    <div className="w-12 h-12 rounded-2xl bg-foreground/5 flex items-center justify-center text-foreground/20 group-hover:text-white group-hover:border-white/20 transition-all duration-700 border border-white/5 shadow-inner">
+                      <Layers size={20} />
                     </div>
-                    <Badge variant="outline" className="text-[9px] font-black tracking-widest uppercase bg-background/50">{ws.visibility}</Badge>
+                    <div className={`px-3 py-1 rounded-full ${
+                      ws.visibility === 'PRIVATE' 
+                        ? 'bg-[#6C75BD] text-black' 
+                        : 'bg-[#CDD9B2] text-[#606653]'
+                    }`}>
+                      <span className="text-[8px] font-black uppercase tracking-widest">{ws.visibility}</span>
+                    </div>
                   </div>
-                  <CardTitle className="text-xl mt-4 font-black capitalize group-hover:text-primary transition-colors flex items-center justify-between">
-                    {ws.name}
-                    <Link 
-                      to={`/workspaces/${ws.workspaceId}?edit=true`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="p-1 rounded-md hover:bg-primary/10 hover:text-primary transition-all opacity-0 group-hover:opacity-100"
-                    >
-                      <Pencil size={12} className="text-muted-foreground/30" />
-                    </Link>
-                  </CardTitle>
-                  <CardDescription className="line-clamp-2 min-h-[32px] font-medium text-xs leading-relaxed mt-1">
-                    {ws.description || 'Manage projects, track progress, and collaborate in real-time with your specialized team.'}
-                  </CardDescription>
+                  <CardTitle className="mt-6 text-xl font-black tracking-tight group-hover:text-white transition-colors line-clamp-1">{ws.name}</CardTitle>
+                  <CardDescription className="text-xs font-medium text-muted-foreground/30 line-clamp-1 mt-1 lowercase">{ws.description || "Sector awaiting mission parameters."}</CardDescription>
                 </CardHeader>
-
-                <CardContent className="flex-1 pb-2 px-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground border-b border-border/50 pb-1">
-                      <span>Featured Boards</span>
-                      <span className="text-primary">{boardsByWorkspace[ws.workspaceId]?.length || 0} total</span>
-                    </div>
-
-                    <div className="space-y-3">
-                      {boardsByWorkspace[ws.workspaceId]?.slice(0, 3).map(board => (
-                        <Link
-                          key={board.boardId}
-                          to={`/boards/${board.boardId}`}
-                          className="flex items-center gap-2 p-2 rounded-lg hover:bg-primary/5 transition-all border border-transparent hover:border-primary/10 group/board"
-                        >
-                          <div className="p-1 rounded-md bg-muted/50 group-hover/board:bg-primary/10 group-hover/board:text-primary transition-colors">
-                            <FolderKanban size={12} />
-                          </div>
-                          <span className="text-xs font-bold text-foreground/80 group-hover/board:text-primary transition-colors">{board.name}</span>
-                          <ArrowRight size={12} className="ml-auto opacity-0 -translate-x-2 group-hover/board:opacity-100 group-hover/board:translate-x-0 transition-all text-primary" />
-                        </Link>
-                      ))}
+                <CardContent className="px-7 mt-auto pb-7">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-1 h-1 rounded-full animate-pulse ${
+                        ws.visibility === 'PRIVATE' ? 'bg-[#6C75BD]' : 'bg-[#CDD9B2]'
+                      }`} />
+                      <span className="text-xs font-medium text-muted-foreground/30">{boardsByWorkspace[ws.workspaceId]?.length || 0} Boards</span>
                     </div>
                   </div>
                 </CardContent>
-
-                <CardFooter className="p-6 pt-2">
-                  <Button asChild variant="outline" className="w-full h-10 gap-2 rounded-xl font-black uppercase tracking-widest text-[10px] group-hover:border-primary group-hover:text-primary transition-all shadow-sm">
-                    <Link to={`/workspaces/${ws.workspaceId}`}>
-                      Enter Workspace <ArrowRight size={14} />
-                    </Link>
-                  </Button>
-                </CardFooter>
               </Card>
-            </motion.div>
+            </div>
           ))}
 
-          {/* Add Workspace Card */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <button
-              onClick={() => setShowWsForm(true)}
-              className="w-full h-full min-h-[360px] flex flex-col items-center justify-center rounded-[2.5rem] border-2 border-dashed border-border/50 bg-muted/10 hover:bg-primary/5 hover:border-primary/30 group transition-all duration-500"
-            >
-              <div className="w-20 h-20 rounded-3xl border-2 border-dashed border-muted-foreground/30 flex items-center justify-center text-muted-foreground/50 group-hover:border-primary group-hover:text-primary group-hover:rotate-90 transition-all duration-500 shadow-inner bg-background/50">
-                <Plus size={32} />
-              </div>
-              <div className="text-center mt-6">
-                <p className="text-lg font-black text-foreground/60 group-hover:text-primary transition-colors">Initialize New Sector</p>
-                <p className="text-xs font-bold text-muted-foreground/50 mt-1 uppercase tracking-widest">Expansion Required</p>
-              </div>
-            </button>
-          </motion.div>
         </div>
       )}
 

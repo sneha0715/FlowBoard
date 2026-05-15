@@ -56,7 +56,7 @@ export default function BoardCanvas({
     <div className="h-full flex flex-col relative group/canvas">
       {/* Background Decor */}
       <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px] opacity-[0.03] pointer-events-none" />
-      
+
       <DragDropContext onDragEnd={onDragEnd}>
         <StrictModeDroppable droppableId="board" direction="horizontal" type="COLUMN">
           {(provided) => (
@@ -91,7 +91,7 @@ export default function BoardCanvas({
                 <div className="w-[220px] flex-shrink-0 flex flex-col h-full">
                   {/* Dummy header to match column alignment (Header height 44px + mb-3) */}
                   <div className="h-[44px] mb-3 invisible" />
-                  
+
                   <AnimatePresence mode="wait">
                     {!open ? (
                       <button
@@ -109,32 +109,48 @@ export default function BoardCanvas({
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 20 }}
                         onSubmit={handleSubmitList}
-                        className="bg-[#181824] border border-white/10 p-6 rounded-[40px] shadow-2xl space-y-6"
+                        className="bg-[#0e0e10] border border-white/5 p-6 rounded-[32px] shadow-2xl space-y-6"
                       >
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 ml-2">Stage Specification</label>
+                        <div className="space-y-3">
+                          <label className="text-[11px] font-black tracking-widest text-white/20 ml-1">StageName</label>
                           <Input
                             autoFocus
-                            placeholder="Stage Name (e.g. Quality Assurance)"
+                            placeholder="e.g. Quality Assurance"
                             value={listDraft.name}
                             onChange={(e) => setListDraft({ ...listDraft, name: e.target.value })}
-                            className="h-12 bg-white/5 border-none text-[14px] font-bold text-foreground focus-visible:ring-0 placeholder:text-muted-foreground/10 px-4 rounded-2xl"
+                            className="h-10 bg-white/[0.03] border border-white/5 rounded-2xl text-[14px] font-bold text-white placeholder:text-white/10 focus-visible:border-white/20 focus-visible:ring-1 focus-visible:ring-white/20 transition-all px-4"
                           />
                         </div>
+                        
+                        <div className="space-y-3">
+                          <label className="text-[11px] font-black tracking-widest text-white/20 ml-1">AccentColor</label>
+                          <div className="flex gap-2.5">
+                            {['#FF7675', '#00CEC9', '#FDCB6E', '#E84393', '#0984E3'].map(c => (
+                              <button
+                                key={c}
+                                type="button"
+                                onClick={() => setListDraft({ ...listDraft, color: c })}
+                                className={`w-6 h-6 rounded-full transition-all ${listDraft.color === c ? 'ring-2 ring-white ring-offset-2 ring-offset-[#0e0e10]' : 'border border-white/10 hover:border-white/30'}`}
+                                style={{ backgroundColor: c }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
                         <div className="flex gap-2">
                           <Button
                             type="button"
                             variant="ghost"
                             onClick={() => setOpen(false)}
-                            className="flex-1 h-11 rounded-2xl text-[11px] font-black uppercase tracking-widest text-muted-foreground/40 hover:bg-white/5"
+                            className="flex-1 h-10 rounded-2xl text-[11px] font-black tracking-widest text-white/30 hover:text-white hover:bg-white/[0.03]"
                           >
                             Abort
                           </Button>
                           <Button
                             type="submit"
-                            className="flex-[2] h-11 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-primary text-black hover:shadow-lg hover:shadow-primary/20 transition-all"
+                            className="flex-[2] h-10 rounded-2xl bg-[#6C75BD] hover:bg-[#6C75BD]/90 text-white font-black tracking-widest text-[11px] transition-all hover:scale-[1.02] active:scale-95 border-none"
                           >
-                            Initialize Stage
+                            Initialize
                           </Button>
                         </div>
                       </motion.form>

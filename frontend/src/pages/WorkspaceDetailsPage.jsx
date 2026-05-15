@@ -2,36 +2,38 @@ import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { 
-  ArrowLeft, 
-  ArrowRight, 
-  Check, 
-  Edit2, 
-  Eye, 
-  FolderKanban, 
-  LoaderCircle, 
-  LogOut, 
-  Mail, 
-  Plus, 
-  Send, 
-  Shield, 
-  Trash2, 
-  UserPlus, 
-  Users, 
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Edit2,
+  Eye,
+  FolderKanban,
+  LoaderCircle,
+  LogOut,
+  Mail,
+  Plus,
+  Send,
+  Shield,
+  Trash2,
+  UserPlus,
+  Users,
   X,
   MoreVertical,
   Lock,
   Globe,
   Settings,
-  Grid,
   ChevronDown,
   Layers,
   LayoutGrid,
   List as ListIcon,
   Calendar,
   Search as SearchIcon,
-  Pencil
+  Pencil,
+  Box,
+  ChevronRight
 } from "lucide-react";
+import { GridIcon, Table01Icon, PencilEdit01Icon, Delete02Icon } from "hugeicons-react";
 
 import AppShell from "../components/layout/AppShell";
 import { authApi, boardApi, columnApi, notificationApi, workspaceApi } from "../api/services";
@@ -109,10 +111,10 @@ export default function WorkspaceDetailsPage() {
 
   useEffect(() => {
     if (workspace) {
-      setWsEditDraft({ 
-        name: workspace.name, 
-        description: workspace.description || "", 
-        visibility: workspace.visibility || "PRIVATE" 
+      setWsEditDraft({
+        name: workspace.name,
+        description: workspace.description || "",
+        visibility: workspace.visibility || "PRIVATE"
       });
     }
   }, [workspace]);
@@ -122,7 +124,7 @@ export default function WorkspaceDetailsPage() {
       if (members.length === 0) return;
       const profiles = { ...memberProfiles };
       try {
-        const results = await authApi.searchUsers(""); 
+        const results = await authApi.searchUsers("");
         results.forEach(u => { profiles[u.userId] = u; });
         setMemberProfiles(profiles);
       } catch (err) { console.error("Failed to fetch member profiles", err); }
@@ -223,7 +225,7 @@ export default function WorkspaceDetailsPage() {
     setBoardSubmitting(true);
     try {
       const board = await boardApi.create({ ...boardDraft, workspaceId: Number(workspaceId) });
-      await Promise.all(DEFAULT_LISTS.map((l, i) => 
+      await Promise.all(DEFAULT_LISTS.map((l, i) =>
         columnApi.create({ boardId: board.boardId, name: l.name, color: l.color, position: i })
       ));
       setBoardDraft({ name: "", description: "", background: "Ocean", visibility: "PRIVATE" });
@@ -307,107 +309,114 @@ export default function WorkspaceDetailsPage() {
             </div>
           </div>
         )}
-
         {/* Tab Content Rendering */}
         {activeTab === "boards" && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 gap-6">
-              <div>
-                <h2 className="text-3xl font-black tracking-tighter flex items-center gap-4">
-                   <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20 text-primary shadow-[0_0_15px_rgba(20,184,166,0.1)]">
-                     <FolderKanban className="h-6 w-6" />
-                   </div>
-                   Active Boards
+            <div className="flex flex-col items-start gap-10 pb-4">
+              <div className="flex items-center justify-between w-full">
+                <h2 className="text-5xl font-black tracking-tighter">
+                  Boards<span className="text-[#BEF264] ml-1 opacity-70">.</span>
                 </h2>
+
+                {canEdit && (
+                  <Button 
+                    onClick={() => setShowBoardForm(true)} 
+                    className="h-11 px-8 rounded-full gap-3 bg-[#40456B] hover:bg-[#40456B]/90 text-white font-black uppercase tracking-widest text-[10px] transition-all hover:scale-[1.02] active:scale-95 border-none shadow-[0_0_20px_rgba(64,69,107,0.2)]"
+                  >
+                    <Plus size={18} strokeWidth={3} />
+                    New Board
+                  </Button>
+                )}
               </div>
 
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-3 p-1.5 rounded-[1.25rem] bg-card/30 backdrop-blur-xl border border-border/40 shadow-2xl ring-1 ring-white/5">
-                  <div className="relative group">
-                    <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary transition-all group-focus-within:scale-110" />
-                    <Input 
-                      placeholder="Search boards..." 
-                      className="pl-9 w-[220px] h-9 bg-background/40 border-none rounded-xl focus:ring-2 focus:ring-primary/20 transition-all text-xs font-bold placeholder:text-muted-foreground/40"
-                      value={boardSearchTerm}
-                      onChange={(e) => setBoardSearchTerm(e.target.value)}
-                    />
-                  </div>
+              <div className="flex items-center gap-5 w-full">
+                <div className="flex items-center px-6 h-14 rounded-full bg-card/30 backdrop-blur-2xl border border-white/5 shadow-2xl ring-1 ring-white/5 flex-1 max-w-md group transition-all focus-within:border-white/20 focus-within:ring-white/10">
+                  <SearchIcon className="h-5 w-5 text-muted-foreground/30 group-focus-within:text-white transition-colors" />
+                  <Input
+                    placeholder="Search by board name, reference, or description..."
+                    className="bg-transparent border-none focus-visible:ring-0 text-sm font-medium placeholder:text-muted-foreground/20 w-full ml-2"
+                    value={boardSearchTerm}
+                    onChange={(e) => setBoardSearchTerm(e.target.value)}
+                  />
+                </div>
 
-                  <div className="w-px h-5 bg-border/50" />
-
-                  <Tabs value={boardViewMode} onValueChange={setBoardViewMode} className="bg-background/20 p-0.5 rounded-xl">
-                    <TabsList className="bg-transparent h-9 gap-1">
-                      <TabsTrigger value="list" className="rounded-lg px-4 text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"><ListIcon size={14} className="mr-2" /> List</TabsTrigger>
-                      <TabsTrigger value="grid" className="rounded-lg px-4 text-[9px] font-black uppercase tracking-widest data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all"><LayoutGrid size={14} className="mr-2" /> Grid</TabsTrigger>
+                <div className="flex items-center p-1 h-14 rounded-full bg-card/30 backdrop-blur-2xl border border-white/5 shadow-2xl ring-1 ring-white/5">
+                  <Tabs value={boardViewMode} onValueChange={setBoardViewMode} className="bg-transparent">
+                    <TabsList className="bg-transparent h-12 gap-2 px-1">
+                      <TabsTrigger value="grid" className="rounded-full w-10 h-10 p-0 text-muted-foreground/40 data-[state=active]:bg-white/10 data-[state=active]:text-white hover:text-white transition-all duration-500 border border-transparent">
+                        <GridIcon size={20} />
+                      </TabsTrigger>
+                      <TabsTrigger value="list" className="rounded-full w-10 h-10 p-0 text-muted-foreground/40 data-[state=active]:bg-white/10 data-[state=active]:text-white hover:text-white transition-all duration-500 border border-transparent">
+                        <Table01Icon size={20} />
+                      </TabsTrigger>
                     </TabsList>
                   </Tabs>
                 </div>
-
-                {canEdit && (
-                  <Button onClick={() => setShowBoardForm(true)} className="h-12 px-6 rounded-2xl gap-3 font-black uppercase tracking-widest text-[10px] shadow-xl shadow-primary/20 bg-primary hover:bg-primary/90 text-primary-foreground transition-all hover:scale-[1.05] active:scale-95">
-                    <Plus size={18} strokeWidth={3} /> New Board
-                  </Button>
-                )}
               </div>
             </div>
 
             {boardViewMode === "list" ? (
-              <div className="rounded-[2rem] border border-border/50 bg-card/30 backdrop-blur-sm overflow-hidden shadow-2xl">
+              <div className="rounded-[2.5rem] border border-white/15 bg-[#0e0e10] overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] ring-1 ring-white/5">
                 <Table>
-                  <TableHeader className="bg-muted/30">
-                    <TableRow className="hover:bg-transparent border-border/50">
-                      <TableHead className="w-[400px] font-black uppercase tracking-widest text-[10px] h-12 px-8">Board Name</TableHead>
-                      <TableHead className="font-black uppercase tracking-widest text-[10px] h-12">Visibility</TableHead>
-                      <TableHead className="font-black uppercase tracking-widest text-[10px] h-12">Last Active</TableHead>
-                      <TableHead className="text-right font-black uppercase tracking-widest text-[10px] h-12 px-6">Actions</TableHead>
+                  <TableHeader className="bg-white/[0.03]">
+                    <TableRow className="hover:bg-transparent border-white/10 h-16">
+                      <TableHead className="w-[45%] font-black text-[13px] text-muted-foreground/40 px-10">Board Identity</TableHead>
+                      <TableHead className="w-[20%] font-black text-[13px] text-muted-foreground/40">Visibility Mode</TableHead>
+                      <TableHead className="w-[25%] font-black text-[13px] text-muted-foreground/40">Last Activity</TableHead>
+                      <TableHead className="w-[10%] text-right font-black text-[13px] text-muted-foreground/40 px-10">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {boards.filter(b => b.name.toLowerCase().includes(boardSearchTerm.toLowerCase())).map((board) => (
-                      <TableRow key={board.boardId} className="group hover:bg-primary/5 transition-colors border-border/50 h-16">
-                        <TableCell className="px-6 py-3">
-                          <div 
+                      <TableRow key={board.boardId} className="group hover:bg-white/[0.02] transition-colors border-white/10 h-20">
+                        <TableCell className="px-10">
+                          <div
                             onClick={() => navigate(`/boards/${board.boardId}`)}
-                            className="flex items-center gap-3 cursor-pointer"
+                            className="flex items-center gap-5 cursor-pointer"
                           >
-                            <div className="w-10 h-10 rounded-xl shadow-lg border border-white/10 group-hover:scale-110 transition-transform bg-primary/10 flex items-center justify-center text-primary/40">
-                              <Layers size={18} />
+                            <div className="w-10 h-10 rounded-xl bg-foreground/5 flex items-center justify-center text-foreground/20 border border-white/5 group-hover:text-white group-hover:border-white/20 transition-all duration-500 shadow-inner">
+                              <Layers size={16} />
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <div className="font-black text-md group-hover:text-primary transition-colors">{board.name}</div>
-                                {isAdmin && (
-                                  <button 
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleBoardEdit(board);
-                                    }}
-                                    className="p-1 rounded-md hover:bg-primary/10 hover:text-primary transition-all opacity-0 group-hover:opacity-100"
-                                  >
-                                    <Pencil size={12} className="text-muted-foreground/30" />
-                                  </button>
-                                )}
+                                <div className="font-black text-xl tracking-tight group-hover:text-white transition-colors">{board.name}</div>
                               </div>
-                              <div className="text-xs font-medium text-muted-foreground line-clamp-1">{board.description || "No description provided."}</div>
+                              <div className="text-xs font-medium text-muted-foreground/30 line-clamp-1 mt-1 lowercase">{board.description || "Sector node awaiting mission parameters."}</div>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            {board.visibility === 'PRIVATE' ? <Lock size={14} className="text-muted-foreground" /> : <Globe size={14} className="text-primary" />}
-                            <span className="text-xs font-black uppercase tracking-tighter">{board.visibility}</span>
+                          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${
+                            board.visibility === 'PRIVATE' 
+                              ? 'bg-[#6C75BD] text-black' 
+                              : 'bg-[#CDD9B2] text-[#606653]'
+                          }`}>
+                            <div className={`w-1.5 h-1.5 rounded-full ${
+                              board.visibility === 'PRIVATE' ? 'bg-black' : 'bg-[#606653]'
+                            }`} />
+                            <span className="text-[9px] font-black uppercase tracking-tight">{board.visibility}</span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Calendar size={14} />
-                            <span className="text-xs font-medium">Oct 21, 2026</span>
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-6 h-6 rounded-md bg-white/[0.03] border border-white/5 flex items-center justify-center text-muted-foreground/30">
+                              <Calendar size={10} />
+                            </div>
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-[13px] font-black">15 May 2026</span>
+                              <span className="text-[10px] font-bold text-muted-foreground/20 uppercase tracking-widest">09:15 PM</span>
+                            </div>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right px-8">
-                          <Button asChild variant="outline" size="sm" className="rounded-xl font-black uppercase tracking-widest text-[10px] group-hover:border-primary group-hover:text-primary transition-all">
-                            <Link to={`/boards/${board.boardId}`}>Open Board</Link>
-                          </Button>
+                        <TableCell className="text-right px-10">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="icon" className="w-9 h-9 rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-all">
+                              <PencilEdit01Icon size={16} />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="w-9 h-9 rounded-full bg-white/5 text-red-400/30 hover:text-red-400/70 hover:bg-red-500/10 transition-all">
+                              <Delete02Icon size={16} />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -415,60 +424,42 @@ export default function WorkspaceDetailsPage() {
                 </Table>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {boards.filter(b => b.name.toLowerCase().includes(boardSearchTerm.toLowerCase())).map((board) => (
-                  <div 
-                    key={board.boardId} 
-                    onClick={() => navigate(`/boards/${board.boardId}`)}
-                    className="cursor-pointer"
-                  >
-                    <Card className="h-56 relative overflow-hidden group hover:border-primary/50 transition-all rounded-3xl border-border/50 shadow-xl shadow-black/5 hover:shadow-primary/5">
-                      <div className="absolute inset-0 opacity-90 group-hover:opacity-100 transition-opacity bg-muted/20 flex items-center justify-center">
-                        <Layers size={64} className="text-primary/5 group-hover:text-primary/10 transition-all duration-700" />
-                      </div>
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
-                      <CardHeader className="relative p-6 pb-0">
+                  <div key={board.boardId} className="group relative">
+                    <Card
+                      onClick={() => navigate(`/boards/${board.boardId}`)}
+                      className="flex flex-col h-60 cursor-pointer transition-all duration-500 rounded-[2rem] overflow-hidden border border-white/5 bg-[#0e0e10] hover:border-white/20 hover:shadow-2xl shadow-inner"
+                    >
+                      <CardHeader className="pb-2 pt-7 px-7">
                         <div className="flex justify-between items-start">
-                          <Badge variant="outline" className="bg-black/30 text-white border-white/20 backdrop-blur-md text-[9px] font-black tracking-widest uppercase py-1 px-3">
-                            {board.visibility}
-                          </Badge>
+                          <div className="w-12 h-12 rounded-2xl bg-foreground/5 flex items-center justify-center text-foreground/20 group-hover:text-white group-hover:border-white/20 transition-all duration-700 border border-white/5 shadow-inner">
+                            <Layers size={20} />
+                          </div>
+                          <div className={`px-3 py-1 rounded-full ${
+                            board.visibility === 'PRIVATE' 
+                              ? 'bg-[#6C75BD] text-black' 
+                              : 'bg-[#CDD9B2] text-[#606653]'
+                          }`}>
+                            <span className="text-[8px] font-black uppercase tracking-widest">{board.visibility}</span>
+                          </div>
                         </div>
+                        <CardTitle className="mt-6 text-xl font-black tracking-tight group-hover:text-white transition-colors line-clamp-1">{board.name}</CardTitle>
+                        <CardDescription className="text-xs font-medium text-muted-foreground/30 line-clamp-1 mt-1 lowercase">{board.description || "Sector node awaiting mission parameters."}</CardDescription>
                       </CardHeader>
-                      <CardContent className="relative p-6 pt-12">
-                        <div className="flex items-center gap-3">
-                          <CardTitle className="text-2xl text-white font-black group-hover:translate-x-2 transition-transform">{board.name}</CardTitle>
-                          {isAdmin && (
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleBoardEdit(board);
-                              }}
-                              className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all opacity-0 group-hover:opacity-100 backdrop-blur-md"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                          )}
+                      <CardContent className="px-7 mt-auto pb-7">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div className={`w-1 h-1 rounded-full animate-pulse ${
+                              board.visibility === 'PRIVATE' ? 'bg-[#6C75BD]' : 'bg-[#CDD9B2]'
+                            }`} />
+                            <span className="text-xs font-medium text-muted-foreground/30">Active Node</span>
+                          </div>
                         </div>
-                        <p className="text-sm text-white/70 line-clamp-2 mt-2 font-medium leading-relaxed">{board.description || "Visual workflow management board."}</p>
                       </CardContent>
                     </Card>
                   </div>
                 ))}
-                
-                {canEdit && (
-                  <button 
-                    onClick={() => setShowBoardForm(true)}
-                    className="h-full min-h-[280px] flex flex-col items-center justify-center border-2 border-dashed border-border/20 rounded-[2.5rem] bg-transparent hover:bg-primary/5 hover:border-primary/30 group transition-all duration-500"
-                  >
-                    <div className="h-16 w-16 rounded-[1.25rem] bg-primary/5 border border-primary/10 flex items-center justify-center text-primary/40 group-hover:text-primary group-hover:bg-primary/10 group-hover:scale-110 group-hover:rotate-90 transition-all duration-500">
-                      <Plus size={32} strokeWidth={3} />
-                    </div>
-                    <div className="mt-6 text-center">
-                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 group-hover:text-primary transition-colors">Initialize Stage</h4>
-                      <p className="text-[9px] font-bold text-muted-foreground/30 mt-1 uppercase tracking-wider italic">Deploy new board</p>
-                    </div>
-                  </button>
-                )}
               </div>
             )}
 
@@ -490,26 +481,26 @@ export default function WorkspaceDetailsPage() {
             <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-border/50 pb-8 gap-6">
               <div>
                 <h2 className="text-3xl font-black tracking-tighter flex items-center gap-4">
-                   <Users className="h-8 w-8 text-primary" />
-                   Personnel Management
+                  <Users className="h-8 w-8 text-primary" />
+                  Personnel Management
                 </h2>
                 <p className="text-sm font-medium text-muted-foreground mt-1">Manage collaborators and authorization levels for this workspace.</p>
               </div>
-              
+
               {isAdmin && (
                 <div className="bg-card p-6 rounded-3xl border border-border/50 shadow-2xl flex-1 max-w-xl">
                   <form onSubmit={sendInvite} className="flex flex-col sm:flex-row gap-4">
                     <div className="flex-1 relative group">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                      <Input 
-                        required 
-                        placeholder="collaborator@email.com" 
+                      <Input
+                        required
+                        placeholder="collaborator@email.com"
                         className="pl-10 h-11 bg-muted/20 border-border/50 rounded-xl focus:ring-primary/20"
                         value={inviteDraft.email}
                         onChange={(e) => setInviteDraft(d => ({ ...d, email: e.target.value }))}
                       />
                     </div>
-                    <select 
+                    <select
                       className="h-11 bg-muted/30 border border-border/50 rounded-xl px-4 text-xs font-black uppercase tracking-widest outline-none focus:ring-2 ring-primary/20 appearance-none cursor-pointer"
                       value={inviteDraft.role}
                       onChange={(e) => setInviteDraft(d => ({ ...d, role: e.target.value }))}
@@ -576,14 +567,14 @@ export default function WorkspaceDetailsPage() {
                             </DropdownMenu>
                           ) : (
                             <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest py-1 px-3 border-border/50 bg-background/50">
-                               {workspaceRoleLabel(m.role)}
+                              {workspaceRoleLabel(m.role)}
                             </Badge>
                           )}
                         </TableCell>
                         <TableCell>
-                           <Badge className={`text-[10px] font-black uppercase tracking-widest py-1 px-3 ${m.status === 'PENDING' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-primary/10 text-primary border-primary/20'}`}>
-                             {m.status}
-                           </Badge>
+                          <Badge className={`text-[10px] font-black uppercase tracking-widest py-1 px-3 ${m.status === 'PENDING' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-primary/10 text-primary border-primary/20'}`}>
+                            {m.status}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-right px-8">
                           {isAdmin && !isMe && m.role !== "OWNER" && (
@@ -605,8 +596,8 @@ export default function WorkspaceDetailsPage() {
           <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-4xl">
             <div className="border-b border-border/50 pb-6">
               <h2 className="text-3xl font-black tracking-tighter flex items-center gap-4">
-                 <Shield className="h-8 w-8 text-destructive" />
-                 Sector Configuration
+                <Shield className="h-8 w-8 text-destructive" />
+                Sector Configuration
               </h2>
               <p className="text-sm font-medium text-muted-foreground mt-1">Management and security policies for this workspace.</p>
             </div>
@@ -619,15 +610,15 @@ export default function WorkspaceDetailsPage() {
                 </CardHeader>
                 <CardContent className="p-8 pt-4 space-y-6">
                   <div className="p-6 rounded-3xl bg-muted/20 border border-border/50 space-y-4">
-                     <div className="flex items-center justify-between">
-                        <div className="font-black text-sm uppercase tracking-widest">Visibility Mode</div>
-                        <Badge className="bg-primary text-white border-none px-3 font-black">{workspace?.visibility}</Badge>
-                     </div>
-                     <p className="text-xs font-medium text-muted-foreground leading-relaxed">This workspace is currently visible to {workspace?.visibility === 'PUBLIC' ? 'Everyone' : 'Team Members only'}. Only owners can change this setting.</p>
+                    <div className="flex items-center justify-between">
+                      <div className="font-black text-sm uppercase tracking-widest">Visibility Mode</div>
+                      <Badge className="bg-primary text-white border-none px-3 font-black">{workspace?.visibility}</Badge>
+                    </div>
+                    <p className="text-xs font-medium text-muted-foreground leading-relaxed">This workspace is currently visible to {workspace?.visibility === 'PUBLIC' ? 'Everyone' : 'Team Members only'}. Only owners can change this setting.</p>
                   </div>
                   {isAdmin && (
                     <Button variant="outline" className="w-full h-12 rounded-2xl font-black uppercase tracking-widest text-[11px]" onClick={() => setShowWsEdit(true)}>
-                       Edit Configuration
+                      Edit Configuration
                     </Button>
                   )}
                 </CardContent>
@@ -639,20 +630,20 @@ export default function WorkspaceDetailsPage() {
                   <CardDescription className="font-medium text-sm leading-relaxed text-destructive/70">Highly sensitive actions that cannot be undone. Exercise extreme caution.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-8 pt-4 space-y-6">
-                   <div className="p-6 rounded-3xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium leading-relaxed">
-                      {isAdmin 
-                        ? "Careful: deleting this workspace will permanently remove all associated boards, cards, and member data. This action is irreversible." 
-                        : "Leaving this workspace will immediately revoke your access to all boards and collaboration history."}
-                   </div>
-                   {isAdmin ? (
-                     <Button variant="destructive" className="w-full h-14 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-xl shadow-destructive/20" onClick={deleteWorkspace}>
-                        <Trash2 className="mr-2 h-4 w-4" /> Permanently Delete
-                     </Button>
-                   ) : (
-                     <Button variant="outline" className="w-full h-14 rounded-2xl border-destructive/50 text-destructive hover:bg-destructive hover:text-white font-black uppercase tracking-widest text-[11px]" onClick={leaveWorkspace}>
-                        <LogOut className="mr-2 h-4 w-4" /> Leave Workspace
-                     </Button>
-                   )}
+                  <div className="p-6 rounded-3xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium leading-relaxed">
+                    {isAdmin
+                      ? "Careful: deleting this workspace will permanently remove all associated boards, cards, and member data. This action is irreversible."
+                      : "Leaving this workspace will immediately revoke your access to all boards and collaboration history."}
+                  </div>
+                  {isAdmin ? (
+                    <Button variant="destructive" className="w-full h-14 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-xl shadow-destructive/20" onClick={deleteWorkspace}>
+                      <Trash2 className="mr-2 h-4 w-4" /> Permanently Delete
+                    </Button>
+                  ) : (
+                    <Button variant="outline" className="w-full h-14 rounded-2xl border-destructive/50 text-destructive hover:bg-destructive hover:text-white font-black uppercase tracking-widest text-[11px]" onClick={leaveWorkspace}>
+                      <LogOut className="mr-2 h-4 w-4" /> Leave Workspace
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -661,7 +652,7 @@ export default function WorkspaceDetailsPage() {
       </div>
 
       {/* Dialogs / Modals */}
-      
+
       {/* Create Board Dialog */}
       <Dialog open={showBoardForm} onOpenChange={setShowBoardForm}>
         <DialogContent className="sm:max-w-[460px] rounded-[2rem] border-border/50 shadow-2xl p-6">
@@ -676,19 +667,19 @@ export default function WorkspaceDetailsPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="board-desc" className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-70">Strategy Description</Label>
-              <textarea 
-                id="board-desc" 
+              <textarea
+                id="board-desc"
                 placeholder="What are we achieving with this board?"
                 className="flex min-h-[80px] w-full rounded-xl border border-border/50 bg-muted/20 px-4 py-3 text-sm shadow-sm transition-all focus:ring-2 ring-primary/20 outline-none resize-none placeholder:text-muted-foreground/30 font-medium"
-                value={boardDraft.description} 
-                onChange={(e) => setBoardDraft(d => ({ ...d, description: e.target.value }))} 
+                value={boardDraft.description}
+                onChange={(e) => setBoardDraft(d => ({ ...d, description: e.target.value }))}
               />
             </div>
             <div className="space-y-1.5">
               <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-70">Access Level</Label>
-              <select 
+              <select
                 className="flex h-11 w-full rounded-xl border border-border/50 bg-muted/20 px-4 py-1 text-[11px] font-black uppercase tracking-widest transition-colors focus:ring-2 ring-primary/20 outline-none appearance-none cursor-pointer"
-                value={boardDraft.visibility} 
+                value={boardDraft.visibility}
                 onChange={(e) => setBoardDraft(d => ({ ...d, visibility: e.target.value }))}
               >
                 {["PRIVATE", "PUBLIC"].map(v => <option key={v} value={v}>{v}</option>)}
@@ -719,17 +710,17 @@ export default function WorkspaceDetailsPage() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-70">Strategy Description</Label>
-              <textarea 
+              <textarea
                 className="flex min-h-[80px] w-full rounded-xl border border-border/50 bg-muted/20 px-4 py-3 text-sm shadow-sm transition-all focus:ring-2 ring-primary/20 outline-none resize-none placeholder:text-muted-foreground/30 font-medium"
-                value={boardEditDraft?.description || ""} 
-                onChange={(e) => setBoardEditDraft(d => ({ ...d, description: e.target.value }))} 
+                value={boardEditDraft?.description || ""}
+                onChange={(e) => setBoardEditDraft(d => ({ ...d, description: e.target.value }))}
               />
             </div>
             <div className="space-y-1.5">
               <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-70">Access Level</Label>
-              <select 
+              <select
                 className="flex h-11 w-full rounded-xl border border-border/50 bg-muted/20 px-4 py-1 text-[11px] font-black uppercase tracking-widest transition-colors focus:ring-2 ring-primary/20 outline-none appearance-none cursor-pointer"
-                value={boardEditDraft?.visibility || "PRIVATE"} 
+                value={boardEditDraft?.visibility || "PRIVATE"}
                 onChange={(e) => setBoardEditDraft(d => ({ ...d, visibility: e.target.value }))}
               >
                 {["PRIVATE", "PUBLIC"].map(v => <option key={v} value={v}>{v}</option>)}
@@ -763,18 +754,18 @@ export default function WorkspaceDetailsPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="ws-desc" className="text-xs font-black uppercase tracking-widest ml-1">Sector Mission</Label>
-              <textarea 
-                id="ws-desc" 
+              <textarea
+                id="ws-desc"
                 className="flex min-h-[120px] w-full rounded-2xl border border-border/50 bg-muted/20 px-4 py-3 text-sm shadow-sm transition-all focus:ring-2 ring-primary/20 outline-none resize-none"
-                value={wsEditDraft.description} 
-                onChange={(e) => setWsEditDraft(d => ({ ...d, description: e.target.value }))} 
+                value={wsEditDraft.description}
+                onChange={(e) => setWsEditDraft(d => ({ ...d, description: e.target.value }))}
               />
             </div>
             <div className="space-y-2">
               <Label className="text-xs font-black uppercase tracking-widest ml-1">Global Visibility</Label>
-              <select 
+              <select
                 className="flex h-12 w-full rounded-2xl border border-border/50 bg-muted/20 px-4 py-1 text-xs font-black uppercase tracking-widest transition-colors focus:ring-2 ring-primary/20 outline-none appearance-none cursor-pointer"
-                value={wsEditDraft.visibility} 
+                value={wsEditDraft.visibility}
                 onChange={(e) => setWsEditDraft(d => ({ ...d, visibility: e.target.value }))}
               >
                 {VISIBILITY_OPTIONS.map(v => <option key={v} value={v}>{v}</option>)}
@@ -782,9 +773,9 @@ export default function WorkspaceDetailsPage() {
             </div>
             <DialogFooter className="pt-6 flex flex-row justify-between items-center border-t border-border/20">
               {isAdmin && (
-                <Button 
-                  type="button" 
-                  variant="ghost" 
+                <Button
+                  type="button"
+                  variant="ghost"
                   className="text-destructive hover:bg-destructive/10 hover:text-destructive font-black uppercase tracking-widest text-[9px] h-10 px-4 rounded-xl group transition-all"
                   onClick={() => {
                     if (window.confirm("Are you sure you want to delete this sector? This cannot be undone.")) {

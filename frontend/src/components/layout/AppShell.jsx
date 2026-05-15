@@ -176,11 +176,11 @@ export default function AppShell({ children }) {
                   asChild
                   isActive={location.pathname === '/'}
                   tooltip="Hub"
-                  className="h-10 px-3.5 rounded-xl data-[active=true]:bg-primary/10 data-[active=true]:text-primary transition-all duration-200"
+                  className="h-10 px-3.5 rounded-xl data-[active=true]:bg-secondary/50 data-[active=true]:text-foreground transition-all duration-200"
                 >
                   <Link to="/" className="flex items-center gap-3">
-                    <Home size={18} strokeWidth={2} />
-                    <span className="font-semibold text-[13px] group-data-[collapsible=icon]:hidden">Control Hub</span>
+                    <Home size={18} strokeWidth={2} className="shrink-0 opacity-70" />
+                    <span className="font-medium text-[13px] group-data-[collapsible=icon]:hidden">Control Hub</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -236,24 +236,24 @@ export default function AppShell({ children }) {
         <SidebarFooter className="p-4 mt-auto">
           <SidebarMenu>
             <SidebarMenuItem>
-              <div className="flex items-center h-10 w-full px-1 rounded-full bg-secondary/5 border border-white/5 hover:bg-secondary/10 transition-all group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:mx-auto overflow-hidden">
-                <Link to="/profile" className="flex flex-1 items-center gap-2.5 pl-1.5 pr-2 min-w-0">
-                  <Avatar className="h-6 w-6 shrink-0 border-none ring-0">
-                    <AvatarFallback className="text-[10px] font-black bg-[#A29BFE]/10 text-[#A29BFE]">
+              <div className="flex items-center h-8 w-full px-1 rounded-full bg-secondary/5 border border-white/5 hover:bg-secondary/10 transition-all group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8 group-data-[collapsible=icon]:mx-auto overflow-hidden">
+                <Link to="/profile" className="flex flex-1 items-center gap-2 pl-1 pr-1.5 min-w-0">
+                  <Avatar className="h-5 w-5 shrink-0 border-none ring-0">
+                    <AvatarFallback className="text-[9px] font-black bg-[#A29BFE]/10 text-[#A29BFE]">
                       {user?.email?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex flex-col items-start truncate group-data-[collapsible=icon]:hidden">
-                    <span className="text-[12px] font-black text-foreground tracking-tight leading-none">{user?.fullName || 'User'}</span>
+                    <span className="text-[11px] font-black text-foreground tracking-tight leading-none">{user?.fullName || 'User'}</span>
                   </div>
                 </Link>
-                <div className="w-px h-3 bg-white/5 mx-1 group-data-[collapsible=icon]:hidden" />
-                <button 
+                <div className="w-px h-2 bg-white/5 mx-0.5 group-data-[collapsible=icon]:hidden" />
+                <button
                   onClick={handleLogout}
-                  className="h-7 w-7 rounded-full flex items-center justify-center text-rose-500/30 hover:text-rose-400 hover:bg-rose-500/10 transition-all group-data-[collapsible=icon]:hidden"
+                  className="h-6 w-6 rounded-full flex items-center justify-center text-rose-500/30 hover:text-rose-400 hover:bg-rose-500/10 transition-all group-data-[collapsible=icon]:hidden"
                   title="Logout"
                 >
-                  <LogOut size={13} />
+                  <LogOut size={12} />
                 </button>
               </div>
             </SidebarMenuItem>
@@ -262,18 +262,18 @@ export default function AppShell({ children }) {
       </Sidebar>
 
       <SidebarInset className="bg-background flex flex-col relative overflow-hidden transition-all duration-300">
-        <header className="h-14 flex items-center justify-between px-8 lg:px-12 sticky top-0 z-40 bg-background/80 backdrop-blur-md">
+        <header className="h-14 flex items-center justify-between px-8 sticky top-0 z-40 bg-background/80 backdrop-blur-md">
           <div className="flex items-center gap-6">
-            <nav className="flex items-center gap-4 text-[12px] font-bold tracking-tight text-violet-400/50">
-              <Link to="/" className="flex items-center gap-2 hover:text-primary transition-colors">
-                <Box size={14} strokeWidth={3} className="text-[#A29BFE]" />
+            <nav className="flex items-center gap-4 text-[12px] font-semibold tracking-tight text-[#a098fa]">
+              <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-all">
+                <Box size={14} strokeWidth={3} className="text-white" />
                 <span>Station</span>
               </Link>
               {crumbs.map((crumb, i) => (
                 <div key={crumb.path + i} className="flex items-center gap-4 animate-in fade-in slide-in-from-left-2 duration-300">
-                  <ChevronRight size={14} className="opacity-30 text-white" strokeWidth={3} />
-                  <Link to={crumb.path} className="flex items-center gap-2 hover:text-primary transition-all">
-                    <span className="text-white flex items-center">{crumb.icon}</span>
+                  <ChevronRight size={14} className="opacity-40 text-white" strokeWidth={3} />
+                  <Link to={crumb.path} className="flex items-center gap-2 hover:opacity-80 transition-all">
+                    <span className="text-white/60 flex items-center">{crumb.icon}</span>
                     <span className="truncate max-w-[150px]">{crumb.name}</span>
                   </Link>
                 </div>
@@ -320,7 +320,7 @@ export default function AppShell({ children }) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
-              className="h-full"
+              className="h-full px-8"
             >
               {children}
             </motion.div>

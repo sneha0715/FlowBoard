@@ -46,6 +46,14 @@ public class WorkspaceController {
                 .ok(ApiResponse.success(response, "Workspace created successfully", httpRequest.getRequestURI()));
     }
 
+    @GetMapping("/public")
+    public ResponseEntity<ApiResponse<List<WorkspaceResponse>>> getPublicWorkspaces(
+            HttpServletRequest httpRequest) {
+        List<WorkspaceResponse> response = workspaceService.getPublicWorkspaces();
+        return ResponseEntity
+                .ok(ApiResponse.success(response, "Public workspaces fetched successfully", httpRequest.getRequestURI()));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("@workspaceSecurity.isPublicOrMember(#id, #requesterId)")
     public ResponseEntity<ApiResponse<WorkspaceResponse>> getWorkspaceById(
@@ -136,14 +144,12 @@ public class WorkspaceController {
     }
 
     @GetMapping("/{workspaceId}/members")
-    @PreAuthorize("@workspaceSecurity.isMember(#workspaceId, #requesterId)")
+    @PreAuthorize("@workspaceSecurity.isPublicOrMember(#workspaceId, #requesterId)")
     public ResponseEntity<ApiResponse<List<WorkspaceMemberResponse>>> getMembers(
             @PathVariable int workspaceId,
             @RequestAttribute(value = "userId", required = false) Long requesterId,
             HttpServletRequest httpRequest) {
-        List<WorkspaceMemberResponse> response = workspaceService.getMembers(workspaceId).stream()
-                .map(workspaceMemberMapper::toResponse)
-                .collect(Collectors.toList());
+        List<WorkspaceMemberResponse> response = workspaceService.getMembers(workspaceId);
         return ResponseEntity
                 .ok(ApiResponse.success(response, "Members fetched successfully", httpRequest.getRequestURI()));
     }

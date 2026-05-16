@@ -98,9 +98,8 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
             // 4. Validate the token
             String validationError = jwtUtil.validateToken(token);
             if (validationError != null) {
-                log.info("Invalid or expired JWT for path: {}. Error: {}", request.getPath(), validationError);
-                return reject(exchange, HttpStatus.UNAUTHORIZED, "Token validation failed: " + validationError,
-                        request.getPath().toString());
+                log.info("Invalid or expired JWT for path: {}. Error: {}. Proceeding as Guest.", request.getPath(), validationError);
+                return chain.filter(exchange.mutate().request(nextRequest).build());
             }
 
             // 5. Extract claims and inject downstream headers

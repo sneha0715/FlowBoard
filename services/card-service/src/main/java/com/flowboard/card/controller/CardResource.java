@@ -51,7 +51,7 @@ public class CardResource {
     }
 
     @GetMapping("/board/{boardId}")
-    @PreAuthorize("@cardSecurity.isBoardMember(#boardId, #requesterId)")
+    @PreAuthorize("@cardSecurity.isPublicOrMember(#boardId, #requesterId)")
     public ResponseEntity<ApiResponse<List<CardResponse>>> getCardsByBoard(
             @PathVariable Long boardId,
             @RequestAttribute(value = "userId", required = false) Long requesterId,

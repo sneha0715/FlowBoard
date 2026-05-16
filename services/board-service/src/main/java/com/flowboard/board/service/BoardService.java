@@ -13,7 +13,7 @@ public interface BoardService {
 
     BoardResponse getBoardById(Long boardId);
 
-    List<BoardResponse> getBoardsByWorkspace(Long workspaceId);
+    List<BoardResponse> getBoardsByWorkspace(Long workspaceId, Long userId);
 
     List<BoardResponse> getBoardsByMember(Long userId);
 

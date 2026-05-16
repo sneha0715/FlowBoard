@@ -120,7 +120,7 @@ export default function NotificationsDrawer({ onClose }) {
                 <motion.div
                   layout
                   key={n.notificationId}
-                  onClick={() => !n.isRead && markRead(n.notificationId)}
+                  onClick={() => !n.isRead && n.type !== "ASSIGNMENT" && markRead(n.notificationId)}
                   className={`relative group p-6 rounded-[24px] border transition-all cursor-pointer ${n.isRead ? 'bg-muted/10 border-border/30 opacity-70' : 'bg-card border-primary/20 shadow-md ring-1 ring-primary/5 hover:border-primary/40'}`}
                 >
                   {!n.isRead && (
@@ -149,6 +149,17 @@ export default function NotificationsDrawer({ onClose }) {
                           e.stopPropagation();
                           try {
                             await workspaceApi.acceptInvitation(n.relatedId);
+                            if (n.actorId) {
+                              await notificationApi.send({
+                                recipientId: Number(n.actorId),
+                                actorId: Number(user.userId),
+                                type: "SYSTEM",
+                                title: `Invite accepted: ${user.fullName || user.email}`,
+                                message: `${user.fullName || user.email} has joined the workspace.`,
+                                relatedId: n.relatedId,
+                                relatedType: "WORKSPACE",
+                              }).catch(() => {});
+                            }
                             await markRead(n.notificationId);
                             window.location.href = `/workspaces/${n.relatedId}`;
                           } catch (err) {

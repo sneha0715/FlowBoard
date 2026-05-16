@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import WorkspacePage from "./pages/WorkspacePage";
 import WorkspaceDetailsPage from "./pages/WorkspaceDetailsPage";
+import GlobalWorkspacesPage from "./pages/GlobalWorkspacesPage";
 import BoardPage from "./pages/BoardPage";
 import AdminPage from "./pages/AdminPage";
 import ProfilePage from "./pages/ProfilePage";
@@ -12,8 +13,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/" element={<GlobalWorkspacesPage />} />
       <Route
-        path="/"
+        path="/my-workspaces"
         element={
           <ProtectedRoute>
             <WorkspacePage />
@@ -22,19 +24,11 @@ export default function App() {
       />
       <Route
         path="/workspaces/:workspaceId"
-        element={
-          <ProtectedRoute>
-            <WorkspaceDetailsPage />
-          </ProtectedRoute>
-        }
+        element={<WorkspaceDetailsPage />}
       />
       <Route
         path="/boards/:boardId"
-        element={
-          <ProtectedRoute>
-            <BoardPage />
-          </ProtectedRoute>
-        }
+        element={<BoardPage />}
       />
       <Route
         path="/boards/:boardId/registry/:cardId"

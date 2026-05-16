@@ -37,7 +37,7 @@ public class ListResource {
     }
 
     @GetMapping("/board/{boardId}")
-    @PreAuthorize("@columnSecurity.isBoardMember(#boardId, #requesterId)")
+    @PreAuthorize("@columnSecurity.isPublicOrMember(#boardId, #requesterId)")
     public ResponseEntity<ApiResponse<List<ListResponse>>> getByBoard(
             @PathVariable Long boardId,
             @RequestAttribute(value = "userId", required = false) Long requesterId) {

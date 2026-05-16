@@ -16,6 +16,8 @@ public interface WorkspaceService {
 
     List<WorkspaceResponse> getByMember(int userId);
 
+    List<WorkspaceResponse> getPublicWorkspaces();
+
     WorkspaceResponse updateWorkspace(int workspaceId, WorkspaceRequest request);
 
     void deleteWorkspace(int workspaceId);
@@ -26,7 +28,7 @@ public interface WorkspaceService {
 
     void updateMemberRole(int userId, int workspaceId, String role);
 
-    List<WorkspaceMember> getMembers(int workspaceId);
+    List<WorkspaceMemberResponse> getMembers(int workspaceId);
     
     String getMemberRole(int userId, int workspaceId);
 

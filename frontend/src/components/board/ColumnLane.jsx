@@ -158,10 +158,10 @@ export default function ColumnLane({
                     {cards.length === 0 && !snapshot.isDraggingOver && (
                       <div
                         onClick={() => !readOnly && setOpen(true)}
-                        className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-white/[0.05] rounded-[32px] gap-6 group/placeholder cursor-pointer hover:bg-white/[0.02] hover:border-primary/20 transition-all duration-500 min-h-[350px]"
+                        className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-white/[0.05] rounded-[32px] gap-4 group/placeholder cursor-pointer hover:bg-white/[0.02] hover:border-white/30 transition-all duration-500 min-h-[200px]"
                       >
-                        <div className="h-16 w-16 rounded-[24px] bg-white/[0.03] border border-white/5 flex items-center justify-center group-hover/placeholder:scale-110 group-hover/placeholder:bg-primary/10 group-hover/placeholder:border-primary/20 transition-all duration-500">
-                          <Plus size={30} className="text-white/10 group-hover/placeholder:text-primary transition-colors" />
+                        <div className="h-12 w-12 rounded-[16px] bg-white/[0.03] border border-white/5 flex items-center justify-center group-hover/placeholder:scale-110 group-hover/placeholder:bg-white/5 group-hover/placeholder:border-white/30 transition-all duration-500">
+                          <Plus size={20} className="text-white/20 group-hover/placeholder:text-white/60 transition-colors" />
                         </div>
                         <div className="flex flex-col items-center gap-2">
                           <span className="text-[12px] font-black uppercase tracking-[0.4em] text-white/20 group-hover/placeholder:text-white/40 transition-colors">

@@ -18,6 +18,7 @@ export const authApi = {
 
 export const workspaceApi = {
   get: (workspaceId) => unwrap(http.get(`/workspaces/${workspaceId}`)),
+  publicWorkspaces: () => unwrap(http.get("/workspaces/public")),
   byMember: (userId) => unwrap(http.get(`/workspaces/member/${userId}`)),
   byOwner: (userId) => unwrap(http.get(`/workspaces/owner/${userId}`)),
   create: (payload) => unwrap(http.post("/workspaces/create", payload)),
@@ -84,7 +85,11 @@ export const cardApi = {
 export const checklistApi = {
   byCard: (cardId) => unwrap(http.get(`/checklists/card/${cardId}`)),
   create: (payload) => unwrap(http.post("/checklists", payload)),
+  update: (checklistId, payload) => unwrap(http.put(`/checklists/${checklistId}`, payload)),
+  remove: (checklistId) => unwrap(http.delete(`/checklists/${checklistId}`)),
   addItem: (checklistId, payload) => unwrap(http.post(`/checklists/${checklistId}/items`, payload)),
+  updateItem: (itemId, payload) => unwrap(http.put(`/checklists/items/${itemId}`, payload)),
+  removeItem: (itemId) => unwrap(http.delete(`/checklists/items/${itemId}`)),
   toggleItem: (itemId) => unwrap(http.put(`/checklists/items/${itemId}/toggle`)),
   progress: (cardId) => unwrap(http.get(`/checklists/card/${cardId}/progress`))
 };

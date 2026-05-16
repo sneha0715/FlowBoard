@@ -96,12 +96,12 @@ export default function BoardCanvas({
                     {!open ? (
                       <button
                         onClick={() => setOpen(true)}
-                        className="w-full h-[150px] flex flex-col items-center justify-center gap-3 border-2 border-dashed border-white/5 rounded-[40px] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/10 transition-all duration-500 group/new"
+                        className="w-full h-[150px] flex flex-col items-center justify-center gap-3 border-2 border-dashed border-white/10 rounded-[40px] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/40 transition-all duration-500 group/new"
                       >
                         <div className="h-10 w-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center group-hover/new:scale-110 group-hover/new:bg-white/10 transition-all">
-                          <Plus size={18} className="text-white/10 group-hover/new:text-muted-foreground" />
+                          <Plus size={18} className="text-white/30 group-hover/new:text-white/70" />
                         </div>
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/5 group-hover/new:text-muted-foreground transition-colors">Construct Stage</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 group-hover/new:text-white/50 transition-colors">Construct Stage</span>
                       </button>
                     ) : (
                       <motion.form
@@ -125,7 +125,7 @@ export default function BoardCanvas({
                         <div className="space-y-3">
                           <label className="text-[11px] font-black tracking-widest text-white/20 ml-1">AccentColor</label>
                           <div className="flex gap-2.5">
-                            {['#FF7675', '#00CEC9', '#FDCB6E', '#E84393', '#0984E3'].map(c => (
+                            {['#6C75BD', '#CDD9B2', '#5A738E', '#A38A75', '#8C7A6B'].map(c => (
                               <button
                                 key={c}
                                 type="button"

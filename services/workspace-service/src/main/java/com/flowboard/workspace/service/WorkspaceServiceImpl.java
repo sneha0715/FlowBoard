@@ -94,6 +94,13 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<WorkspaceResponse> getPublicWorkspaces() {
+        List<Workspace> workspaces = workspaceRepository.findByVisibility("PUBLIC");
+        return workspaces.stream().map(workspaceMapper::toResponse).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<WorkspaceMemberResponse> getPendingInvitations(int userId) {
         return workspaceMemberRepository.findByUserIdAndStatus(userId, "PENDING").stream()
                 .map(workspaceMemberMapper::toResponse)
@@ -203,11 +210,15 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     }
 
     @Override
-    public List<WorkspaceMember> getMembers(int workspaceId) {
-        return workspaceMemberRepository.findByWorkspaceWorkspaceId(workspaceId);
+    @Transactional(readOnly = true)
+    public List<WorkspaceMemberResponse> getMembers(int workspaceId) {
+        return workspaceMemberRepository.findByWorkspaceWorkspaceId(workspaceId).stream()
+                .map(workspaceMemberMapper::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
+    @Transactional(readOnly = true)
     public String getMemberRole(int userId, int workspaceId) {
         return workspaceMemberRepository.findByWorkspaceWorkspaceIdAndUserId(workspaceId, userId)
                 .map(WorkspaceMember::getRole)

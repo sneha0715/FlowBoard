@@ -22,4 +22,10 @@ public interface BoardClient {
             @PathVariable("userId") Long userId,
             @RequestHeader("X-Internal-Gateway-Secret") String secret
     );
+
+    @GetMapping("/boards/{id}")
+    ResponseEntity<java.util.Map<String, Object>> getById(
+            @PathVariable("id") Long id,
+            @RequestHeader("X-Internal-Gateway-Secret") String secret
+    );
 }

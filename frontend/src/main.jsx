@@ -19,16 +19,22 @@ createRoot(document.getElementById("root")).render(
             closeButton
             toastOptions={{
               style: {
-                fontSize: '10px',
-                fontWeight: '800',
+                fontSize: '11px',
+                fontWeight: '900',
                 textTransform: 'uppercase',
-                letterSpacing: '0.1em',
-                padding: '10px 16px',
+                letterSpacing: '0.15em',
+                padding: '12px 20px',
                 minHeight: 'auto',
                 width: 'fit-content',
-                borderRadius: '12px',
-                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '16px',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderLeft: '4px solid #6C75BD',
+                background: '#2A2B36',
+                color: '#ffffff',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.5)',
                 backdropFilter: 'blur(12px)',
+                marginTop: '100px',
+                marginLeft: '50px',
               }
             }}
           />

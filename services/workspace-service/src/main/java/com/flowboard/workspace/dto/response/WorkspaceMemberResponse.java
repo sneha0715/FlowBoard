@@ -14,6 +14,7 @@ import java.time.LocalDate;
 public class WorkspaceMemberResponse {
     private Integer memberId;
     private Integer workspaceId;
+    private String workspaceName;
     private Integer userId;
     private String role;
     private String status;

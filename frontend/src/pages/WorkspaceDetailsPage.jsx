@@ -150,7 +150,37 @@ export default function WorkspaceDetailsPage() {
     if (!inviteDraft.email) return;
     setInviteStatus("loading");
     try {
-      await workspaceApi.invite(workspaceId, inviteDraft);
+      // 1. Search for user by email first
+      const users = await authApi.searchUsers(inviteDraft.email);
+      const match = users.find((u) => u.email?.toLowerCase() === inviteDraft.email.trim().toLowerCase());
+      
+      if (!match) {
+        toast.error("User not found in system. They must register first.");
+        setInviteStatus("idle");
+        return;
+      }
+
+      // 2. Add member with user ID
+      await workspaceApi.addMember(workspaceId, {
+        userId: match.userId,
+        role: inviteDraft.role
+      });
+      
+      // 3. Send notification
+      try {
+        await notificationApi.send({
+          recipientId: Number(match.userId),
+          actorId: Number(user.userId),
+          type: "ASSIGNMENT",
+          title: `Workspace invite: ${workspace?.name || "Workspace"}`,
+          message: `${user.fullName || user.email} invited you to join ${workspace?.name}.`,
+          relatedId: workspaceId,
+          relatedType: "WORKSPACE",
+        });
+      } catch (notifErr) {
+        console.error("Failed to send in-app notification:", notifErr);
+      }
+
       toast.success("Invitation dispatched successfully.");
       setInviteDraft({ email: "", role: "MEMBER" });
       load();
@@ -266,10 +296,10 @@ export default function WorkspaceDetailsPage() {
     }
   };
 
-  const deleteBoard = async () => {
+  const deleteBoard = async (boardId) => {
     if (!window.confirm("Permanently delete this board? This action cannot be undone.")) return;
     try {
-      await boardApi.remove(boardEditDraft.boardId);
+      await boardApi.remove(boardId);
       setShowBoardEdit(false);
       toast.success("Board deleted.");
       load();
@@ -320,11 +350,12 @@ export default function WorkspaceDetailsPage() {
 
                 {canEdit && (
                   <Button 
+                    id="create-board-btn"
                     onClick={() => setShowBoardForm(true)} 
                     className="h-11 px-8 rounded-full gap-3 bg-[#40456B] hover:bg-[#40456B]/90 text-white font-black uppercase tracking-widest text-[10px] transition-all hover:scale-[1.02] active:scale-95 border-none shadow-[0_0_20px_rgba(64,69,107,0.2)]"
                   >
                     <Plus size={18} strokeWidth={3} />
-                    New Board
+                    Create Board
                   </Button>
                 )}
               </div>
@@ -410,12 +441,16 @@ export default function WorkspaceDetailsPage() {
                         </TableCell>
                         <TableCell className="text-right px-10">
                           <div className="flex items-center justify-end gap-1">
-                            <Button variant="ghost" size="icon" className="w-9 h-9 rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-all">
-                              <PencilEdit01Icon size={16} />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="w-9 h-9 rounded-full bg-white/5 text-red-400/30 hover:text-red-400/70 hover:bg-red-500/10 transition-all">
-                              <Delete02Icon size={16} />
-                            </Button>
+                            {(isAdmin || board.createdById === user?.userId) && (
+                              <Button variant="ghost" size="icon" className="w-9 h-9 rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-all" onClick={(e) => { e.stopPropagation(); handleBoardEdit(board); }}>
+                                <PencilEdit01Icon size={16} />
+                              </Button>
+                            )}
+                            {(isAdmin || board.createdById === user?.userId) && (
+                              <Button variant="ghost" size="icon" className="w-9 h-9 rounded-full bg-white/5 text-red-400/30 hover:text-red-400/70 hover:bg-red-500/10 transition-all" onClick={(e) => { e.stopPropagation(); deleteBoard(board.boardId); }}>
+                                <Delete02Icon size={16} />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -470,7 +505,16 @@ export default function WorkspaceDetailsPage() {
                 </div>
                 <p className="text-lg font-black text-foreground/60">No boards discovered in this sector.</p>
                 <p className="text-sm font-medium text-muted-foreground mt-1">Start by creating your first collaborative workspace.</p>
-                {canEdit && <Button variant="link" className="mt-4 font-black uppercase tracking-widest text-xs text-primary" onClick={() => setShowBoardForm(true)}>Deploy First Board</Button>}
+                {canEdit && (
+                  <Button
+                    id="create-first-board-btn"
+                    className="mt-8 h-12 px-10 rounded-full gap-3 bg-[#40456B] hover:bg-[#40456B]/90 text-white font-black uppercase tracking-widest text-[11px] transition-all hover:scale-[1.02] active:scale-95 border-none shadow-[0_0_30px_rgba(64,69,107,0.3)]"
+                    onClick={() => setShowBoardForm(true)}
+                  >
+                    <Plus size={16} strokeWidth={3} />
+                    Create Board
+                  </Button>
+                )}
               </div>
             )}
           </div>
@@ -522,9 +566,9 @@ export default function WorkspaceDetailsPage() {
               <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow className="hover:bg-transparent border-border/50">
-                    <TableHead className="w-[400px] font-black uppercase tracking-widest text-[10px] h-14 px-8">Member Name</TableHead>
+                    <TableHead className="w-[400px] font-black uppercase tracking-widest text-[10px] h-14 px-8">Member</TableHead>
                     <TableHead className="font-black uppercase tracking-widest text-[10px] h-14">Role</TableHead>
-                    <TableHead className="font-black uppercase tracking-widest text-[10px] h-14">Status</TableHead>
+                    <TableHead className="font-black uppercase tracking-widest text-[10px] h-14">Invite Status</TableHead>
                     <TableHead className="text-right font-black uppercase tracking-widest text-[10px] h-14 px-8">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -532,25 +576,45 @@ export default function WorkspaceDetailsPage() {
                   {members.map((m) => {
                     const profile = memberProfiles[m.userId];
                     const isMe = Number(m.userId) === Number(user?.userId);
+                    const isPendingMember = m.status === 'PENDING';
                     return (
-                      <TableRow key={m.userId} className="group hover:bg-primary/5 transition-colors border-border/50">
+                      <TableRow
+                        key={m.userId}
+                        className={`group transition-colors border-border/50 ${
+                          isPendingMember
+                            ? 'bg-amber-500/[0.03] hover:bg-amber-500/[0.06] opacity-75'
+                            : 'hover:bg-primary/5'
+                        }`}
+                      >
                         <TableCell className="px-8 py-6">
                           <div className="flex items-center gap-4">
-                            <Avatar className="h-12 w-12 border-2 border-primary/20 ring-4 ring-primary/5">
-                              <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${profile?.fullName || m.userId}`} />
-                              <AvatarFallback>{profile?.fullName?.[0] || "?"}</AvatarFallback>
-                            </Avatar>
+                            <div className={`relative ${isPendingMember ? 'opacity-50' : ''}`}>
+                              <Avatar className={`h-12 w-12 border-2 ring-4 ${
+                                isPendingMember
+                                  ? 'border-amber-500/20 ring-amber-500/5 grayscale'
+                                  : 'border-primary/20 ring-primary/5'
+                              }`}>
+                                <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${profile?.fullName || m.userId}`} />
+                                <AvatarFallback>{profile?.fullName?.[0] || "?"}</AvatarFallback>
+                              </Avatar>
+                              {isPendingMember && (
+                                <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center">
+                                  <Mail size={8} className="text-black" />
+                                </div>
+                              )}
+                            </div>
                             <div>
                               <div className="font-black text-lg">
                                 {profile?.fullName || `User #${m.userId}`}
                                 {isMe && <Badge variant="secondary" className="ml-2 bg-primary text-white border-none text-[8px] font-black uppercase">You</Badge>}
+                                {isPendingMember && <span className="ml-2 text-[9px] font-black uppercase tracking-widest text-amber-500">· Invited</span>}
                               </div>
                               <div className="text-xs font-medium text-muted-foreground">{profile?.email || "No contact info"}</div>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          {isAdmin && m.role !== "OWNER" ? (
+                          {isAdmin && m.role !== "OWNER" && !isPendingMember ? (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="outline" size="sm" className="h-8 rounded-lg text-[10px] font-black uppercase tracking-widest border-primary/20 bg-primary/5 text-primary hover:bg-primary hover:text-white transition-all">
@@ -566,22 +630,53 @@ export default function WorkspaceDetailsPage() {
                               </DropdownMenuContent>
                             </DropdownMenu>
                           ) : (
-                            <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest py-1 px-3 border-border/50 bg-background/50">
+                            <Badge variant="outline" className={`text-[10px] font-black uppercase tracking-widest py-1 px-3 ${
+                              isPendingMember ? 'border-amber-500/20 text-amber-500/60 bg-amber-500/5' : 'border-border/50 bg-background/50'
+                            }`}>
                               {workspaceRoleLabel(m.role)}
                             </Badge>
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge className={`text-[10px] font-black uppercase tracking-widest py-1 px-3 ${m.status === 'PENDING' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-primary/10 text-primary border-primary/20'}`}>
-                            {m.status}
+                          <Badge className={`text-[10px] font-black uppercase tracking-widest py-1 px-3 ${
+                            isPendingMember
+                              ? 'bg-amber-500/10 text-amber-500 border border-amber-500/30'
+                              : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30'
+                          }`}>
+                            {isPendingMember ? '⏳ Invite Pending' : '✓ Active'}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right px-8">
-                          {isAdmin && !isMe && m.role !== "OWNER" && (
-                            <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-xl opacity-0 group-hover:opacity-100 transition-all" onClick={() => removeMember(m.userId)}>
-                              <Trash2 size={18} />
-                            </Button>
-                          )}
+                          <div className="flex items-center justify-end gap-2">
+                            {isPendingMember && isAdmin && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-3 rounded-lg text-[10px] font-black uppercase tracking-widest text-amber-500 hover:bg-amber-500/10 opacity-0 group-hover:opacity-100 transition-all"
+                                onClick={async () => {
+                                  try {
+                                    await notificationApi.send({
+                                      recipientId: Number(m.userId),
+                                      actorId: Number(user.userId),
+                                      type: "ASSIGNMENT",
+                                      title: `Workspace invite: ${workspace?.name}`,
+                                      message: `${user.fullName || user.email} invited you to join ${workspace?.name}.`,
+                                      relatedId: Number(workspaceId),
+                                      relatedType: "WORKSPACE",
+                                    });
+                                    toast.success("Notification resent!");
+                                  } catch { toast.error("Failed to resend."); }
+                                }}
+                              >
+                                <Send size={12} className="mr-1" /> Resend
+                              </Button>
+                            )}
+                            {isAdmin && !isMe && m.role !== "OWNER" && (
+                              <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-xl opacity-0 group-hover:opacity-100 transition-all" onClick={() => removeMember(m.userId)}>
+                                <Trash2 size={18} />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -718,20 +813,27 @@ export default function WorkspaceDetailsPage() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-[10px] font-black uppercase tracking-widest ml-1 opacity-70">Access Level</Label>
-              <select
-                className="flex h-11 w-full rounded-xl border border-border/50 bg-muted/20 px-4 py-1 text-[11px] font-black uppercase tracking-widest transition-colors focus:ring-2 ring-primary/20 outline-none appearance-none cursor-pointer"
-                value={boardEditDraft?.visibility || "PRIVATE"}
-                onChange={(e) => setBoardEditDraft(d => ({ ...d, visibility: e.target.value }))}
-              >
-                {["PRIVATE", "PUBLIC"].map(v => <option key={v} value={v}>{v}</option>)}
-              </select>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { id: 'PRIVATE', label: 'Private', icon: Lock },
+                  { id: 'PUBLIC', label: 'Public', icon: Globe }
+                ].map(v => (
+                  <Button
+                    key={v.id}
+                    type="button"
+                    variant={boardEditDraft?.visibility === v.id ? 'default' : 'outline'}
+                    onClick={() => setBoardEditDraft(d => ({ ...d, visibility: v.id }))}
+                    className="flex items-center justify-center gap-2 h-9 py-0"
+                  >
+                    <v.icon size={14} />
+                    <span className="text-xs">{v.label}</span>
+                  </Button>
+                ))}
+              </div>
             </div>
-            <DialogFooter className="pt-4 flex flex-row justify-end items-center border-t border-border/10 gap-3">
-              <Button type="button" variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive font-black uppercase tracking-widest text-[9px] h-10 px-4 rounded-xl mr-auto" onClick={deleteBoard}>
-                <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
-              </Button>
-              <Button type="button" variant="ghost" className="rounded-xl h-10 font-black uppercase tracking-widest text-[9px] px-6" onClick={() => setShowBoardEdit(false)}>Cancel</Button>
-              <Button type="submit" className="rounded-xl px-8 h-10 font-black uppercase tracking-widest text-[9px] shadow-lg shadow-primary/20 bg-primary text-primary-foreground" disabled={boardUpdating}>
+            <DialogFooter className="pt-4 grid grid-cols-2 gap-3 border-t border-border/10 w-full">
+              <Button type="button" variant="outline" className="rounded-xl h-10 font-black uppercase tracking-widest text-[9px] border-white/10 text-white hover:bg-white/5" onClick={() => setShowBoardEdit(false)}>Cancel</Button>
+              <Button type="submit" className="rounded-xl h-10 font-black uppercase tracking-widest text-[9px] shadow-lg shadow-primary/20 bg-primary text-primary-foreground" disabled={boardUpdating}>
                 {boardUpdating ? <LoaderCircle className="mr-2 h-3.5 w-3.5 animate-spin" /> : <Check className="mr-2 h-3.5 w-3.5" />}
                 Save Changes
               </Button>

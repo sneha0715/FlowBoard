@@ -17,6 +17,12 @@ import BoardCanvas from "@/components/board/BoardCanvas";
 import AppShell from "@/components/layout/AppShell";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   LoaderCircle,
   Eye,
   Users,
@@ -271,10 +277,14 @@ export default function BoardPage() {
     }
   };
 
-  const updateBoardRole = async (member) => {
-    const next = member.role === "MEMBER" ? "OBSERVER" : member.role === "OBSERVER" ? "ADMIN" : "MEMBER";
-    await boardApi.updateMemberRole(Number(boardId), member.userId, next);
-    setBoardMembers(await boardApi.members(Number(boardId)));
+  const updateBoardRole = async (userId, nextRole) => {
+    try {
+      await boardApi.updateMemberRole(Number(boardId), userId, nextRole);
+      setBoardMembers(await boardApi.members(Number(boardId)));
+      toast.success("Role updated.");
+    } catch (err) {
+      toast.error("Failed to update role.");
+    }
   };
 
   const removeBoardMember = async (member) => {
@@ -441,15 +451,25 @@ export default function BoardPage() {
                                         </div>
                                         {isBoardAdmin && Number(m.userId) !== Number(activeBoard?.createdById) && (
                                           <div className="flex items-center gap-2 transition-all">
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              className="h-6 px-3 rounded-full text-[8px] font-black uppercase tracking-widest text-white/40 hover:bg-white/5 hover:text-white border border-white/5 flex items-center gap-1.5"
-                                              onClick={() => updateBoardRole(m)}
-                                            >
-                                              <ShieldKeyIcon size={8} />
-                                              Permissions
-                                            </Button>
+                                            <DropdownMenu>
+                                              <DropdownMenuTrigger asChild>
+                                                <Button
+                                                  variant="ghost"
+                                                  size="sm"
+                                                  className="h-6 px-3 rounded-full text-[8px] font-black uppercase tracking-widest text-white/40 hover:bg-white/5 hover:text-white border border-white/5 flex items-center gap-1.5"
+                                                >
+                                                  <ShieldKeyIcon size={8} />
+                                                  Permissions
+                                                </Button>
+                                              </DropdownMenuTrigger>
+                                              <DropdownMenuContent align="end" className="rounded-xl border-border/50 shadow-2xl bg-[#0e0e10] text-white">
+                                                {["ADMIN", "MEMBER", "OBSERVER"].map(r => (
+                                                  <DropdownMenuItem key={r} onClick={() => updateBoardRole(m.userId, r)} className="text-[10px] font-black uppercase tracking-widest px-4 py-2 hover:bg-white/10 cursor-pointer">
+                                                    {r}
+                                                  </DropdownMenuItem>
+                                                ))}
+                                              </DropdownMenuContent>
+                                            </DropdownMenu>
                                             <Button
                                               variant="ghost"
                                               size="sm"

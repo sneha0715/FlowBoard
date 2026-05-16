@@ -16,7 +16,7 @@ public class Notification {
     @Column(nullable = false)
     private Long recipientId;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private Long actorId;
 
     @Enumerated(EnumType.STRING)

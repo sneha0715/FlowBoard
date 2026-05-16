@@ -59,8 +59,41 @@ public class BoardServiceImpl implements BoardService {
     }
 
     @Override
-    public List<BoardResponse> getBoardsByWorkspace(Long workspaceId) {
-        return boardRepository.findByWorkspaceId(workspaceId).stream()
+    public List<BoardResponse> getBoardsByWorkspace(Long workspaceId, Long userId) {
+        List<Board> boards = boardRepository.findByWorkspaceId(workspaceId);
+        
+        if (userId == null) {
+            // Guest user: only see public boards
+            return boards.stream()
+                    .filter(b -> "PUBLIC".equalsIgnoreCase(b.getVisibility()))
+                    .map(boardMapper::toResponse)
+                    .collect(Collectors.toList());
+        }
+        
+        // Check if workspace member
+        try {
+            java.util.Map<String, String> result = workspaceClient.getMemberRole(
+                    workspaceId.intValue(), userId.intValue(), gatewaySecret);
+            String role = result != null ? result.get("role") : "NONE";
+            
+            if ("NONE".equalsIgnoreCase(role)) {
+                // Not a member, only see public boards
+                return boards.stream()
+                        .filter(b -> "PUBLIC".equalsIgnoreCase(b.getVisibility()))
+                        .map(boardMapper::toResponse)
+                        .collect(Collectors.toList());
+            }
+        } catch (Exception e) {
+            log.error("Failed to check workspace role for userId={} in workspace={}", userId, workspaceId, e);
+            // Fallback to only public boards if error
+            return boards.stream()
+                    .filter(b -> "PUBLIC".equalsIgnoreCase(b.getVisibility()))
+                    .map(boardMapper::toResponse)
+                    .collect(Collectors.toList());
+        }
+        
+        // Is a member, see all boards
+        return boards.stream()
                 .map(boardMapper::toResponse)
                 .collect(Collectors.toList());
     }

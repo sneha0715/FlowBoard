@@ -58,6 +58,23 @@ public class ColumnSecurity {
         }
     }
 
+    public boolean isPublicOrMember(Long boardId, Long userId) {
+        if (userId != null && isBoardMember(boardId, userId)) {
+            return true;
+        }
+        try {
+            java.util.Map<String, Object> result = boardClient.getById(boardId, gatewaySecret).getBody();
+            if (result != null) {
+                java.util.Map<String, Object> data = (java.util.Map<String, Object>) result.get("data");
+                String visibility = data != null ? (String) data.get("visibility") : null;
+                return "PUBLIC".equalsIgnoreCase(visibility);
+            }
+        } catch (Exception e) {
+            log.error("Error checking board visibility: boardId={}", boardId, e);
+        }
+        return false;
+    }
+
     public boolean canModifyList(Long listId, Long userId) {
         try {
             Long boardId = listService.getBoardIdByListId(listId);

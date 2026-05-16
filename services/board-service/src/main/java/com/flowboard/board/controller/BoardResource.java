@@ -40,10 +40,11 @@ public class BoardResource {
     }
 
     @GetMapping("/workspace/{workspaceId}")
-    public ResponseEntity<ApiResponse<List<BoardResponse>>> getByWorkspace(@PathVariable Long workspaceId) {
-        // Workspace-level security should be checked here or in workspace-service
-        // For now, allow viewing if authenticated
-        List<BoardResponse> response = boardService.getBoardsByWorkspace(workspaceId);
+    public ResponseEntity<ApiResponse<List<BoardResponse>>> getByWorkspace(
+            @PathVariable Long workspaceId,
+            @RequestAttribute(value = "userId", required = false) Long requesterId) {
+        // Workspace-level security is handled in the service by filtering boards
+        List<BoardResponse> response = boardService.getBoardsByWorkspace(workspaceId, requesterId);
         return ResponseEntity.ok(ApiResponse.success(response, "Boards retrieved successfully"));
     }
 

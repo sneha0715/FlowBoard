@@ -23,13 +23,13 @@ public class BoardSecurity {
     private String gatewaySecret;
 
     public boolean isPublicOrMember(Long boardId, Long userId) {
-        if (userId == null) return false;
-        
         // 1. Check if public
         boolean isPublic = boardRepository.findById(boardId)
                 .map(board -> "PUBLIC".equalsIgnoreCase(board.getVisibility()))
                 .orElse(false);
         if (isPublic) return true;
+
+        if (userId == null) return false;
 
         // 2. Check if platform admin
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();

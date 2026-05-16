@@ -12,6 +12,7 @@ import {
   Search,
   Plus,
   Home,
+  Globe,
   ChevronDown,
   Users,
   Grid,
@@ -175,12 +176,25 @@ export default function AppShell({ children }) {
                 <SidebarMenuButton
                   asChild
                   isActive={location.pathname === '/'}
-                  tooltip="Hub"
+                  tooltip="Global"
                   className="h-10 px-3.5 rounded-xl data-[active=true]:bg-secondary/50 data-[active=true]:text-foreground transition-all duration-200"
                 >
                   <Link to="/" className="flex items-center gap-3">
+                    <Globe size={18} strokeWidth={2} className="shrink-0 opacity-70" />
+                    <span className="font-medium text-[13px] group-data-[collapsible=icon]:hidden">Global Workspaces</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={location.pathname === '/my-workspaces'}
+                  tooltip="My Workspaces"
+                  className="h-10 px-3.5 rounded-xl data-[active=true]:bg-secondary/50 data-[active=true]:text-foreground transition-all duration-200"
+                >
+                  <Link to="/my-workspaces" className="flex items-center gap-3">
                     <Home size={18} strokeWidth={2} className="shrink-0 opacity-70" />
-                    <span className="font-medium text-[13px] group-data-[collapsible=icon]:hidden">Control Hub</span>
+                    <span className="font-medium text-[13px] group-data-[collapsible=icon]:hidden">My Workspaces</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

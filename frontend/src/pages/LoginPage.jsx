@@ -63,58 +63,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-background">
-      {/* Left Side: Branding/Intro */}
-      <div className="hidden lg:flex lg:w-1/2 bg-stone-950 p-12 flex-col justify-between relative overflow-hidden">
-        <div className="absolute inset-0 opacity-20 pointer-events-none">
-          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/20 blur-[120px]" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-primary/10 blur-[120px]" />
-        </div>
-
-        <div className="relative z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg">
-              <Layout className="text-primary-foreground" size={20} />
-            </div>
-            <span className="text-2xl font-black tracking-tighter text-white uppercase">FlowBoard</span>
-          </div>
-        </div>
-
-        <div className="relative z-10 max-w-lg">
-          <Badge variant="outline" className="mb-6 text-[10px] uppercase font-black tracking-widest text-primary border-primary/30">
-            Platform v2.0
-          </Badge>
-          <h2 className="text-6xl font-black tracking-tight text-white mb-6 leading-[0.9]">
-            Manage projects with <span className="text-primary">velocity.</span>
-          </h2>
-          <p className="text-stone-400 text-lg font-medium leading-relaxed">
-            The next generation of project management. Built for speed, collaboration, and absolute clarity.
-          </p>
-        </div>
-
-        <div className="relative z-10 flex items-center gap-8 border-t border-white/10 pt-8">
-           <div className="flex flex-col">
-             <span className="text-white text-2xl font-bold tracking-tighter">10k+</span>
-             <span className="text-stone-500 text-[10px] font-black uppercase tracking-widest">Active Users</span>
-           </div>
-           <div className="flex flex-col">
-             <span className="text-white text-2xl font-bold tracking-tighter">99.9%</span>
-             <span className="text-stone-500 text-[10px] font-black uppercase tracking-widest">Uptime</span>
-           </div>
-        </div>
-      </div>
-
-      {/* Right Side: Auth Form */}
-      <div className="flex-1 flex items-center justify-center p-8 md:p-16">
-        <div className="w-full max-w-[420px] space-y-8 animate-in fade-in slide-in-from-right-4 duration-700">
-          <div className="space-y-2">
-            <h1 className="text-4xl font-bold tracking-tight">
-              {mode === "login" ? "Welcome back" : "Create account"}
-            </h1>
-            <p className="text-muted-foreground text-sm font-medium">
-              {mode === "login" ? "Enter your credentials to access your workspace." : "Join thousands of teams managing work on FlowBoard."}
-            </p>
-          </div>
+    <div className="min-h-screen flex items-center justify-center bg-background p-8">
+      <Card className="w-full max-w-[420px] bg-stone-900/50 border-stone-800 backdrop-blur-sm animate-in fade-in duration-700">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold tracking-tight text-white">
+            {mode === "login" ? "Sign In" : "Sign Up"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
 
           <AnimatePresence mode="wait">
             {mode === "login" ? (
@@ -125,30 +81,25 @@ export default function LoginPage() {
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                <form onSubmit={handleLogin} className="space-y-5">
+                <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email Address</Label>
                     <Input 
                       id="email" 
                       type="email" 
                       required 
-                      placeholder="name@company.com" 
+                      placeholder="Email Address" 
                       className="h-12"
                       value={loginForm.email}
                       onChange={e => setLoginForm(f => ({ ...f, email: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <Label htmlFor="password">Password</Label>
-                      <button type="button" className="text-xs font-bold text-primary hover:underline">Forgot password?</button>
-                    </div>
                     <div className="relative">
                       <Input 
                         id="password" 
                         type={showPw ? "text" : "password"} 
                         required 
-                        placeholder="••••••••" 
+                        placeholder="Password" 
                         className="h-12 pr-10"
                         value={loginForm.password}
                         onChange={e => setLoginForm(f => ({ ...f, password: e.target.value }))}
@@ -157,6 +108,7 @@ export default function LoginPage() {
                         {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
                     </div>
+
                   </div>
 
                   {localError && (
@@ -180,23 +132,21 @@ export default function LoginPage() {
               >
                 <form onSubmit={handleRegister} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="reg-name">Full Name</Label>
                     <Input 
                       id="reg-name" 
                       required 
-                      placeholder="John Doe" 
+                      placeholder="Full Name" 
                       className="h-11"
                       value={registerForm.fullName}
                       onChange={e => setRegisterForm(f => ({ ...f, fullName: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="reg-email">Email Address</Label>
                     <Input 
                       id="reg-email" 
                       type="email" 
                       required 
-                      placeholder="name@company.com" 
+                      placeholder="Email Address" 
                       className="h-11"
                       value={registerForm.email}
                       onChange={e => setRegisterForm(f => ({ ...f, email: e.target.value }))}
@@ -204,22 +154,22 @@ export default function LoginPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="reg-pw">Password</Label>
                       <Input 
                         id="reg-pw" 
                         type="password" 
                         required 
+                        placeholder="Password"
                         className="h-11"
                         value={registerForm.password}
                         onChange={e => setRegisterForm(f => ({ ...f, password: e.target.value }))}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="reg-conf">Confirm</Label>
                       <Input 
                         id="reg-conf" 
                         type="password" 
                         required 
+                        placeholder="Confirm Password"
                         className="h-11"
                         value={registerForm.confirmPassword}
                         onChange={e => setRegisterForm(f => ({ ...f, confirmPassword: e.target.value }))}
@@ -241,20 +191,20 @@ export default function LoginPage() {
             )}
           </AnimatePresence>
 
-          <div className="text-center pt-4">
-            <button 
-              onClick={() => { setMode(mode === "login" ? "register" : "login"); setLocalError(""); }}
-              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-1 group"
-            >
-              {mode === "login" ? "Don't have an account?" : "Already have an account?"}
-              <span className="text-primary font-bold inline-flex items-center">
-                {mode === "login" ? "Register" : "Sign In"}
-                <ArrowRight size={14} className="ml-1 group-hover:translate-x-1 transition-transform" />
-              </span>
-            </button>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+        <CardFooter className="justify-center border-t border-stone-800 pt-4">
+          <button 
+            onClick={() => { setMode(mode === "login" ? "register" : "login"); setLocalError(""); }}
+            className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors inline-flex items-center gap-1 group"
+          >
+            {mode === "login" ? "Don't have an account?" : "Already have an account?"}
+            <span className="text-primary font-bold inline-flex items-center">
+              {mode === "login" ? "Register" : "Sign In"}
+              <ArrowRight size={14} className="ml-1 group-hover:translate-x-1 transition-transform" />
+            </span>
+          </button>
+        </CardFooter>
+      </Card>
     </div>
   );
 }

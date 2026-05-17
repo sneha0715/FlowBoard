@@ -1,1 +1,6 @@
 logs/
+.env
+services/*/.env
+target/
+.idea/
+*.iml

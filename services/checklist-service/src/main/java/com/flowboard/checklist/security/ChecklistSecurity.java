@@ -21,7 +21,7 @@ public class ChecklistSecurity {
     private final CardClient cardClient;
     private final ChecklistService checklistService;
 
-    @Value("${gateway.secret:FlowBoardGateway2024}")
+    @Value("${gateway.secret}")
     private String gatewaySecret;
 
     public boolean isBoardMemberByCardId(Long cardId, Long userId) {

@@ -19,7 +19,7 @@ public class ColumnSecurity {
     private final BoardClient boardClient;
     private final ListService listService;
 
-    @Value("${gateway.secret:FlowBoardGateway2024}")
+    @Value("${gateway.secret}")
     private String gatewaySecret;
 
     public boolean hasBoardRole(Long boardId, Long userId, String... allowedRoles) {

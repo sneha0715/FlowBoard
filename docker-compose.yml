@@ -14,7 +14,7 @@ services:
     image: mysql:8.0
     container_name: flowboard-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: flowboard
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_ROOT_HOST: '%'
     ports:
       - "3306:3306"
@@ -22,7 +22,7 @@ services:
       - mysql_data:/var/lib/mysql
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pflowboard"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -51,8 +51,9 @@ services:
       - "8080:8080"
     environment:
       EUREKA_SERVER: http://eureka-server:8761/eureka/
-      JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
-      GATEWAY_SECRET: FlowBoardGateway2024
+      JWT_SECRET: ${JWT_SECRET}
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
     depends_on:
       eureka-server:
         condition: service_healthy
@@ -66,12 +67,13 @@ services:
     environment:
       SERVER_PORT: 8081
       DB_URL: jdbc:mysql://mysql:3306/auth_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-      DB_USERNAME: root
-      DB_PASSWORD: flowboard
-      JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
-      JWT_EXPIRATION: 86400000
-      GATEWAY_SECRET: FlowBoardGateway2024
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
       EUREKA_SERVER: http://eureka-server:8761/eureka/
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
     depends_on:
       mysql:
         condition: service_healthy
@@ -87,10 +89,11 @@ services:
     environment:
       SERVER_PORT: 8082
       DB_URL: jdbc:mysql://mysql:3306/workspace_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-      DB_USERNAME: root
-      DB_PASSWORD: flowboard
-      GATEWAY_SECRET: FlowBoardGateway2024
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
       EUREKA_SERVER: http://eureka-server:8761/eureka/
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
     depends_on:
       mysql:
         condition: service_healthy
@@ -106,10 +109,11 @@ services:
     environment:
       SERVER_PORT: 8083
       DB_URL: jdbc:mysql://mysql:3306/board_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-      DB_USERNAME: root
-      DB_PASSWORD: flowboard
-      GATEWAY_SECRET: FlowBoardGateway2024
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
       EUREKA_SERVER: http://eureka-server:8761/eureka/
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
     depends_on:
       mysql:
         condition: service_healthy
@@ -125,10 +129,11 @@ services:
     environment:
       SERVER_PORT: 8084
       DB_URL: jdbc:mysql://mysql:3306/column_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-      DB_USERNAME: root
-      DB_PASSWORD: flowboard
-      GATEWAY_SECRET: FlowBoardGateway2024
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
       EUREKA_SERVER: http://eureka-server:8761/eureka/
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
     depends_on:
       mysql:
         condition: service_healthy
@@ -144,10 +149,11 @@ services:
     environment:
       SERVER_PORT: 8085
       DB_URL: jdbc:mysql://mysql:3306/card_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-      DB_USERNAME: root
-      DB_PASSWORD: flowboard
-      GATEWAY_SECRET: FlowBoardGateway2024
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
       EUREKA_SERVER: http://eureka-server:8761/eureka/
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
     depends_on:
       mysql:
         condition: service_healthy
@@ -163,10 +169,11 @@ services:
     environment:
       SERVER_PORT: 8086
       DB_URL: jdbc:mysql://mysql:3306/comment_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-      DB_USERNAME: root
-      DB_PASSWORD: flowboard
-      GATEWAY_SECRET: FlowBoardGateway2024
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
       EUREKA_SERVER: http://eureka-server:8761/eureka/
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
     depends_on:
       mysql:
         condition: service_healthy
@@ -182,10 +189,11 @@ services:
     environment:
       SERVER_PORT: 8087
       DB_URL: jdbc:mysql://mysql:3306/checklist_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-      DB_USERNAME: root
-      DB_PASSWORD: flowboard
-      GATEWAY_SECRET: FlowBoardGateway2024
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
       EUREKA_SERVER: http://eureka-server:8761/eureka/
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
     depends_on:
       mysql:
         condition: service_healthy
@@ -201,10 +209,17 @@ services:
     environment:
       SERVER_PORT: 8088
       DB_URL: jdbc:mysql://mysql:3306/notification_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-      DB_USERNAME: root
-      DB_PASSWORD: flowboard
-      GATEWAY_SECRET: FlowBoardGateway2024
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      GATEWAY_SECRET: ${GATEWAY_SECRET}
       EUREKA_SERVER: http://eureka-server:8761/eureka/
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      MAIL_HOST: ${MAIL_HOST}
+      MAIL_PORT: ${MAIL_PORT}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      MAIL_AUTH: ${MAIL_AUTH}
+      MAIL_STARTTLS: ${MAIL_STARTTLS}
     depends_on:
       mysql:
         condition: service_healthy

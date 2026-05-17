@@ -19,7 +19,7 @@ public class CardSecurity {
     private final BoardClient boardClient;
     private final CardService cardService;
 
-    @Value("${gateway.secret:FlowBoardGateway2024}")
+    @Value("${gateway.secret}")
     private String gatewaySecret;
 
     public boolean hasBoardRole(Long boardId, Long userId, String... allowedRoles) {

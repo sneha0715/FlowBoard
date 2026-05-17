@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: ${LOCAL_DB_URL:jdbc:mysql://localhost:3306/comment_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true}
+    username: ${LOCAL_DB_USERNAME:root}
+    password: ${LOCAL_DB_PASSWORD:shravan}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: ${LOCAL_JPA_SHOW_SQL:false}
+
+gateway:
+  secret: ${INTERNAL_GATEWAY_SECRET:FlowBoardGateway2024}
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_SERVER:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: false
+    hostname: localhost

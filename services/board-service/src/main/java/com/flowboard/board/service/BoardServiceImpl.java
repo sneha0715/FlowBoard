@@ -30,7 +30,7 @@ public class BoardServiceImpl implements BoardService {
     private final BoardMemberMapper boardMemberMapper;
     private final com.flowboard.board.client.WorkspaceClient workspaceClient;
 
-    @org.springframework.beans.factory.annotation.Value("${gateway.secret:FlowBoardGateway2024}")
+    @org.springframework.beans.factory.annotation.Value("${gateway.secret}")
     private String gatewaySecret;
 
     @Override

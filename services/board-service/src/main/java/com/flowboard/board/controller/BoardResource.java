@@ -21,6 +21,9 @@ public class BoardResource {
 
     private final BoardService boardService;
 
+    @org.springframework.beans.factory.annotation.Value("${gateway.secret}")
+    private String gatewaySecret;
+
     @PostMapping
     public ResponseEntity<ApiResponse<BoardResponse>> createBoard(
             @Valid @RequestBody BoardRequest request,
@@ -139,7 +142,7 @@ public class BoardResource {
             @PathVariable Long userId,
             @RequestHeader(value = "X-Internal-Gateway-Secret", required = false) String secret) {
         // Simple secret validation
-        if (!"FlowBoardGateway2024".equals(secret)) {
+        if (!gatewaySecret.equals(secret)) {
             // Log warning or throw exception in production
         }
         return ResponseEntity.ok(boardService.isMember(id, userId));
@@ -150,7 +153,7 @@ public class BoardResource {
             @PathVariable Long id, 
             @PathVariable Long userId,
             @RequestHeader(value = "X-Internal-Gateway-Secret", required = false) String secret) {
-        if (!"FlowBoardGateway2024".equals(secret)) {
+        if (!gatewaySecret.equals(secret)) {
             // Internal security check
         }
         return ResponseEntity.ok(java.util.Map.of("role", boardService.getRole(id, userId)));

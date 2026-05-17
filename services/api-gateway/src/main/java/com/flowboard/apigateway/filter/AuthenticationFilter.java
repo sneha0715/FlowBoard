@@ -37,7 +37,8 @@ import reactor.core.publisher.Mono;
 @Component
 public class AuthenticationFilter extends AbstractGatewayFilterFactory<AuthenticationFilter.Config> {
 
-    private static final String GATEWAY_SECRET = "FlowBoardGateway2024";
+    @org.springframework.beans.factory.annotation.Value("${gateway.secret}")
+    private String gatewaySecret;
     private static final String INTERNAL_SECRET_HEADER = "X-Internal-Gateway-Secret";
     private static final String USER_NAME_HEADER = "X-User-Name";
     private static final String USER_ROLES_HEADER = "X-User-Roles";
@@ -78,7 +79,7 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
 
             // 3. Extract Authorization header and always add Gateway Secret
             ServerHttpRequest nextRequest = mutatedRequest.mutate()
-                    .header(INTERNAL_SECRET_HEADER, GATEWAY_SECRET)
+                    .header(INTERNAL_SECRET_HEADER, gatewaySecret)
                     .build();
 
             String authHeader = nextRequest.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
@@ -111,7 +112,7 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                     .header(USER_NAME_HEADER, Objects.toString(username, ""))
                     .header(USER_ROLES_HEADER, Objects.toString(role, ""))
                     .header(USER_ID_HEADER, Objects.toString(userId, ""))
-                    .header(INTERNAL_SECRET_HEADER, GATEWAY_SECRET)
+                    .header(INTERNAL_SECRET_HEADER, gatewaySecret)
                     .build();
 
             log.debug("Auth OK — user={}, role={}, userId={}", username, role, userId);

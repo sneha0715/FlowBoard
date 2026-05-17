@@ -19,7 +19,7 @@ public class BoardSecurity {
     private final com.flowboard.board.repository.BoardRepository boardRepository;
     private final com.flowboard.board.client.WorkspaceClient workspaceClient;
 
-    @org.springframework.beans.factory.annotation.Value("${gateway.secret:FlowBoardGateway2024}")
+    @org.springframework.beans.factory.annotation.Value("${gateway.secret}")
     private String gatewaySecret;
 
     public boolean isPublicOrMember(Long boardId, Long userId) {

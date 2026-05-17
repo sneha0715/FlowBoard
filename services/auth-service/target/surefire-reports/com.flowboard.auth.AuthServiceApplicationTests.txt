@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.flowboard.auth.AuthServiceApplicationTests
 -------------------------------------------------------------------------------
-Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 7.856 s -- in com.flowboard.auth.AuthServiceApplicationTests
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 11.84 s -- in com.flowboard.auth.AuthServiceApplicationTests

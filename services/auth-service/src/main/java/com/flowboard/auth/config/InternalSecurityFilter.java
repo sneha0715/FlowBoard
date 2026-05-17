@@ -36,7 +36,7 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
     private static final String USER_ROLES_HEADER     = "X-User-Roles";
     private static final String USER_ID_HEADER        = "X-User-Id";
 
-    @Value("${gateway.secret:FlowBoardGateway2024}")
+    @Value("${gateway.secret}")
     private String expectedSecret;
 
     private final ObjectMapper objectMapper = new ObjectMapper();

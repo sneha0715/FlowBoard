@@ -21,7 +21,7 @@ public class CommentSecurity {
     private final CardClient cardClient;
     private final CommentService commentService;
 
-    @Value("${gateway.secret:FlowBoardGateway2024}")
+    @Value("${gateway.secret}")
     private String gatewaySecret;
 
     public boolean hasBoardRoleByCardId(Long cardId, Long userId, String... allowedRoles) {

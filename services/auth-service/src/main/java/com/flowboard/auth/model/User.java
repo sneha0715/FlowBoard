@@ -42,7 +42,7 @@ public class User {
     @Column(nullable = false, unique = true)
     private String userName;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "VARCHAR(50)")
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private Role role = Role.MEMBER;

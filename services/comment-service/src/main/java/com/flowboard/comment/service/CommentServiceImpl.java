@@ -127,6 +127,13 @@ public class CommentServiceImpl implements CommentService {
         return commentRepository.countByCardId(cardId);
     }
 
+    @Override
+    public Long getCardIdByCommentId(Long commentId) {
+        return commentRepository.findById(commentId)
+                .map(Comment::getCardId)
+                .orElseThrow(() -> new ResourceNotFoundException("Comment not found with ID: " + commentId));
+    }
+
     private Long getCurrentUserId() {
         String principal = SecurityContextHolder.getContext().getAuthentication().getName();
         try {

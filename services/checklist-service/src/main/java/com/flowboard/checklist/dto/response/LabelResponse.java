@@ -2,10 +2,14 @@ package com.flowboard.checklist.dto.response;
 
 import lombok.Builder;
 import lombok.Data;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class LabelResponse {
     private Long labelId;
@@ -14,3 +18,5 @@ public class LabelResponse {
     private String color;
     private LocalDateTime createdAt;
 }
+
+

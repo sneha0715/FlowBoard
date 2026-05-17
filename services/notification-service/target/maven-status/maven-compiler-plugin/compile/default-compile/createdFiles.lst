@@ -15,4 +15,5 @@ com\flowboard\notification\repository\NotificationRepository.class
 com\flowboard\notification\entity\Notification$NotificationBuilder.class
 com\flowboard\notification\dto\response\NotificationResponse.class
 com\flowboard\notification\entity\Notification.class
+com\flowboard\notification\dto\response\NotificationResponse$NotificationResponseBuilder.class
 com\flowboard\notification\dto\response\ApiResponse$ApiResponseBuilder.class

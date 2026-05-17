@@ -12,6 +12,7 @@ public interface CardService {
     CardResponse getCardById(Long cardId);
     List<CardResponse> getCardsByList(Long listId);
     List<CardResponse> getCardsByBoard(Long boardId);
+    List<CardResponse> getArchivedCardsByBoard(Long boardId);
     List<CardResponse> getCardsByAssignee(Long assigneeId);
     CardResponse updateCard(Long cardId, CardRequest request);
     CardResponse moveCard(Long cardId, Long newListId, int newPosition);
@@ -23,4 +24,5 @@ public interface CardService {
     void setPriority(Long cardId, Priority priority);
     void setStatus(Long cardId, Status status);
     List<CardResponse> getOverdueCards();
+    Long getBoardIdByCardId(Long cardId);
 }

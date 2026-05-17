@@ -35,6 +35,10 @@ public class WorkspaceMember {
     @NotBlank(message = "Role is required")
     private String role;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private String status = "ACCEPTED"; // PENDING, ACCEPTED
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDate joinedAt;

@@ -1,0 +1,172 @@
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+@import "@fontsource-variable/space-grotesk";
+@import "@fontsource-variable/dm-sans";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.148 0.004 228.8);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.148 0.004 228.8);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.148 0.004 228.8);
+    --primary: oklch(0.511 0.096 186.391);
+    --primary-foreground: oklch(0.984 0.014 180.72);
+    --secondary: oklch(0.967 0.001 286.375);
+    --secondary-foreground: oklch(0.21 0.006 285.885);
+    --muted: oklch(0.963 0.002 197.1);
+    --muted-foreground: oklch(0.56 0.021 213.5);
+    --accent: oklch(0.963 0.002 197.1);
+    --accent-foreground: oklch(0.218 0.008 223.9);
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: oklch(0.925 0.005 214.3);
+    --input: oklch(0.925 0.005 214.3);
+    --ring: oklch(0.723 0.014 214.4);
+    --radius: 0.75rem;
+}
+
+.dark {
+    --background: oklch(0.141 0.005 285.823);
+    --foreground: oklch(0.985 0.001 106.423);
+    --card: oklch(0.165 0.005 285.823);
+    --card-foreground: oklch(0.985 0.001 106.423);
+    --popover: oklch(0.165 0.005 285.823);
+    --popover-foreground: oklch(0.985 0.001 106.423);
+    --primary: oklch(0.7 0.17 180);
+    --primary-foreground: oklch(0.985 0.001 106.423);
+    --secondary: oklch(0.269 0.006 285.823);
+    --secondary-foreground: oklch(0.985 0.001 106.423);
+    --muted: oklch(0.269 0.006 285.823);
+    --muted-foreground: oklch(0.708 0.01 201.54);
+    --accent: oklch(0.269 0.006 285.823);
+    --accent-foreground: oklch(0.985 0.001 106.423);
+    --destructive: oklch(0.396 0.141 25.723);
+    --destructive-foreground: oklch(0.637 0.237 25.331);
+    --border: oklch(0.269 0.006 285.823);
+    --input: oklch(0.269 0.006 285.823);
+    --ring: oklch(0.439 0.124 158.739);
+}
+
+@theme inline {
+    --font-sans: 'Space Grotesk Variable', sans-serif;
+    --font-heading: 'DM Sans Variable', sans-serif;
+    --color-sidebar-ring: var(--ring);
+    --color-sidebar-border: var(--border);
+    --color-sidebar-accent-foreground: var(--accent-foreground);
+    --color-sidebar-accent: var(--accent);
+    --color-sidebar-primary-foreground: var(--primary-foreground);
+    --color-sidebar-primary: var(--primary);
+    --color-sidebar-foreground: var(--foreground);
+    --color-sidebar: var(--card);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  button:not(:disabled), [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* Global Select & Option Fix for Dark Mode */
+select {
+  @apply bg-background text-foreground border-border rounded-md px-3 py-1 text-sm transition-all focus:ring-2 focus:ring-primary/20 outline-none;
+}
+
+option {
+  @apply bg-popover text-popover-foreground;
+  padding: 8px;
+}
+
+.dark select option {
+  background-color: oklch(0.218 0.008 223.9);
+  color: oklch(0.987 0.002 197.1);
+}
+
+/* Global Scrollbar Reset */
+html, body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar, 
+body::-webkit-scrollbar {
+  display: none;
+}
+
+/* Custom Scrollbar Utility */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e11d48;
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #be123c;
+}
+
+/* No Scrollbar Utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Surface Utils */
+.surface-ground {
+  @apply bg-background text-foreground;
+}
+.surface-section {
+  @apply bg-muted/30 border-y border-border/50;
+}
+.surface-card {
+  @apply bg-card text-card-foreground border border-border/50 shadow-lg rounded-xl;
+}
+.glass-card {
+  @apply bg-card/60 backdrop-blur-xl border border-white/10 shadow-2xl;
+}
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}

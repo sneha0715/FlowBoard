@@ -131,4 +131,11 @@ public class ListServiceImpl implements ListService {
                 .map(listMapper::toResponse)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public Long getBoardIdByListId(Long listId) {
+        return listRepository.findById(listId)
+                .map(TaskList::getBoardId)
+                .orElseThrow(() -> new ResourceNotFoundException("List not found with id: " + listId));
+    }
 }

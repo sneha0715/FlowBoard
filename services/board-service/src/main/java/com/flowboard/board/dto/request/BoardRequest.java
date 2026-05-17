@@ -3,10 +3,12 @@ package com.flowboard.board.dto.request;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 public class BoardRequest {
@@ -22,5 +24,5 @@ public class BoardRequest {
     private String background;
 
     @NotBlank(message = "Visibility is required")
-    private String visibility;
+    private String visibility = "PRIVATE";
 }

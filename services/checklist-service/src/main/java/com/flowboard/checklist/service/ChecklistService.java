@@ -18,4 +18,5 @@ public interface ChecklistService {
     void deleteItem(Long itemId);
     void toggleItem(Long itemId);
     ChecklistProgressResponse getChecklistProgress(Long cardId);
+    Long getCardIdByChecklistId(Long checklistId);
 }

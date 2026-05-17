@@ -41,7 +41,7 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String path = request.getRequestURI();
-        if (path.startsWith("/actuator")) {
+        if (path.contains("/actuator") || path.contains("/v3/api-docs") || path.contains("/swagger-ui")) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -70,6 +70,13 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
                 catch (NumberFormatException ignored) {}
             }
             log.debug("Gateway-authenticated: user={}, role={}, userId={}", username, role, userId);
+        } else {
+            // Internal service-to-service call without user context
+            UsernamePasswordAuthenticationToken auth =
+                    new UsernamePasswordAuthenticationToken("internal-service", null, 
+                            List.of(new SimpleGrantedAuthority("ROLE_INTERNAL")));
+            SecurityContextHolder.getContext().setAuthentication(auth);
+            log.debug("Internal service authentication set");
         }
 
         filterChain.doFilter(request, response);
@@ -84,3 +91,5 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
                 "timestamp", LocalDateTime.now().toString(), "path", path));
     }
 }
+
+

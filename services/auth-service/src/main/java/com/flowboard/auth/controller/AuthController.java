@@ -132,11 +132,40 @@ public class AuthController {
             @PathVariable Integer id) {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
-            User user = authService.getProfile(token);
-            authService.deactivateAccount(user.getUserId());
+            User requester = authService.getProfile(token);
+            boolean isAdmin = requester.getRole() == com.flowboard.auth.model.Role.PLATFORM_ADMIN;
+            if (!isAdmin && !requester.getUserId().equals(id)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Forbidden: You cannot deactivate this account", "/auth/deactivate/" + id));
+            }
+            authService.deactivateAccount(id);
             return ResponseEntity.ok(ApiResponse.success(null, "Account deactivated successfully"));
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.error("Unauthorized: Invalid or missing token", "/auth/deactivate/" + id));
+    }
+
+    @PutMapping("/role/{id}")
+    public ResponseEntity<ApiResponse<UserResponse>> updateUserRole(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Integer id,
+            @RequestBody Map<String, String> request) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            User requester = authService.getProfile(token);
+            if (requester.getRole() != com.flowboard.auth.model.Role.PLATFORM_ADMIN) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Forbidden: Only platform admins can change user roles", "/auth/role/" + id));
+            }
+            String newRole = request.get("role");
+            if (newRole == null || newRole.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(ApiResponse.error("Missing required field: role", "/auth/role/" + id));
+            }
+            User updatedUser = authService.updateUserRole(id, newRole);
+            return ResponseEntity.ok(ApiResponse.success(userMapper.toResponse(updatedUser), "User role updated successfully"));
+        }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error("Unauthorized: Invalid or missing token", "/auth/role/" + id));
     }
 }

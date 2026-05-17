@@ -1,1 +1,4 @@
+com\flowboard\card\controller\CardControllerTest.class
 com\flowboard\card\CardServiceApplicationTests.class
+com\flowboard\card\repository\CardRepositoryTest.class
+com\flowboard\card\service\CardServiceImplTest.class

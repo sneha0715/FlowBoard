@@ -13,7 +13,10 @@ import java.time.LocalDate;
 @Builder
 public class WorkspaceMemberResponse {
     private Integer memberId;
+    private Integer workspaceId;
+    private String workspaceName;
     private Integer userId;
     private String role;
+    private String status;
     private LocalDate joinedAt;
 }

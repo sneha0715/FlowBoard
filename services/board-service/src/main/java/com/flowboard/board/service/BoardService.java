@@ -13,7 +13,7 @@ public interface BoardService {
 
     BoardResponse getBoardById(Long boardId);
 
-    List<BoardResponse> getBoardsByWorkspace(Long workspaceId);
+    List<BoardResponse> getBoardsByWorkspace(Long workspaceId, Long userId);
 
     List<BoardResponse> getBoardsByMember(Long userId);
 
@@ -31,4 +31,8 @@ public interface BoardService {
     BoardMemberResponse updateMemberRole(Long boardId, Long userId, String role);
 
     List<BoardMemberResponse> getMembers(Long boardId);
+
+    boolean isMember(Long boardId, Long userId);
+
+    String getRole(Long boardId, Long userId);
 }

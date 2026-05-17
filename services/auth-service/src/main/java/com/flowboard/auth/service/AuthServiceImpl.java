@@ -31,6 +31,14 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public User register(User user) {
         if (userRepository.existsByEmail(user.getEmail()) || userRepository.existsByUserName(user.getUserName())) {
+            User existing = userRepository.findByEmail(user.getEmail()).orElse(null);
+            if (existing != null && "PENDING_STUB".equals(existing.getFullName())) {
+                existing.setFullName(user.getFullName());
+                existing.setUserName(user.getUserName());
+                existing.setPasswordHash(passwordEncoder.encode(user.getPasswordHash()));
+                log.info("Stub user registered properly: {}", user.getEmail());
+                return userRepository.save(existing);
+            }
             log.warn("Register failed — email/username already exists: {}", user.getEmail());
             throw new CustomException("User already registered with this email or username", HttpStatus.CONFLICT);
         }
@@ -154,6 +162,20 @@ public class AuthServiceImpl implements AuthService {
         if (query == null || query.trim().isEmpty()) {
             return userRepository.findAll();
         }
-        return userRepository.searchByFullName(query);
+        return userRepository.searchByQuery(query);
+    }
+
+    @Override
+    public User updateUserRole(Integer userId, String role) {
+        User user = getUserByUserId(userId);
+        try {
+            com.flowboard.auth.model.Role newRole = com.flowboard.auth.model.Role.valueOf(role.toUpperCase());
+            user.setRole(newRole);
+            User saved = userRepository.save(user);
+            log.info("User role updated: userId={}, role={}", userId, role);
+            return saved;
+        } catch (IllegalArgumentException e) {
+            throw new CustomException("Invalid role: " + role, org.springframework.http.HttpStatus.BAD_REQUEST);
+        }
     }
 }

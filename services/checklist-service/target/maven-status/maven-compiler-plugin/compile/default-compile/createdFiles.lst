@@ -1,5 +1,6 @@
 com\flowboard\checklist\dto\request\ChecklistItemRequest.class
 com\flowboard\checklist\entity\Label$LabelBuilder.class
+com\flowboard\checklist\config\FeignConfig.class
 com\flowboard\checklist\repository\ChecklistItemRepository.class
 com\flowboard\checklist\dto\response\ChecklistItemResponse$ChecklistItemResponseBuilder.class
 com\flowboard\checklist\entity\Label.class
@@ -23,6 +24,8 @@ com\flowboard\checklist\entity\CardLabel.class
 com\flowboard\checklist\dto\response\ChecklistProgressResponse.class
 com\flowboard\checklist\dto\request\LabelRequest.class
 com\flowboard\checklist\dto\response\ChecklistProgressResponse$ChecklistProgressResponseBuilder.class
+com\flowboard\checklist\client\BoardClient.class
+com\flowboard\checklist\client\CardClient.class
 com\flowboard\checklist\repository\CardLabelRepository.class
 com\flowboard\checklist\dto\response\ChecklistResponse$ChecklistResponseBuilder.class
 com\flowboard\checklist\entity\Checklist.class
@@ -38,4 +41,5 @@ com\flowboard\checklist\entity\ChecklistItem$ChecklistItemBuilder.class
 com\flowboard\checklist\service\LabelService.class
 com\flowboard\checklist\controller\ChecklistResource.class
 com\flowboard\checklist\dto\response\ApiResponse.class
+com\flowboard\checklist\security\ChecklistSecurity.class
 com\flowboard\checklist\config\InternalSecurityFilter.class

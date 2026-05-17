@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-05-04T11:28:04+0530",
-    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.46.0.v20260407-0427, environment: Java 21.0.10 (Eclipse Adoptium)"
+    date = "2026-05-17T02:57:39+0530",
+    comments = "version: 1.5.5.Final, compiler: javac, environment: Java 20.0.1 (Oracle Corporation)"
 )
 @Component
 public class ListMapperImpl implements ListMapper {
@@ -23,9 +23,9 @@ public class ListMapperImpl implements ListMapper {
         TaskList.TaskListBuilder taskList = TaskList.builder();
 
         taskList.boardId( request.getBoardId() );
-        taskList.color( request.getColor() );
         taskList.name( request.getName() );
         taskList.position( request.getPosition() );
+        taskList.color( request.getColor() );
 
         return taskList.build();
     }
@@ -38,12 +38,12 @@ public class ListMapperImpl implements ListMapper {
 
         ListResponse.ListResponseBuilder listResponse = ListResponse.builder();
 
-        listResponse.boardId( taskList.getBoardId() );
-        listResponse.color( taskList.getColor() );
-        listResponse.createdAt( taskList.getCreatedAt() );
         listResponse.listId( taskList.getListId() );
+        listResponse.boardId( taskList.getBoardId() );
         listResponse.name( taskList.getName() );
         listResponse.position( taskList.getPosition() );
+        listResponse.color( taskList.getColor() );
+        listResponse.createdAt( taskList.getCreatedAt() );
         listResponse.updatedAt( taskList.getUpdatedAt() );
 
         return listResponse.build();
@@ -56,8 +56,8 @@ public class ListMapperImpl implements ListMapper {
         }
 
         taskList.setBoardId( request.getBoardId() );
-        taskList.setColor( request.getColor() );
         taskList.setName( request.getName() );
         taskList.setPosition( request.getPosition() );
+        taskList.setColor( request.getColor() );
     }
 }

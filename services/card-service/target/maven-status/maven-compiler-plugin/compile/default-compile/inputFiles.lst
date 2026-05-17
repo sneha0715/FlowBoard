@@ -1,5 +1,6 @@
 D:\FlowBoard\services\card-service\src\main\java\com\flowboard\card\config\SecurityConfig.java
 D:\FlowBoard\services\card-service\src\main\java\com\flowboard\card\entity\Card.java
+D:\FlowBoard\services\card-service\src\main\java\com\flowboard\card\client\BoardClient.java
 D:\FlowBoard\services\card-service\src\main\java\com\flowboard\card\model\Priority.java
 D:\FlowBoard\services\card-service\src\main\java\com\flowboard\card\dto\request\CardRequest.java
 D:\FlowBoard\services\card-service\src\main\java\com\flowboard\card\repository\CardRepository.java
@@ -12,6 +13,8 @@ D:\FlowBoard\services\card-service\src\main\java\com\flowboard\card\exception\Re
 D:\FlowBoard\services\card-service\src\main\java\com\flowboard\card\exception\GlobalExceptionHandler.java
 D:\FlowBoard\services\card-service\src\main\java\com\flowboard\card\CardServiceApplication.java
 D:\FlowBoard\services\card-service\src\main\java\com\flowboard\card\config\RequestLoggingFilter.java
+D:\FlowBoard\services\card-service\src\main\java\com\flowboard\card\security\CardSecurity.java
+D:\FlowBoard\services\card-service\src\main\java\com\flowboard\card\config\FeignConfig.java
 D:\FlowBoard\services\card-service\src\main\java\com\flowboard\card\service\CardService.java
 D:\FlowBoard\services\card-service\src\main\java\com\flowboard\card\dto\response\CardResponse.java
 D:\FlowBoard\services\card-service\src\main\java\com\flowboard\card\dto\response\ApiResponse.java

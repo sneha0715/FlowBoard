@@ -3,11 +3,17 @@ package com.flowboard.card.dto.response;
 import com.flowboard.card.model.Priority;
 import com.flowboard.card.model.Status;
 import lombok.Data;
+import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class CardResponse {
     private Long cardId;
     private Long listId;
@@ -26,3 +32,5 @@ public class CardResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
+
+

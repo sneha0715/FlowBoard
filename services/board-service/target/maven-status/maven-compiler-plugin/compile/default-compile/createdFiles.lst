@@ -1,4 +1,5 @@
 com\flowboard\board\config\InternalSecurityFilter.class
+com\flowboard\board\client\WorkspaceClient.class
 com\flowboard\board\dto\request\BoardMemberRequest.class
 com\flowboard\board\dto\response\BoardMemberResponse.class
 com\flowboard\board\model\BoardMember.class
@@ -6,6 +7,7 @@ com\flowboard\board\dto\response\BoardResponse$BoardResponseBuilder.class
 com\flowboard\board\model\Board.class
 com\flowboard\board\repository\BoardMemberRepository.class
 com\flowboard\board\dto\request\BoardRequest.class
+com\flowboard\board\config\FeignConfig.class
 com\flowboard\board\repository\BoardRepository.class
 com\flowboard\board\exception\GlobalExceptionHandler.class
 com\flowboard\board\dto\response\ApiResponse$ApiResponseBuilder.class
@@ -25,3 +27,4 @@ com\flowboard\board\BoardServiceApplication.class
 com\flowboard\board\dto\response\BoardMemberResponse$BoardMemberResponseBuilder.class
 com\flowboard\board\model\Board$BoardBuilder.class
 com\flowboard\board\exception\ResourceNotFoundException.class
+com\flowboard\board\security\BoardSecurity.class

@@ -158,6 +158,24 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    public void reactivateAccount(Integer id) {
+        User user = getUserByUserId(id);
+        if (Boolean.TRUE.equals(user.getIsActive())) {
+            throw new CustomException("User is already active", HttpStatus.CONFLICT);
+        }
+        user.setIsActive(true);
+        userRepository.save(user);
+        log.info("Account reactivated: userId={}", id);
+    }
+
+    @Override
+    public void deleteAccount(Integer id) {
+        User user = getUserByUserId(id);
+        userRepository.deleteByUserId(id);
+        log.info("Account deleted: userId={}", id);
+    }
+
+    @Override
     public List<User> searchUsers(String query) {
         if (query == null || query.trim().isEmpty()) {
             return userRepository.findAll();

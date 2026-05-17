@@ -18,6 +18,8 @@ public interface WorkspaceService {
 
     List<WorkspaceResponse> getPublicWorkspaces();
 
+    List<WorkspaceResponse> getAllWorkspaces();
+
     WorkspaceResponse updateWorkspace(int workspaceId, WorkspaceRequest request);
 
     void deleteWorkspace(int workspaceId);

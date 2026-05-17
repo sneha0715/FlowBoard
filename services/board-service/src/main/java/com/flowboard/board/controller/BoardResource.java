@@ -56,6 +56,14 @@ public class BoardResource {
         return ResponseEntity.ok(ApiResponse.success(response, "Boards retrieved successfully"));
     }
 
+    @GetMapping
+    @PreAuthorize("hasRole('PLATFORM_ADMIN')")
+    public ResponseEntity<ApiResponse<List<BoardResponse>>> getAllBoards(
+            @RequestAttribute(value = "userId", required = false) Long requesterId) {
+        List<BoardResponse> response = boardService.getAllBoards();
+        return ResponseEntity.ok(ApiResponse.success(response, "All boards retrieved successfully"));
+    }
+
     @PutMapping("/{id}")
     @PreAuthorize("@boardSecurity.hasBoardRole(#id, #requesterId, 'ADMIN')")
     public ResponseEntity<ApiResponse<BoardResponse>> update(

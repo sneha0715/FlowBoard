@@ -106,6 +106,13 @@ public class BoardServiceImpl implements BoardService {
     }
 
     @Override
+    public List<BoardResponse> getAllBoards() {
+        return boardRepository.findAll().stream()
+                .map(boardMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     @Transactional
     public BoardResponse updateBoard(Long boardId, BoardRequest request) {
         Board board = boardRepository.findById(boardId)

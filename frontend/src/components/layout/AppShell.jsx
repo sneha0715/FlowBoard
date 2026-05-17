@@ -10,6 +10,7 @@ import {
   Settings,
   User,
   Search,
+  Shield,
   Plus,
   Home,
   Globe,
@@ -198,6 +199,21 @@ export default function AppShell({ children }) {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              {isPlatformAdmin(user) && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === '/admin'}
+                    tooltip="Admin Panel"
+                    className="h-10 px-3.5 rounded-xl data-[active=true]:bg-secondary/50 data-[active=true]:text-foreground transition-all duration-200"
+                  >
+                    <Link to="/admin" className="flex items-center gap-3">
+                      <Shield size={18} strokeWidth={2} className="shrink-0 opacity-70" />
+                      <span className="font-medium text-[13px] group-data-[collapsible=icon]:hidden">Admin Panel</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroup>
 

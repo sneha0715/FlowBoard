@@ -1,0 +1,82 @@
+{
+  "hash": "4888a768",
+  "configHash": "3ae5ac1f",
+  "lockfileHash": "0df30e4a",
+  "browserHash": "f13a0714",
+  "optimized": {
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "b7ed58a1",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "8a34e3ed",
+      "needsInterop": true
+    },
+    "react-router-dom": {
+      "src": "../../node_modules/react-router-dom/dist/index.js",
+      "file": "react-router-dom.js",
+      "fileHash": "657604dd",
+      "needsInterop": false
+    },
+    "react-redux": {
+      "src": "../../node_modules/react-redux/dist/react-redux.mjs",
+      "file": "react-redux.js",
+      "fileHash": "1968d080",
+      "needsInterop": false
+    },
+    "sonner": {
+      "src": "../../node_modules/sonner/dist/index.mjs",
+      "file": "sonner.js",
+      "fileHash": "a0ceb9c2",
+      "needsInterop": false
+    },
+    "@reduxjs/toolkit": {
+      "src": "../../node_modules/@reduxjs/toolkit/dist/redux-toolkit.modern.mjs",
+      "file": "@reduxjs_toolkit.js",
+      "fileHash": "c4feb3d2",
+      "needsInterop": false
+    },
+    "framer-motion": {
+      "src": "../../node_modules/framer-motion/dist/es/index.mjs",
+      "file": "framer-motion.js",
+      "fileHash": "1b5f856a",
+      "needsInterop": false
+    },
+    "lucide-react": {
+      "src": "../../node_modules/lucide-react/dist/esm/lucide-react.js",
+      "file": "lucide-react.js",
+      "fileHash": "fc547b65",
+      "needsInterop": false
+    },
+    "axios": {
+      "src": "../../node_modules/axios/index.js",
+      "file": "axios.js",
+      "fileHash": "dee12dbe",
+      "needsInterop": false
+    },
+    "hugeicons-react": {
+      "src": "../../node_modules/hugeicons-react/dist/esm/hugeicons-react.js",
+      "file": "hugeicons-react.js",
+      "fileHash": "8fa9d021",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-YEGEUSQR": {
+      "file": "chunk-YEGEUSQR.js"
+    },
+    "chunk-TGFRTKTZ": {
+      "file": "chunk-TGFRTKTZ.js"
+    },
+    "chunk-7JZAKNLV": {
+      "file": "chunk-7JZAKNLV.js"
+    },
+    "chunk-2TUXWMP5": {
+      "file": "chunk-2TUXWMP5.js"
+    }
+  }
+}

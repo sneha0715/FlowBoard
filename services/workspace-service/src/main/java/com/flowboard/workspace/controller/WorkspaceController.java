@@ -54,6 +54,15 @@ public class WorkspaceController {
                 .ok(ApiResponse.success(response, "Public workspaces fetched successfully", httpRequest.getRequestURI()));
     }
 
+    @GetMapping
+    @PreAuthorize("hasRole('PLATFORM_ADMIN')")
+    public ResponseEntity<ApiResponse<List<WorkspaceResponse>>> getAllWorkspaces(
+            HttpServletRequest httpRequest) {
+        List<WorkspaceResponse> response = workspaceService.getAllWorkspaces();
+        return ResponseEntity
+                .ok(ApiResponse.success(response, "All workspaces fetched successfully", httpRequest.getRequestURI()));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("@workspaceSecurity.isPublicOrMember(#id, #requesterId)")
     public ResponseEntity<ApiResponse<WorkspaceResponse>> getWorkspaceById(

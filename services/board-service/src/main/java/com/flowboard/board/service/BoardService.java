@@ -17,6 +17,8 @@ public interface BoardService {
 
     List<BoardResponse> getBoardsByMember(Long userId);
 
+    List<BoardResponse> getAllBoards();
+
     BoardResponse updateBoard(Long boardId, BoardRequest request);
 
     void closeBoard(Long boardId);

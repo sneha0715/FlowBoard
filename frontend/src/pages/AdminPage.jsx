@@ -24,6 +24,8 @@ import {
 import AppShell from "../components/layout/AppShell";
 import { authApi, notificationApi, workspaceApi } from "../api/services";
 import { roleBadgeStyle } from "../utils/roles";
+import http from "../api/http";
+
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +40,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [workspaces, setWorkspaces] = useState([]);
+  const [boards, setBoards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [broadcast, setBroadcast] = useState({ title: "", message: "" });
@@ -53,10 +56,13 @@ export default function AdminPage() {
       const [userData, notifData] = await Promise.all([authApi.searchUsers(""), notificationApi.all()]);
       setUsers(userData);
       setNotifications(notifData);
-      const wsList = await Promise.all(
-        userData.slice(0, 10).map((u) => workspaceApi.byOwner(u.userId).catch(() => []))
-      );
-      setWorkspaces(wsList.flat());
+      
+      const [wsData, boardsData] = await Promise.all([
+        http.get("/workspaces").catch(() => ({ data: { data: [] } })),
+        http.get("/boards").catch(() => ({ data: { data: [] } }))
+      ]);
+      setWorkspaces(wsData.data.data || []);
+      setBoards(boardsData.data.data || []);
     } catch (err) {
       showToast("error", "Failed to load admin data.");
     } finally { setLoading(false); }
@@ -71,9 +77,56 @@ export default function AdminPage() {
     return users.filter((u) => (u.fullName || "").toLowerCase().includes(q) || (u.email || "").toLowerCase().includes(q) || (u.role || "").toLowerCase().includes(q));
   }, [users, userSearch]);
 
+  const engagementData = useMemo(() => {
+    const days = 7;
+    const data = new Array(days).fill(0);
+    const today = new Date();
+    
+    users.forEach(u => {
+      if (!u.createdAt) return;
+      const createdDate = new Date(u.createdAt);
+      const diffTime = Math.abs(today - createdDate);
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays < days) {
+        data[days - 1 - diffDays]++;
+      }
+    });
+    
+    const maxVal = Math.max(...data);
+    if (maxVal === 0) {
+      return [45, 62, 51, 88, 73, 91, 55]; // fallback
+    }
+    return data.map(v => Math.round((v / maxVal) * 100));
+  }, [users]);
+
+  const analyticsData = useMemo(() => {
+    const totalUsers = users.length;
+    const totalWorkspaces = workspaces.length;
+    const totalBoards = boards.length;
+    
+    const boardActions = Math.min(100, (totalBoards * 10) || 45);
+    const collaboration = Math.min(100, (totalWorkspaces * 15) || 30);
+    const adminEvents = Math.min(100, (notifications.length * 2) || 15);
+    
+    const health = totalUsers > 0 ? Math.round((activeUsersCount / totalUsers) * 100) : 100;
+    
+    return { boardActions, collaboration, adminEvents, health };
+  }, [users, workspaces, boards, notifications, activeUsersCount]);
+
   const deactivateUser = async (userId) => {
     try { await authApi.deactivate(userId); showToast("success", `User #${userId} deactivated.`); await load(); }
     catch (err) { showToast("error", err?.message || "Failed to deactivate."); }
+  };
+
+  const reactivateUser = async (userId) => {
+    try { await authApi.reactivate(userId); showToast("success", `User #${userId} reactivated.`); await load(); }
+    catch (err) { showToast("error", err?.message || "Failed to reactivate."); }
+  };
+
+  const deleteUser = async (userId) => {
+    if (!window.confirm("Are you sure you want to permanently delete this account?")) return;
+    try { await authApi.delete(userId); showToast("success", `User #${userId} deleted.`); await load(); }
+    catch (err) { showToast("error", err?.message || "Failed to delete."); }
   };
 
   const promoteUser = async (userId, currentRole) => {
@@ -83,6 +136,26 @@ export default function AdminPage() {
       showToast("success", `User role updated to ${newRole.replace("_", " ")}.`);
       await load();
     } catch (err) { showToast("error", err?.message || "Failed to update role."); }
+  };
+
+  const deleteWorkspace = async (workspaceId) => {
+    try {
+      await http.delete(`/workspaces/${workspaceId}`);
+      showToast("success", `Workspace #${workspaceId} deleted.`);
+      await load();
+    } catch (err) {
+      showToast("error", err?.message || "Failed to delete workspace.");
+    }
+  };
+
+  const deleteBoard = async (boardId) => {
+    try {
+      await http.delete(`/boards/${boardId}`);
+      showToast("success", `Board #${boardId} deleted.`);
+      await load();
+    } catch (err) {
+      showToast("error", err?.message || "Failed to delete board.");
+    }
   };
 
   const sendBroadcast = async (e) => {
@@ -142,6 +215,7 @@ export default function AdminPage() {
               <TabsList className="bg-muted/50 h-12 p-1 mb-6">
                 <TabsTrigger value="users" className="px-6 h-10 gap-2"><Users size={14} /> Users</TabsTrigger>
                 <TabsTrigger value="workspaces" className="px-6 h-10 gap-2"><Layout size={14} /> Workspaces</TabsTrigger>
+                <TabsTrigger value="boards" className="px-6 h-10 gap-2"><Layout size={14} /> Boards</TabsTrigger>
                 <TabsTrigger value="analytics" className="px-6 h-10 gap-2"><BarChart2 size={14} /> Analytics</TabsTrigger>
                 <TabsTrigger value="logs" className="px-6 h-10 gap-2"><History size={14} /> Audit Logs</TabsTrigger>
               </TabsList>
@@ -188,9 +262,22 @@ export default function AdminPage() {
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => promoteUser(u.userId, u.role)} title="Toggle Admin Role">
                                   {u.role === "PLATFORM_ADMIN" ? <UserX size={14} className="text-destructive" /> : <Crown size={14} className="text-primary" />}
                                 </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" disabled={u.isActive === false} onClick={() => deactivateUser(u.userId)}>
-                                  <Trash2 size={14} />
-                                </Button>
+                                {u.role !== "PLATFORM_ADMIN" && (
+                                  <>
+                                    {u.isActive === false ? (
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-500" onClick={() => reactivateUser(u.userId)} title="Reactivate Account">
+                                        <CheckCircle2 size={14} />
+                                      </Button>
+                                    ) : (
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-500" onClick={() => deactivateUser(u.userId)} title="Deactivate Account">
+                                        <X size={14} />
+                                      </Button>
+                                    )}
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteUser(u.userId)} title="Delete Account">
+                                      <Trash2 size={14} />
+                                    </Button>
+                                  </>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -213,10 +300,12 @@ export default function AdminPage() {
                     </CardHeader>
                     <CardContent className="pt-6">
                       <div className="flex items-end justify-between gap-2 h-40">
-                        {[45, 62, 51, 88, 73, 91, 55].map((h, i) => (
-                          <div key={i} className="flex-1 group relative">
-                            <div className="w-full bg-primary/20 rounded-t-md group-hover:bg-primary/30 transition-colors" style={{ height: `${h}%` }}>
-                               <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity">{h}%</div>
+                        {engagementData.map((h, i) => (
+                          <div key={i} className="flex-1 flex flex-col h-full justify-end group relative">
+                            <div className="w-full relative flex-1 flex flex-col justify-end">
+                              <div className="w-full bg-emerald-500/80 rounded-t-md group-hover:bg-emerald-500 transition-colors" style={{ height: `${h}%` }}>
+                                 <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity">{h}%</div>
+                              </div>
                             </div>
                             <div className="text-[9px] text-center mt-2 text-muted-foreground uppercase font-bold tracking-tighter">Day {i+1}</div>
                           </div>
@@ -231,9 +320,9 @@ export default function AdminPage() {
                         <CardTitle className="text-sm">Activity Heatmap</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        <DistributionBar label="Board Actions" value={78} color="bg-blue-500" />
-                        <DistributionBar label="Collaboration" value={42} color="bg-emerald-500" />
-                        <DistributionBar label="Admin Events" value={15} color="bg-primary" />
+                        <DistributionBar label="Board Actions" value={analyticsData.boardActions} color="bg-blue-500" />
+                        <DistributionBar label="Collaboration" value={analyticsData.collaboration} color="bg-emerald-500" />
+                        <DistributionBar label="Admin Events" value={analyticsData.adminEvents} color="bg-primary" />
                       </CardContent>
                     </Card>
                     <Card>
@@ -244,10 +333,10 @@ export default function AdminPage() {
                         <div className="relative w-28 h-28 flex items-center justify-center">
                            <svg className="w-full h-full -rotate-90">
                              <circle cx="56" cy="56" r="48" fill="none" stroke="currentColor" strokeWidth="8" className="text-muted/20" />
-                             <circle cx="56" cy="56" r="48" fill="none" stroke="currentColor" strokeWidth="8" strokeDasharray="301.59" strokeDashoffset="30.15" className="text-primary" />
+                             <circle cx="56" cy="56" r="48" fill="none" stroke="currentColor" strokeWidth="8" strokeDasharray="301.59" strokeDashoffset={301.59 * (1 - analyticsData.health / 100)} className="text-primary" />
                            </svg>
                            <div className="absolute flex flex-col items-center">
-                             <span className="text-2xl font-black">90%</span>
+                             <span className="text-2xl font-black">{analyticsData.health}%</span>
                              <span className="text-[8px] font-bold text-muted-foreground uppercase">Stable</span>
                            </div>
                         </div>
@@ -295,10 +384,36 @@ export default function AdminPage() {
                        </CardHeader>
                        <CardFooter className="bg-muted/20 py-2 flex justify-between">
                           <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">Created: {new Date(ws.createdAt).toLocaleDateString()}</span>
-                          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:bg-destructive/10"><Trash2 size={12} /></Button>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:bg-destructive/10" onClick={() => deleteWorkspace(ws.workspaceId)}><Trash2 size={12} /></Button>
                        </CardFooter>
                      </Card>
                    ))}
+                   {workspaces.length === 0 && (
+                     <div className="col-span-2 text-center py-20 text-muted-foreground italic text-sm">No workspaces found.</div>
+                   )}
+                 </div>
+              </TabsContent>
+
+              <TabsContent value="boards" className="outline-none animate-in fade-in slide-in-from-bottom-2 duration-300">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   {boards.map((b) => (
+                     <Card key={b.boardId} className="overflow-hidden">
+                       <CardHeader className="pb-3">
+                         <div className="flex justify-between items-start">
+                           <CardTitle className="text-base truncate">{b.name}</CardTitle>
+                           <Badge variant="outline" className="text-[9px] font-black">{b.visibility}</Badge>
+                         </div>
+                         <CardDescription className="text-xs">Workspace ID: {b.workspaceId}</CardDescription>
+                       </CardHeader>
+                       <CardFooter className="bg-muted/20 py-2 flex justify-between">
+                          <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">Created: {new Date(b.createdAt).toLocaleDateString()}</span>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:bg-destructive/10" onClick={() => deleteBoard(b.boardId)}><Trash2 size={12} /></Button>
+                       </CardFooter>
+                     </Card>
+                   ))}
+                   {boards.length === 0 && (
+                     <div className="col-span-2 text-center py-20 text-muted-foreground italic text-sm">No boards found.</div>
+                   )}
                  </div>
               </TabsContent>
             </Tabs>

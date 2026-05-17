@@ -145,6 +145,42 @@ public class AuthController {
                 .body(ApiResponse.error("Unauthorized: Invalid or missing token", "/auth/deactivate/" + id));
     }
 
+    @PostMapping("/reactivate/{id}")
+    public ResponseEntity<ApiResponse<Void>> reactivateAccount(@RequestHeader("Authorization") String authHeader,
+            @PathVariable Integer id) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            User requester = authService.getProfile(token);
+            boolean isAdmin = requester.getRole() == com.flowboard.auth.model.Role.PLATFORM_ADMIN;
+            if (!isAdmin) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Forbidden: Only platform admins can reactivate accounts", "/auth/reactivate/" + id));
+            }
+            authService.reactivateAccount(id);
+            return ResponseEntity.ok(ApiResponse.success(null, "Account reactivated successfully"));
+        }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error("Unauthorized: Invalid or missing token", "/auth/reactivate/" + id));
+    }
+
+    @PostMapping("/delete/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteAccount(@RequestHeader("Authorization") String authHeader,
+            @PathVariable Integer id) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            User requester = authService.getProfile(token);
+            boolean isAdmin = requester.getRole() == com.flowboard.auth.model.Role.PLATFORM_ADMIN;
+            if (!isAdmin && !requester.getUserId().equals(id)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Forbidden: You cannot delete this account", "/auth/delete/" + id));
+            }
+            authService.deleteAccount(id);
+            return ResponseEntity.ok(ApiResponse.success(null, "Account deleted successfully"));
+        }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error("Unauthorized: Invalid or missing token", "/auth/delete/" + id));
+    }
+
     @PutMapping("/role/{id}")
     public ResponseEntity<ApiResponse<UserResponse>> updateUserRole(
             @RequestHeader("Authorization") String authHeader,

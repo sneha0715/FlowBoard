@@ -101,6 +101,13 @@ public class WorkspaceServiceImpl implements WorkspaceService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<WorkspaceResponse> getAllWorkspaces() {
+        List<Workspace> workspaces = workspaceRepository.findAll();
+        return workspaces.stream().map(workspaceMapper::toResponse).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<WorkspaceMemberResponse> getPendingInvitations(int userId) {
         return workspaceMemberRepository.findByUserIdAndStatus(userId, "PENDING").stream()
                 .map(workspaceMemberMapper::toResponse)

@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-05-17T02:57:25+0530",
-    comments = "version: 1.5.5.Final, compiler: javac, environment: Java 20.0.1 (Oracle Corporation)"
+    date = "2026-05-18T10:39:58+0530",
+    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.46.0.v20260407-0427, environment: Java 21.0.10 (Eclipse Adoptium)"
 )
 @Component
 public class BoardMemberMapperImpl implements BoardMemberMapper {
@@ -22,8 +22,8 @@ public class BoardMemberMapperImpl implements BoardMemberMapper {
 
         BoardMember.BoardMemberBuilder boardMember = BoardMember.builder();
 
-        boardMember.userId( request.getUserId() );
         boardMember.role( request.getRole() );
+        boardMember.userId( request.getUserId() );
 
         return boardMember.build();
     }
@@ -36,11 +36,11 @@ public class BoardMemberMapperImpl implements BoardMemberMapper {
 
         BoardMemberResponse.BoardMemberResponseBuilder boardMemberResponse = BoardMemberResponse.builder();
 
-        boardMemberResponse.boardMemberId( boardMember.getBoardMemberId() );
-        boardMemberResponse.boardId( boardMember.getBoardId() );
-        boardMemberResponse.userId( boardMember.getUserId() );
-        boardMemberResponse.role( boardMember.getRole() );
         boardMemberResponse.addedAt( boardMember.getAddedAt() );
+        boardMemberResponse.boardId( boardMember.getBoardId() );
+        boardMemberResponse.boardMemberId( boardMember.getBoardMemberId() );
+        boardMemberResponse.role( boardMember.getRole() );
+        boardMemberResponse.userId( boardMember.getUserId() );
 
         return boardMemberResponse.build();
     }
@@ -51,7 +51,7 @@ public class BoardMemberMapperImpl implements BoardMemberMapper {
             return;
         }
 
-        boardMember.setUserId( request.getUserId() );
         boardMember.setRole( request.getRole() );
+        boardMember.setUserId( request.getUserId() );
     }
 }

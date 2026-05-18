@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-05-17T02:58:26+0530",
-    comments = "version: 1.5.5.Final, compiler: javac, environment: Java 20.0.1 (Oracle Corporation)"
+    date = "2026-05-18T10:40:43+0530",
+    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.46.0.v20260407-0427, environment: Java 21.0.10 (Eclipse Adoptium)"
 )
 @Component
 public class CommentMapperImpl implements CommentMapper {
@@ -37,12 +37,12 @@ public class CommentMapperImpl implements CommentMapper {
 
         CommentResponse.CommentResponseBuilder commentResponse = CommentResponse.builder();
 
-        commentResponse.commentId( comment.getCommentId() );
-        commentResponse.cardId( comment.getCardId() );
         commentResponse.authorId( comment.getAuthorId() );
+        commentResponse.cardId( comment.getCardId() );
+        commentResponse.commentId( comment.getCommentId() );
         commentResponse.content( comment.getContent() );
-        commentResponse.parentCommentId( comment.getParentCommentId() );
         commentResponse.createdAt( comment.getCreatedAt() );
+        commentResponse.parentCommentId( comment.getParentCommentId() );
         commentResponse.updatedAt( comment.getUpdatedAt() );
 
         return commentResponse.build();

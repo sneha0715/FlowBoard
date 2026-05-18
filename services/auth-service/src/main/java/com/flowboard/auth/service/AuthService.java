@@ -30,6 +30,10 @@ public interface AuthService {
     
     void deactivateAccount(Integer id);
     
+    void activateAccount(Integer id);
+    
+    void deleteAccount(Integer id);
+    
     List<User> searchUsers(String query);
 
     User updateUserRole(Integer userId, String role);

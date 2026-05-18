@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -143,6 +144,42 @@ public class AuthController {
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(ApiResponse.error("Unauthorized: Invalid or missing token", "/auth/deactivate/" + id));
+    }
+
+    @PostMapping("/activate/{id}")
+    public ResponseEntity<ApiResponse<Void>> activateAccount(@RequestHeader("Authorization") String authHeader,
+            @PathVariable Integer id) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            User requester = authService.getProfile(token);
+            boolean isAdmin = requester.getRole() == com.flowboard.auth.model.Role.PLATFORM_ADMIN;
+            if (!isAdmin) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Forbidden: Only platform admins can activate accounts", "/auth/activate/" + id));
+            }
+            authService.activateAccount(id);
+            return ResponseEntity.ok(ApiResponse.success(null, "Account activated successfully"));
+        }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error("Unauthorized: Invalid or missing token", "/auth/activate/" + id));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteAccount(@RequestHeader("Authorization") String authHeader,
+            @PathVariable Integer id) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            User requester = authService.getProfile(token);
+            boolean isAdmin = requester.getRole() == com.flowboard.auth.model.Role.PLATFORM_ADMIN;
+            if (!isAdmin) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(ApiResponse.error("Forbidden: Only platform admins can delete accounts", "/auth/" + id));
+            }
+            authService.deleteAccount(id);
+            return ResponseEntity.ok(ApiResponse.success(null, "Account deleted successfully"));
+        }
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error("Unauthorized: Invalid or missing token", "/auth/" + id));
     }
 
     @PutMapping("/role/{id}")

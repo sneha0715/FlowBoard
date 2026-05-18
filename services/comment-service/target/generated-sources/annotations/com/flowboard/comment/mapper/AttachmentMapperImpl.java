@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-05-17T02:58:26+0530",
-    comments = "version: 1.5.5.Final, compiler: javac, environment: Java 20.0.1 (Oracle Corporation)"
+    date = "2026-05-18T10:40:43+0530",
+    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.46.0.v20260407-0427, environment: Java 21.0.10 (Eclipse Adoptium)"
 )
 @Component
 public class AttachmentMapperImpl implements AttachmentMapper {
@@ -24,8 +24,8 @@ public class AttachmentMapperImpl implements AttachmentMapper {
 
         attachment.cardId( request.getCardId() );
         attachment.fileName( request.getFileName() );
-        attachment.fileUrl( request.getFileUrl() );
         attachment.fileType( request.getFileType() );
+        attachment.fileUrl( request.getFileUrl() );
         attachment.sizeKb( request.getSizeKb() );
 
         return attachment.build();
@@ -41,12 +41,12 @@ public class AttachmentMapperImpl implements AttachmentMapper {
 
         attachmentResponse.attachmentId( attachment.getAttachmentId() );
         attachmentResponse.cardId( attachment.getCardId() );
-        attachmentResponse.uploaderId( attachment.getUploaderId() );
         attachmentResponse.fileName( attachment.getFileName() );
-        attachmentResponse.fileUrl( attachment.getFileUrl() );
         attachmentResponse.fileType( attachment.getFileType() );
+        attachmentResponse.fileUrl( attachment.getFileUrl() );
         attachmentResponse.sizeKb( attachment.getSizeKb() );
         attachmentResponse.uploadedAt( attachment.getUploadedAt() );
+        attachmentResponse.uploaderId( attachment.getUploaderId() );
 
         return attachmentResponse.build();
     }

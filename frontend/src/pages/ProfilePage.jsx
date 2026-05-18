@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export default function ProfilePage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const user = useSelector((s) => s.auth.user);
+  const user = useSelector((s) => s.auth.user);      
 
   const [profileDraft, setProfileDraft] = useState({
     fullName: user?.fullName || "",

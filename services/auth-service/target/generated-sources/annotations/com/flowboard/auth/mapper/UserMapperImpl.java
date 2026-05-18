@@ -9,8 +9,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-05-17T02:56:54+0530",
-    comments = "version: 1.5.5.Final, compiler: javac, environment: Java 20.0.1 (Oracle Corporation)"
+    date = "2026-05-18T10:39:34+0530",
+    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.46.0.v20260407-0427, environment: Java 21.0.10 (Eclipse Adoptium)"
 )
 @Component
 public class UserMapperImpl implements UserMapper {
@@ -36,10 +36,10 @@ public class UserMapperImpl implements UserMapper {
         else {
             user.isActive( true );
         }
-        user.fullName( request.getFullName() );
         user.email( request.getEmail() );
-        user.userName( request.getUserName() );
+        user.fullName( request.getFullName() );
         user.provider( request.getProvider() );
+        user.userName( request.getUserName() );
 
         return user.build();
     }
@@ -52,15 +52,15 @@ public class UserMapperImpl implements UserMapper {
 
         UserResponse.UserResponseBuilder userResponse = UserResponse.builder();
 
-        userResponse.userId( user.getUserId() );
-        userResponse.fullName( user.getFullName() );
-        userResponse.email( user.getEmail() );
-        userResponse.userName( user.getUserName() );
-        userResponse.role( user.getRole() );
         userResponse.avatarUrl( user.getAvatarUrl() );
-        userResponse.provider( user.getProvider() );
-        userResponse.isActive( user.getIsActive() );
         userResponse.createdAt( user.getCreatedAt() );
+        userResponse.email( user.getEmail() );
+        userResponse.fullName( user.getFullName() );
+        userResponse.isActive( user.getIsActive() );
+        userResponse.provider( user.getProvider() );
+        userResponse.role( user.getRole() );
+        userResponse.userId( user.getUserId() );
+        userResponse.userName( user.getUserName() );
 
         return userResponse.build();
     }

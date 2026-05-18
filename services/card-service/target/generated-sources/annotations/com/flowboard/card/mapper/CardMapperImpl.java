@@ -8,8 +8,8 @@ import org.springframework.stereotype.Component;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-05-17T02:57:54+0530",
-    comments = "version: 1.5.5.Final, compiler: javac, environment: Java 20.0.1 (Oracle Corporation)"
+    date = "2026-05-18T10:40:21+0530",
+    comments = "version: 1.5.5.Final, compiler: Eclipse JDT (IDE) 3.46.0.v20260407-0427, environment: Java 21.0.10 (Eclipse Adoptium)"
 )
 @Component
 public class CardMapperImpl implements CardMapper {
@@ -22,21 +22,21 @@ public class CardMapperImpl implements CardMapper {
 
         CardResponse.CardResponseBuilder cardResponse = CardResponse.builder();
 
-        cardResponse.cardId( card.getCardId() );
-        cardResponse.listId( card.getListId() );
-        cardResponse.boardId( card.getBoardId() );
-        cardResponse.title( card.getTitle() );
-        cardResponse.description( card.getDescription() );
-        cardResponse.position( card.getPosition() );
-        cardResponse.priority( card.getPriority() );
-        cardResponse.status( card.getStatus() );
-        cardResponse.dueDate( card.getDueDate() );
-        cardResponse.startDate( card.getStartDate() );
-        cardResponse.assigneeId( card.getAssigneeId() );
-        cardResponse.createdById( card.getCreatedById() );
         cardResponse.archived( card.isArchived() );
+        cardResponse.assigneeId( card.getAssigneeId() );
+        cardResponse.boardId( card.getBoardId() );
+        cardResponse.cardId( card.getCardId() );
         cardResponse.coverColor( card.getCoverColor() );
         cardResponse.createdAt( card.getCreatedAt() );
+        cardResponse.createdById( card.getCreatedById() );
+        cardResponse.description( card.getDescription() );
+        cardResponse.dueDate( card.getDueDate() );
+        cardResponse.listId( card.getListId() );
+        cardResponse.position( card.getPosition() );
+        cardResponse.priority( card.getPriority() );
+        cardResponse.startDate( card.getStartDate() );
+        cardResponse.status( card.getStatus() );
+        cardResponse.title( card.getTitle() );
         cardResponse.updatedAt( card.getUpdatedAt() );
 
         return cardResponse.build();
@@ -50,19 +50,19 @@ public class CardMapperImpl implements CardMapper {
 
         Card.CardBuilder card = Card.builder();
 
-        card.listId( request.getListId() );
+        card.assigneeId( request.getAssigneeId() );
         card.boardId( request.getBoardId() );
-        card.title( request.getTitle() );
+        card.coverColor( request.getCoverColor() );
         card.description( request.getDescription() );
+        card.dueDate( request.getDueDate() );
+        card.listId( request.getListId() );
         if ( request.getPosition() != null ) {
             card.position( request.getPosition() );
         }
         card.priority( request.getPriority() );
-        card.status( request.getStatus() );
-        card.dueDate( request.getDueDate() );
         card.startDate( request.getStartDate() );
-        card.assigneeId( request.getAssigneeId() );
-        card.coverColor( request.getCoverColor() );
+        card.status( request.getStatus() );
+        card.title( request.getTitle() );
 
         return card.build();
     }
@@ -73,16 +73,16 @@ public class CardMapperImpl implements CardMapper {
             return;
         }
 
-        card.setTitle( request.getTitle() );
+        card.setAssigneeId( request.getAssigneeId() );
+        card.setCoverColor( request.getCoverColor() );
         card.setDescription( request.getDescription() );
+        card.setDueDate( request.getDueDate() );
         if ( request.getPosition() != null ) {
             card.setPosition( request.getPosition() );
         }
         card.setPriority( request.getPriority() );
-        card.setStatus( request.getStatus() );
-        card.setDueDate( request.getDueDate() );
         card.setStartDate( request.getStartDate() );
-        card.setAssigneeId( request.getAssigneeId() );
-        card.setCoverColor( request.getCoverColor() );
+        card.setStatus( request.getStatus() );
+        card.setTitle( request.getTitle() );
     }
 }

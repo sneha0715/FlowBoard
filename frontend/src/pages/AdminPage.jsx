@@ -11,6 +11,7 @@ import {
   Shield, 
   Trash2, 
   UserCheck, 
+  UserMinus,
   UserX, 
   Users, 
   X,
@@ -74,6 +75,16 @@ export default function AdminPage() {
   const deactivateUser = async (userId) => {
     try { await authApi.deactivate(userId); showToast("success", `User #${userId} deactivated.`); await load(); }
     catch (err) { showToast("error", err?.message || "Failed to deactivate."); }
+  };
+
+  const activateUser = async (userId) => {
+    try { await authApi.activate(userId); showToast("success", `User #${userId} activated.`); await load(); }
+    catch (err) { showToast("error", err?.message || "Failed to activate."); }
+  };
+
+  const deleteUser = async (userId) => {
+    try { await authApi.delete(userId); showToast("success", `User #${userId} deleted.`); await load(); }
+    catch (err) { showToast("error", err?.message || "Failed to delete."); }
   };
 
   const promoteUser = async (userId, currentRole) => {
@@ -184,14 +195,23 @@ export default function AdminPage() {
                               <Badge variant={u.role === "PLATFORM_ADMIN" ? "default" : "outline"} className="text-[10px] font-bold h-5 uppercase">
                                 {u.isActive === false ? "Deactivated" : u.role.replace("PLATFORM_", "")}
                               </Badge>
-                              <div className="flex gap-1">
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => promoteUser(u.userId, u.role)} title="Toggle Admin Role">
-                                  {u.role === "PLATFORM_ADMIN" ? <UserX size={14} className="text-destructive" /> : <Crown size={14} className="text-primary" />}
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" disabled={u.isActive === false} onClick={() => deactivateUser(u.userId)}>
-                                  <Trash2 size={14} />
-                                </Button>
-                              </div>
+                                <div className="flex gap-1">
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => promoteUser(u.userId, u.role)} title="Toggle Admin Role">
+                                    {u.role === "PLATFORM_ADMIN" ? <UserX size={14} className="text-destructive" /> : <Crown size={14} className="text-primary" />}
+                                  </Button>
+                                  {u.isActive === false ? (
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-500" onClick={() => activateUser(u.userId)} title="Activate Account">
+                                      <UserCheck size={14} />
+                                    </Button>
+                                  ) : (
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-amber-500" onClick={() => deactivateUser(u.userId)} title="Deactivate Account">
+                                      <UserMinus size={14} />
+                                    </Button>
+                                  )}
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteUser(u.userId)} title="Delete Account">
+                                    <Trash2 size={14} />
+                                  </Button>
+                                </div>
                             </div>
                           </div>
                         ))

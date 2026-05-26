@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@import "tailwindcss" source(none);
+@source "./**/*.{js,jsx,ts,tsx}";
+@source "../index.html";
 @plugin "tailwindcss-animate";
 @import "@fontsource-variable/space-grotesk";
 @import "@fontsource-variable/dm-sans";
@@ -6,28 +8,6 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.148 0.004 228.8);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.148 0.004 228.8);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.148 0.004 228.8);
-    --primary: oklch(0.511 0.096 186.391);
-    --primary-foreground: oklch(0.984 0.014 180.72);
-    --secondary: oklch(0.967 0.001 286.375);
-    --secondary-foreground: oklch(0.21 0.006 285.885);
-    --muted: oklch(0.963 0.002 197.1);
-    --muted-foreground: oklch(0.56 0.021 213.5);
-    --accent: oklch(0.963 0.002 197.1);
-    --accent-foreground: oklch(0.218 0.008 223.9);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.925 0.005 214.3);
-    --input: oklch(0.925 0.005 214.3);
-    --ring: oklch(0.723 0.014 214.4);
-    --radius: 0.75rem;
-}
-
-.dark {
     --background: oklch(0.141 0.005 285.823);
     --foreground: oklch(0.985 0.001 106.423);
     --card: oklch(0.165 0.005 285.823);
@@ -47,6 +27,7 @@
     --border: oklch(0.269 0.006 285.823);
     --input: oklch(0.269 0.006 285.823);
     --ring: oklch(0.439 0.124 158.739);
+    --radius: 0.75rem;
 }
 
 @theme inline {
@@ -112,7 +93,7 @@ option {
   padding: 8px;
 }
 
-.dark select option {
+select option {
   background-color: oklch(0.218 0.008 223.9);
   color: oklch(0.987 0.002 197.1);
 }

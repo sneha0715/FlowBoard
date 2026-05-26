@@ -1,6 +1,0 @@
-$kind: http-request
-url: "{{base_url}}/labels/{{labelId}}"
-method: DELETE
-headers:
-  Authorization: Bearer {{token}}
-order: 13000

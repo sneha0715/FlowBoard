@@ -10,6 +10,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.flowboard.card.entity.Card;
+import com.flowboard.card.model.Priority;
+import com.flowboard.card.model.Status;
 
 @DataJpaTest
 @org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase(replace = org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace.NONE)
@@ -23,8 +25,11 @@ class CardRepositoryTest {
     void findByListId_ReturnsCards() {
         Card card = Card.builder()
                 .listId(1L)
+                .boardId(1L)
                 .title("Task Card")
                 .position(1)
+                .priority(Priority.LOW)
+                .status(Status.TO_DO)
                 .build();
         cardRepository.save(card);
 

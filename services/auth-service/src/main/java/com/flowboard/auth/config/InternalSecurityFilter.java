@@ -47,9 +47,9 @@ public class InternalSecurityFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        // Skip actuator and public endpoints
+        // Skip actuator, Swagger UI, API docs, and public endpoints
         String path = request.getRequestURI();
-        if (path.startsWith("/actuator") || path.equals("/auth/login") || path.equals("/auth/register")) {
+        if (path.startsWith("/actuator") || path.contains("/v3/api-docs") || path.contains("/swagger-ui") || path.equals("/auth/login") || path.equals("/auth/register")) {
             filterChain.doFilter(request, response);
             return;
         }

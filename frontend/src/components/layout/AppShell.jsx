@@ -18,8 +18,6 @@ import {
   Grid,
   CheckSquare,
   Briefcase,
-  Sun,
-  Moon,
   PanelLeft,
   ChevronUp,
   FolderKanban,
@@ -33,7 +31,6 @@ import { logout } from "../../store/slices/authSlice";
 import NotificationsDrawer from "./NotificationsDrawer";
 import { notificationApi, workspaceApi } from "../../api/services";
 import { isPlatformAdmin } from "../../utils/roles";
-import { useTheme } from "../theme-provider";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,7 +68,6 @@ export default function AppShell({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const user = useSelector((state) => state.auth.user);
-  const { theme, setTheme } = useTheme();
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -311,22 +307,6 @@ export default function AppShell({ children }) {
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* Theme Capsule Toggle */}
-            <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="group relative h-7 w-12 rounded-full bg-[#A29BFE]/10 border border-[#A29BFE]/20 hover:border-[#A29BFE]/40 transition-all duration-300"
-            >
-              <div className={`absolute top-1 left-1 h-5 w-5 rounded-full shadow-lg transition-all duration-500 flex items-center justify-center ${theme === 'dark' ? 'translate-x-5 bg-[#A29BFE] text-black' : 'translate-x-0 bg-white/10 text-white'}`}>
-                {theme === 'dark' ? <Moon size={11} fill="currentColor" /> : <Sun size={11} />}
-              </div>
-              <div className="absolute inset-0 flex items-center justify-between px-2.5 pointer-events-none opacity-20">
-                <Sun size={10} className={theme === 'light' ? 'invisible' : ''} />
-                <Moon size={10} className={theme === 'dark' ? 'invisible' : ''} />
-              </div>
-            </button>
-
-            <div className="w-px h-3 bg-white/5 mx-1" />
-
             <Button
               variant="ghost"
               size="icon"

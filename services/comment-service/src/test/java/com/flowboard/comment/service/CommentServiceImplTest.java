@@ -19,6 +19,10 @@ import com.flowboard.comment.entity.Comment;
 import com.flowboard.comment.exception.ResourceNotFoundException;
 import com.flowboard.comment.mapper.CommentMapper;
 import com.flowboard.comment.repository.CommentRepository;
+import org.mockito.MockedStatic;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @ExtendWith(MockitoExtension.class)
 class CommentServiceImplTest {
@@ -27,6 +31,8 @@ class CommentServiceImplTest {
     private CommentRepository commentRepository;
     @Mock
     private CommentMapper commentMapper;
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private CommentServiceImpl commentService;
@@ -55,14 +61,23 @@ class CommentServiceImplTest {
 
     @Test
     void createComment_Success() {
-        when(commentMapper.toEntity(any())).thenReturn(testComment);
-        when(commentRepository.save(any())).thenReturn(testComment);
-        when(commentMapper.toResponse(any())).thenReturn(commentResponse);
+        Authentication authentication = mock(Authentication.class);
+        when(authentication.getName()).thenReturn("1");
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(authentication);
 
-        CommentResponse created = commentService.addComment(commentRequest);
+        try (MockedStatic<SecurityContextHolder> mockedSecurityContextHolder = mockStatic(SecurityContextHolder.class)) {
+            mockedSecurityContextHolder.when(SecurityContextHolder::getContext).thenReturn(securityContext);
 
-        assertNotNull(created);
-        assertEquals("Test Content", created.getContent());
+            when(commentMapper.toEntity(any())).thenReturn(testComment);
+            when(commentRepository.save(any())).thenReturn(testComment);
+            when(commentMapper.toResponse(any())).thenReturn(commentResponse);
+
+            CommentResponse created = commentService.addComment(commentRequest);
+
+            assertNotNull(created);
+            assertEquals("Test Content", created.getContent());
+        }
     }
 
     @Test

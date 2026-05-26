@@ -38,6 +38,7 @@ class CardControllerTest {
         CardRequest request = new CardRequest();
         request.setTitle("New Card");
         request.setListId(10L);
+        request.setBoardId(10L);
 
         CardResponse response = new CardResponse();
         response.setCardId(1L);

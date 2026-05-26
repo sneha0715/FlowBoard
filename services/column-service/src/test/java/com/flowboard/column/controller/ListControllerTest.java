@@ -45,10 +45,10 @@ class ListControllerTest {
 
         when(listService.createList(any())).thenReturn(response);
 
-        mockMvc.perform(post("/lists")
+        mockMvc.perform(post("/columns")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.name").value("New List"));
     }
@@ -61,9 +61,10 @@ class ListControllerTest {
 
         when(listService.getListById(1L)).thenReturn(response);
 
-        mockMvc.perform(get("/lists/1"))
+        mockMvc.perform(get("/columns/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.name").value("Test List"));
     }
 }
+

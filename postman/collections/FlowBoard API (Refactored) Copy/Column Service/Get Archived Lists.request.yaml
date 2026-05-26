@@ -1,6 +1,0 @@
-$kind: http-request
-url: "{{base_url}}/columns/board/{{boardId}}/archived"
-method: GET
-headers:
-  Authorization: Bearer {{token}}
-order: 10000

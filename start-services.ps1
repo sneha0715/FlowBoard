@@ -55,11 +55,16 @@ $services = @(
     "notification-service"
 )
 
-# Perform a clean build across all services to ensure everything is in sync
-Write-Host "Performing a clean build across all services..." -ForegroundColor Yellow
+# Perform a build across all services if -Clean is specified, or if they haven't been built yet
+Write-Host "Checking service builds..." -ForegroundColor Yellow
 foreach ($service in $services) {
-    Write-Host "Building $service..." -ForegroundColor DarkGray
-    $null = Start-Process -FilePath "mvn.cmd" -ArgumentList "-q", "clean", "install", "-DskipTests" -WorkingDirectory ".\services\$service" -NoNewWindow -Wait
+    $targetDir = ".\services\$service\target-maven"
+    if ($Clean -or -not (Test-Path $targetDir)) {
+        Write-Host "Building $service..." -ForegroundColor DarkGray
+        $null = Start-Process -FilePath "mvn.cmd" -ArgumentList "-q", "clean", "install", "-DskipTests" -WorkingDirectory ".\services\$service" -NoNewWindow -Wait
+    } else {
+        Write-Host "Service $service is already built. Skipping build. (Use -Clean to rebuild)" -ForegroundColor DarkGray
+    }
 }
 Write-Host "Build complete. Proceeding to startup...`n" -ForegroundColor Green
 

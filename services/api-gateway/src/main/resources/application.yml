@@ -127,6 +127,63 @@ spring:
           filters:
             - name: AuthenticationFilter
             - StripPrefix=2
+        
+        # ── API Docs routing for Swagger UI ────────────────────────────────────
+        - id: auth-service-api-docs
+          uri: lb://auth-service
+          predicates:
+            - Path=/v3/api-docs/auth-service
+          filters:
+            - SetPath=/v3/api-docs
+
+        - id: workspace-service-api-docs
+          uri: lb://workspace-service
+          predicates:
+            - Path=/v3/api-docs/workspace-service
+          filters:
+            - SetPath=/v3/api-docs
+
+        - id: board-service-api-docs
+          uri: lb://board-service
+          predicates:
+            - Path=/v3/api-docs/board-service
+          filters:
+            - SetPath=/v3/api-docs
+
+        - id: column-service-api-docs
+          uri: lb://column-service
+          predicates:
+            - Path=/v3/api-docs/column-service
+          filters:
+            - SetPath=/v3/api-docs
+
+        - id: card-service-api-docs
+          uri: lb://card-service
+          predicates:
+            - Path=/v3/api-docs/card-service
+          filters:
+            - SetPath=/v3/api-docs
+
+        - id: comment-service-api-docs
+          uri: lb://comment-service
+          predicates:
+            - Path=/v3/api-docs/comment-service
+          filters:
+            - SetPath=/v3/api-docs
+
+        - id: checklist-service-api-docs
+          uri: lb://checklist-service
+          predicates:
+            - Path=/v3/api-docs/checklist-service
+          filters:
+            - SetPath=/v3/api-docs
+
+        - id: notification-service-api-docs
+          uri: lb://notification-service
+          predicates:
+            - Path=/v3/api-docs/notification-service
+          filters:
+            - SetPath=/v3/api-docs
 
 eureka:
   client:
@@ -149,3 +206,24 @@ management:
   endpoint:
     health:
       show-details: always
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: auth-service
+        url: /v3/api-docs/auth-service
+      - name: workspace-service
+        url: /v3/api-docs/workspace-service
+      - name: board-service
+        url: /v3/api-docs/board-service
+      - name: column-service
+        url: /v3/api-docs/column-service
+      - name: card-service
+        url: /v3/api-docs/card-service
+      - name: comment-service
+        url: /v3/api-docs/comment-service
+      - name: checklist-service
+        url: /v3/api-docs/checklist-service
+      - name: notification-service
+        url: /v3/api-docs/notification-service
